@@ -663,6 +663,37 @@ body.theme-female{--acc:#8FB9FF!important;--acc-dim:rgba(143,185,255,.13)!import
 
 .profil-ov.open,.friend-ov.open{background:var(--bg)!important}.gs-profile{min-height:100%;padding:calc(env(safe-area-inset-top,12px) + 12px) 18px 40px}.gs-profile-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}.gs-profile-title{font-size:18px;font-weight:950;letter-spacing:-.03em}.gs-profile-icon{width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--txt);display:flex;align-items:center;justify-content:center}.gs-profile-top{display:grid;grid-template-columns:96px 1fr;gap:18px;align-items:center;margin-bottom:18px}.gs-avatar{width:96px;height:96px;border-radius:32px;object-fit:cover;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:950;color:var(--txt);position:relative;overflow:hidden}.gs-avatar img{width:100%;height:100%;object-fit:cover}.gs-avatar-add{position:absolute;right:6px;bottom:6px;width:28px;height:28px;border-radius:999px;background:var(--txt);color:#071018;display:flex;align-items:center;justify-content:center;font-weight:950}.gs-profile-name{font-size:26px;font-weight:950;letter-spacing:-.06em;line-height:1}.gs-profile-user{font-size:13px;color:var(--acc);margin-top:6px;font-weight:800}.gs-social-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}.gs-social-stat{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:14px 8px;text-align:center}.gs-social-stat b{font-size:21px;font-weight:950}.gs-social-stat span{display:block;margin-top:4px;color:var(--mut);font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.05em}.gs-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:12px}.gs-gallery-item{aspect-ratio:1;border-radius:16px;background:rgba(255,255,255,.045);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:12px;text-align:center}.gs-gallery-item img{width:100%;height:100%;object-fit:cover}
 
+
+
+/* PATCH — séance plus claire + état loggé */
+#p-seance .wrap{padding-bottom:128px!important}
+#p-seance .hud-card{border-radius:18px!important;background:rgba(255,255,255,.045)!important;border:1px solid rgba(255,255,255,.07)!important}
+#p-seance #f-day{font-family:'DM Sans',sans-serif!important;font-size:28px!important;font-weight:950!important;letter-spacing:-.05em!important;color:var(--txt)!important}
+#p-seance #f-type,#p-seance #f-dur{font-weight:800!important;color:var(--txt2)!important}
+#p-seance .ex-hero{position:relative;border-radius:28px!important;background:linear-gradient(160deg,rgba(18,24,33,.96),rgba(9,13,18,.98))!important;border:1px solid rgba(255,255,255,.08)!important;box-shadow:0 18px 44px rgba(0,0,0,.24)!important}
+#p-seance .ex-hero.dim{opacity:.48!important;filter:saturate(.55);background:rgba(18,24,33,.58)!important;border-color:rgba(255,255,255,.045)!important}
+#p-seance .ex-hero.dim::after{content:'LOGGÉ';position:absolute;right:16px;top:16px;border-radius:999px;background:rgba(115,214,162,.14);border:1px solid rgba(115,214,162,.32);color:var(--grn);font-size:10px;font-weight:950;letter-spacing:.10em;padding:6px 9px}
+#p-seance .ex-dot-v2.logged{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.12);color:var(--txt2);opacity:.55}
+#p-seance .exrow{gap:8px!important}
+.ttbtn{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#fff;padding:6px 12px;border:1px solid rgba(255,255,255,.16);border-radius:20px;background:#050505;cursor:pointer;font-weight:700}
+.gs-session-start-dock{position:sticky;bottom:10px;z-index:20;margin:12px 0 10px;padding:10px;background:linear-gradient(180deg,rgba(7,10,14,0),rgba(7,10,14,.96) 35%);border-radius:24px}
+.gs-session-start-dock button{width:100%;padding:16px;border-radius:20px;border:0;background:var(--txt);color:#071018;font-weight:950;font-size:15px;letter-spacing:-.02em;box-shadow:0 14px 40px rgba(0,0,0,.35)}
+.gs-session-hint{border:1px solid rgba(143,185,255,.16);background:rgba(143,185,255,.08);border-radius:20px;padding:12px 14px;margin:0 0 12px;color:var(--txt2);font-size:12px;line-height:1.45;font-weight:700}
+
+
+/* PATCH 2026-05-02 — menu lisible mobile */
+.more-sh{max-height:86vh!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;}
+.gs-menu-btn{display:grid!important;grid-template-columns:44px minmax(0,1fr)!important;align-items:center!important;gap:14px!important;min-height:82px!important;padding:14px 16px!important;}
+.gs-menu-btn > span:not(.gs-menu-logo){display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;}
+.gs-menu-title{display:block!important;width:100%!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important;line-height:1.15!important;font-size:15px!important;}
+.gs-menu-sub{display:block!important;width:100%!important;white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.35!important;margin-top:5px!important;font-size:12px!important;}
+.gs-menu-logo{width:44px!important;height:44px!important;border-radius:16px!important;flex:0 0 44px!important;}
+.gs-menu-section{margin:20px 0 10px!important;line-height:1.1!important;}
+.gs-music-row{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+.gs-music{min-width:0!important;}
+@media(min-width:390px){.gs-music-row{grid-template-columns:repeat(4,minmax(0,1fr))!important;}}
+@media(max-width:360px){.gs-menu-btn{grid-template-columns:40px minmax(0,1fr)!important;padding:13px!important;gap:12px!important}.gs-menu-logo{width:40px!important;height:40px!important;flex-basis:40px!important}.gs-menu-title{font-size:14px!important}.gs-menu-sub{font-size:11px!important}}
+
 </style>
 </head>
 <body>
@@ -1201,7 +1232,7 @@ body.theme-female{--acc:#8FB9FF!important;--acc-dim:rgba(143,185,255,.13)!import
               <div id="f-dur" style="font-size:12px;color:var(--mut)">75 min</div>
             </div>
           </div>
-          <button id="start-sess-btn" onclick="startSession('seance')" style="padding:9px 18px;border-radius:22px;background:var(--acc);color:#000;font-family:Bebas Neue,sans-serif;font-size:15px;border:none;cursor:pointer;white-space:nowrap;letter-spacing:1px;box-shadow:0 4px 16px rgba(232,255,71,.3)">▶ GO</button>
+          <button id="start-sess-btn" onclick="startSession('seance')" style="display:none;padding:9px 18px;border-radius:22px;background:var(--acc);color:#000;font-family:Bebas Neue,sans-serif;font-size:15px;border:none;cursor:pointer;white-space:nowrap;letter-spacing:1px;box-shadow:0 4px 16px rgba(232,255,71,.3)">▶ GO</button>
         </div>
         <div style="display:flex;gap:6px;margin-bottom:12px">
           <div class="hud-card" onclick="openBadges('streak')">
@@ -1220,6 +1251,9 @@ body.theme-female{--acc:#8FB9FF!important;--acc-dim:rgba(143,185,255,.13)!import
             <div class="hud-val" style="font-size:18px;color:var(--acc)">🏆</div>
             <div class="hud-lbl">Records</div>
           </div>
+        </div>
+        <div class="gs-session-hint">
+          1. Démarre la séance · 2. Log ton set si tu veux · 3. Valide l’exercice. Les exercices loggés ou validés deviennent assombris.
         </div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--mut);margin-bottom:4px"><span id="bp-l">0/0</span><span id="bp-r">0%</span></div>
         <div class="prog-bar"><div class="prog-fill" id="bpfill" style="width:0%"></div></div>
@@ -1242,6 +1276,7 @@ body.theme-female{--acc:#8FB9FF!important;--acc-dim:rgba(143,185,255,.13)!import
             </div>
           </div>
         </div>
+        <div class="gs-session-start-dock"><button id="start-sess-btn-bottom" onclick="startSession('seance')">▶ DÉMARRER LA SÉANCE</button></div>
         <div class="exnav" id="exnav"></div>
         <div class="ex-hero" id="hero">
           <div class="ex-hero-num" id="exnum">EX 1/8</div>
@@ -1689,7 +1724,7 @@ var DAYS = [
     {n:'Développé incliné barre',s:'5 x 5 reps',note:'Travail de force — 3 min de récupération entre les séries',yt:'https://www.youtube.com/results?search_query=developpe+incline+barre+force'},
     {n:'Écarté câble croisé bas',s:'3 x 12-15 reps',yt:'https://www.youtube.com/results?search_query=écarte+cable+croise+bas+pectoraux'},
     {n:'Arnold Press',s:'3 x 10 reps',yt:'https://www.youtube.com/results?search_query=arnold+press+epaule'},
-    {n:'Extension triceps corde câble',s:'4 x 12 reps',yt:'https://www.youtube.com/results?search_query=pushdown+corde+triceps'},
+    {n:'Extension triceps à la poulie',s:'4 x 12 reps',yt:'https://www.youtube.com/results?search_query=triceps+poulie+extension'},
     {n:'Crunchs câble lestés',s:'4 x 15-20 reps',note:'Priorité abdominaux ce soir',yt:'https://www.youtube.com/results?search_query=crunch+cable+leste+abdominaux'},
     {n:'Dragon Flag',s:'3 x 5-8 reps',note:'Commencer par la version raccourcie si nécessaire',yt:'https://www.youtube.com/results?search_query=dragon+flag+progression+debutant'},
     {n:'Planche latérale + rotation',s:'3 x 30 s par côté',yt:'https://www.youtube.com/results?search_query=planche+laterale+rotation+obliques'}
@@ -1982,7 +2017,7 @@ function renderExosDay(){
       +'<div style="font-size:11px;font-weight:900;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Séries / reps</div>'
       +'<div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">'
       +['3 × 8-10','4 × 6-8','4 × 12-15','5 × 5','3 × max'].map(function(p){
-        return '<button type="button" onclick="document.getElementById(&quot;exo-setinp-'+exosDayIdx+'-'+ei+'&quot;).value=&quot;'+p.replace('×','x')+' reps&quot;" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--txt2);font-size:11px;font-weight:800;cursor:pointer">'+p+'</button>';
+        var pv=p.replace('×','x')+' reps'; return '<button type="button" data-val="'+pv+'" onclick="document.getElementById(\'exo-setinp-'+exosDayIdx+'-'+ei+'\').value=this.dataset.val" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--txt2);font-size:11px;font-weight:800;cursor:pointer">'+p+'</button>';
       }).join('')
       +'</div>'
       +'<div style="display:flex;gap:6px">'
@@ -2229,7 +2264,7 @@ function renderBib(){
     }
     var tcBib={'Machine':'#60a5fa','Câble':'#a78bfa','Cable':'#a78bfa','Poids du corps':'#4ade80','Barre':'#f59e0b','Haltères':'#fb923c'};
     var ytUrl=e.yt||('https://www.youtube.com/results?search_query='+encodeURIComponent(e.n+' technique'));
-    var ttUrl='https://www.tiktok.com/search?q='+encodeURIComponent(e.n+' musculation');
+    var ttUrl='javascript:void(0)';
     html+='<div style="background:rgba(18,24,33,.85);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:14px;margin-bottom:10px">'
       +'<div style="font-size:14px;font-weight:900;color:var(--txt);margin-bottom:6px">'+e.n+'</div>'
       +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap">'
@@ -2240,7 +2275,7 @@ function renderBib(){
       +'<a href="'+ytUrl+'" target="_blank" onclick="event.stopPropagation()" style="flex:1;padding:9px 6px;border-radius:11px;background:#FF0000;display:flex;align-items:center;justify-content:center;gap:5px;text-decoration:none">'
       +'<svg width="13" height="10" viewBox="0 0 24 17" fill="white"><path d="M23.5 2.6s-.3-2-1.2-2.8C21.2-.5 19.9-.5 19.3-.6 16.1-.8 12-.8 12-.8s-4.1 0-7.3.2C4.1-.5 2.8-.5 1.7.7.8 1.5.5 3.5.5 3.5S.2 5.7.2 8v2.1c0 2.3.3 4.5.3 4.5s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C7.4 18.8 12 18.8 12 18.8s4.2 0 7.3-.2c.6-.1 1.9-.1 3-1.3.9-.8 1.2-2.8 1.2-2.8s.3-2.2.3-4.5V8c0-2.3-.3-5.4-.3-5.4zM9.7 12.5V5.4l8.1 3.6-8.1 3.5z"/></svg>'
       +'<span style="color:white;font-size:11px;font-weight:800">YouTube</span></a>'
-      +'<a href="'+ttUrl+'" target="_blank" onclick="event.stopPropagation()" style="flex:1;padding:9px 6px;border-radius:11px;background:#010101;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;gap:5px;text-decoration:none">'
+      +'<a href="javascript:void(0)" onclick="event.stopPropagation();openTikTokSearchName('+JSON.stringify(e.n)+')" style="flex:1;padding:9px 6px;border-radius:11px;background:#010101;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;gap:5px;text-decoration:none">'
       +'<svg width="13" height="13" viewBox="0 0 32 32" fill="white"><path d="M27.9 7.2a7.8 7.8 0 0 1-7.8-7.8h-5.4v22c0 2.1-1.7 3.8-3.8 3.8s-3.8-1.7-3.8-3.8 1.7-3.8 3.8-3.8c.4 0 .8.1 1.1.2V12.2c-.4-.1-.7-.1-1.1-.1a9.2 9.2 0 0 0-9.2 9.2A9.2 9.2 0 0 0 10.9 30a9.2 9.2 0 0 0 9.2-9.2V12.7a13 13 0 0 0 7.8 2.6V9.9a7.8 7.8 0 0 1-2.5-2.1l2.5-.6z"/></svg>'
       +'<span style="color:white;font-size:11px;font-weight:800">TikTok</span></a>'
       +'</div>'
@@ -2374,7 +2409,7 @@ var EXOS_DB=[
   // TRICEPS
   {n:'Dips triceps / Triceps Dips',g:'triceps',t:'Poids du corps',m:'Triceps',yt:'https://www.youtube.com/results?search_query=triceps+dips+technique'},
   {n:'Skull Crusher barre EZ / Lying Triceps Extension',g:'triceps',t:'Barre',m:'Triceps long',yt:'https://www.youtube.com/results?search_query=skull+crusher+triceps+technique'},
-  {n:'Extension triceps corde / Rope Pushdown',g:'triceps',t:'Câble',m:'Triceps, isolation',yt:'https://www.youtube.com/results?search_query=rope+pushdown+triceps'},
+  {n:'Extension triceps à la poulie / Cable Triceps Pushdown',g:'triceps',t:'Poulie',m:'Triceps, isolation',yt:'https://www.youtube.com/results?search_query=cable+triceps+pushdown'},
   {n:'Extension triceps nuque / Overhead Triceps Extension',g:'triceps',t:'Haltères',m:'Triceps long',yt:'https://www.youtube.com/results?search_query=overhead+triceps+extension'},
   {n:'Kickback haltère / Triceps Kickback',g:'triceps',t:'Haltères',m:'Triceps, isolation',yt:'https://www.youtube.com/results?search_query=triceps+kickback+technique'},
   {n:'Développé serré / Close Grip Bench Press',g:'triceps',t:'Barre',m:'Triceps, Pectoraux',yt:'https://www.youtube.com/results?search_query=close+grip+bench+press+triceps'},
@@ -4116,6 +4151,40 @@ function saveQuickPoids(){
   sv();inp.value='';
   notify('Poids enregistré : '+val.toFixed(1)+' kg');vib([50,30,50]);
 }
+
+function getTodayKeyFR(){return new Date().toLocaleDateString('fr-FR');}
+function isExLoggedToday(exName){
+  var today=getTodayKeyFR();
+  return (state.logs||[]).some(function(l){return l&&l.date===today&&l.ex===exName&&(l.charge||l.reps||l.auto);});
+}
+function buildTikTokSearch(exName){
+  return encodeURIComponent((exName||'exercice musculation')+' technique musculation');
+}
+function openTikTokSearchName(name){
+  var q=buildTikTokSearch(name);
+  var appUrl='tiktok://search?keyword='+q;
+  var webUrl='https://www.tiktok.com/search?q='+q;
+  if(/iPad|iPhone|iPod/.test(navigator.userAgent)){window.location.href=appUrl;setTimeout(function(){window.open(webUrl,'_blank');},900);}
+  else window.open(webUrl,'_blank');
+}
+function openTikTokExercise(ev){
+  if(ev){ev.preventDefault();ev.stopPropagation();}
+  var ex=(DAYS[cDay]&&DAYS[cDay].exercises[cEx])?DAYS[cDay].exercises[cEx]:null;
+  var q=buildTikTokSearch(ex?ex.n:'exercice');
+  var appUrl='tiktok://search?keyword='+q;
+  var webUrl='https://www.tiktok.com/search?q='+q;
+  var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+  var opened=false;
+  if(isIOS){
+    opened=true;
+    window.location.href=appUrl;
+    setTimeout(function(){window.open(webUrl,'_blank');},900);
+  }else{
+    window.open(webUrl,'_blank');
+  }
+  return false;
+}
+
 function toggleML(){
   var ml=document.getElementById('minilog');
   ml.classList.toggle('open');
@@ -4130,6 +4199,7 @@ function saveML(){
   sv();
   document.getElementById('ml-c').value='';document.getElementById('ml-r').value='';
   document.getElementById('minilog').classList.remove('open');
+  renderSeance();renderDayBar();
   if(isPR){
     notify('🏆 RECORD BATTU ! '+ex.n+' — '+charge+'kg');
     vib([100,30,100,30,200]);
@@ -4147,6 +4217,7 @@ function saveML(){
       setTimeout(function(){showBadgeUnlock(_curXPBadge);},500);
     }
     var _hxp=document.getElementById('h-xp');if(_hxp)_hxp.textContent=state.xp;
+    renderSeance();renderDayBar();
   }else{
     notify('Set enregistré — '+ex.n+(charge?' '+charge+'kg':'')+(reps?' x'+reps:''));vib([40,20,40]);
   }
@@ -4175,8 +4246,9 @@ function renderSeance(){
   // Dots
   var nav=document.getElementById('exnav');if(nav){
     nav.innerHTML=d.exercises.map(function(_,i){
-      var dk=!!checks[i],is=i===cEx;
+      var dk=!!checks[i],is=i===cEx,lg=isExLoggedToday(d.exercises[i].n);
       if(dk)return '<button class="ex-dot-v2 dn" onclick="jumpEx('+i+')">✓</button>';
+      if(lg)return '<button class="ex-dot-v2 logged '+(is?'cur':'')+'" onclick="jumpEx('+i+')">'+(i+1)+'</button>';
       if(is)return '<button class="ex-dot-v2 cur" onclick="jumpEx('+i+')">'+(i+1)+'</button>';
       return '<button class="ex-dot-v2" onclick="jumpEx('+i+')">'+(i+1)+'</button>';
     }).join('');
@@ -7310,7 +7382,7 @@ document.addEventListener('DOMContentLoaded',function(){
         +'<div class="pei-inline" id="peiinline-'+di+'-'+ei+'">'
         +'<div class="pei-presets">'
         +['3 x 8-10 reps','4 x 6-8 reps','4 x 12-15 reps','5 x 5 reps','3 x max reps','2 x 20 reps'].map(function(p){
-          return '<button type="button" class="pei-pre" onclick="setPePreset('+di+','+ei+',&quot;'+p+'&quot;)">'+p.replace(' reps','')+'</button>';
+          var pv=p; return '<button type="button" class="pei-pre" data-val="'+pv+'" onclick="setPePreset('+di+','+ei+',this.dataset.val)">'+p.replace(' reps','')+'</button>';
         }).join('')
         +'</div>'
         +'<div class="pei-sinp-row">'
@@ -7392,7 +7464,7 @@ document.addEventListener('DOMContentLoaded',function(){
       html+='<div class="prog-day-wrap">'
         +'<div class="prog-day-hd">'
         +'<div><div class="prog-day-name">'+d.name+'</div><div class="prog-day-type">'+d.type+' · '+d.dur+'</div></div>'
-        +'<button type="button" class="prog-add-btn" onclick="window.exosDayIdx='+di+';if(typeof openAddExo!==&quot;undefined&quot;)openAddExo()">+ Ajouter</button>'
+        +'<button type="button" class="prog-add-btn" onclick="window.exosDayIdx='+di+';if(window.openAddExo)openAddExo()">+ Ajouter</button>'
         +'</div>'
         +(d.exercises.length===0?'<div style="text-align:center;padding:16px;color:var(--mut);font-size:13px">Aucun exercice — appuie sur + pour en ajouter</div>':'')
         +'<div id="prog-exo-list-'+di+'">'
@@ -7616,1205 +7688,399 @@ document.addEventListener('DOMContentLoaded',function(){
 })();
 </script>
 
-<script>
-/* ═══════════════════════════════════════════════════════════════
-   G-SQUAD — ELITE RANKING + SMART SQUAD SOCIAL PATCH
-   Ajoute :
-   - 4 classements : GOAT / Force King / Volume Beast / Endurance Monster
-   - scoring robuste bodyweight + charge + reps + volume
-   - sync Supabase progressive : performances, user_exercise_scores, notifications
-   - notifications intelligentes Squad / Squad privée
-   - demandes d'amis + badge + feed + profil public enrichi
-   ═══════════════════════════════════════════════════════════════ */
+
+<!-- GSQUAD HOTFIX — UX/Profile/Program/Session/Social 2026-05-02 -->
+<style id="gs-hotfix-style">
+  #header-logo{font-size:22px!important;letter-spacing:.22em!important;font-weight:1000!important;}
+  .more-sh{max-height:86vh!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;touch-action:pan-y!important;}
+  .more-sh .gs-menu-grid{padding-bottom:18px!important;}
+  .gs-profile{padding-bottom:calc(env(safe-area-inset-bottom,20px) + 70px)!important;}
+  .gs-avatar{cursor:pointer!important;}
+  .gs-avatar-add{width:34px!important;height:34px!important;font-size:25px!important;right:4px!important;bottom:4px!important;box-shadow:0 10px 28px rgba(0,0,0,.42)!important;}
+  .gs-brand-logo{width:42px;height:42px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-weight:1000;letter-spacing:-.05em;flex:0 0 auto;border:1px solid rgba(255,255,255,.12);box-shadow:inset 0 0 18px rgba(255,255,255,.05)}
+  .g-basicfit{background:linear-gradient(135deg,#ff8a00,#f15a24);color:#111}.g-fitnesspark{background:linear-gradient(135deg,#05d84f,#006b2b);color:white}.g-keepcool{background:linear-gradient(135deg,#b832ff,#6110a7);color:white}.g-onair{background:linear-gradient(135deg,#ff2b3e,#7b0010);color:white}.g-neoness{background:linear-gradient(135deg,#39ff14,#088a00);color:#071018}.g-orangebleue{background:linear-gradient(135deg,#20a2ff,#0154c8);color:white}.g-magicform{background:linear-gradient(135deg,#ffe23b,#e69a00);color:#071018}.g-gigafit{background:linear-gradient(135deg,#ff8a1d,#a83b00);color:white}.g-onefitness{background:linear-gradient(135deg,#fff,#95a2b5);color:#071018}.g-cmg{background:linear-gradient(135deg,#111,#4a5568);color:white}.g-foresthill{background:linear-gradient(135deg,#0ea65b,#064d2d);color:white}.g-anytime{background:linear-gradient(135deg,#8b5cf6,#3b0764);color:white}.g-home{background:linear-gradient(135deg,#64748b,#1f2937);color:white}.g-autre{background:linear-gradient(135deg,#64748b,#334155);color:white}
+  .gs-gym-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--txt);font-size:12px;font-weight:900;margin:0 6px 6px 0}.gs-gym-chip .dot{width:10px;height:10px;border-radius:50%;display:block;animation:none;opacity:1}
+  .gs-session-start-bottom{position:sticky;bottom:calc(env(safe-area-inset-bottom,0px) + 86px);z-index:40;margin-top:14px;background:linear-gradient(180deg,rgba(7,10,14,0),rgba(7,10,14,.94) 28%,rgba(7,10,14,.98));padding:18px 0 0;}
+  .gs-start-wide{width:100%;height:58px;border:0;border-radius:22px;background:var(--txt);color:#071018;font-size:18px;font-weight:1000;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 20px 50px rgba(0,0,0,.38)}
+  .gs-ex-top{display:flex;align-items:center;gap:12px}.gs-validate-inline{margin-left:auto;border:0;border-radius:999px;background:#071018;color:white;padding:11px 14px;font-size:13px;font-weight:1000}.gs-validate-inline.done{background:rgba(115,214,162,.18);color:#0f5132;border:1px solid rgba(15,81,50,.16)}
+  .gs-session-arrows{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.gs-session-arrows button{border-radius:18px!important;background:rgba(255,255,255,.05)!important;border:1px solid rgba(255,255,255,.08)!important;color:var(--txt)!important;font-weight:950!important;padding:15px!important}
+  .gs-link-pill{border-radius:999px!important;border:1px solid rgba(7,16,24,.10)!important;background:rgba(7,16,24,.06)!important;color:#071018!important;padding:10px 14px!important;font-size:13px!important;font-weight:950!important;text-decoration:none!important;display:inline-flex!important;align-items:center!important;gap:6px!important}
+  .gs-program-calc{background:linear-gradient(145deg,rgba(143,185,255,.16),rgba(255,255,255,.04));border:1px solid rgba(143,185,255,.22);border-radius:22px;padding:16px;margin:0 0 14px}.gs-program-calc button{width:100%;border:0;border-radius:17px;background:var(--txt);color:#071018;font-weight:1000;padding:13px;margin-top:12px}
+  .gs-reorder-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;background:rgba(143,185,255,.08);border:1px solid rgba(143,185,255,.16);border-radius:18px;padding:12px;margin-bottom:12px}.gs-reorder-copy{font-size:12px;color:var(--txt2);font-weight:800;line-height:1.35}.gs-reorder-btn{border:0;border-radius:999px;background:var(--txt);color:#071018;font-weight:1000;padding:10px 14px;white-space:nowrap}.gs-reorder-btn.on{background:var(--acc);}
+  .gs-drag-list{display:block}.gs-drag-item{background:rgba(18,24,33,.9);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:15px;margin-bottom:10px;transition:transform .14s,opacity .14s,border-color .14s;background-clip:padding-box}.gs-drag-item.edit{touch-action:none;cursor:grab;border-color:rgba(143,185,255,.24)}.gs-drag-item.dragging{opacity:.76;transform:scale(.985);border-color:var(--acc);box-shadow:0 18px 45px rgba(0,0,0,.35);z-index:1000}.gs-drag-main{display:flex;align-items:flex-start;gap:12px}.gs-drag-grip{width:32px;height:32px;border-radius:12px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;color:var(--mut);font-weight:1000;flex:0 0 auto}.gs-drag-item.edit .gs-drag-grip{background:rgba(143,185,255,.14);color:var(--acc);font-size:18px}.gs-drag-title{font-size:15px;font-weight:1000;color:var(--txt);line-height:1.25}.gs-drag-meta{font-size:12px;color:var(--mut);font-weight:800;margin-top:5px}.gs-drag-actions{display:flex;gap:8px;margin-top:12px}.gs-mini-btn{border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.05);color:var(--txt);font-weight:950;font-size:12px;padding:10px 12px}.gs-mini-btn.danger{color:var(--red);border-color:rgba(255,107,122,.22)}
+</style>
+<script id="gs-hotfix-script">
 (function(){
-  'use strict';
+  function $(id){return document.getElementById(id)}
+  function E(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}
+  function S(){return window.state || (window.state={})}
+  function save(){try{ if(typeof sv==='function') sv(); else localStorage.setItem('gsquad_state_v1',JSON.stringify(S())); }catch(e){}}
+  function nt(m){try{ if(typeof notify==='function') notify(m); }catch(e){}}
+  function getDays(){return window.DAYS || []}
+  function curDay(){var days=getDays(); return days[window.cDay||0] || days[0] || {name:'Séance',type:'',dur:'',exercises:[]};}
+  function icon(n){try{return typeof svg==='function'?svg(n):''}catch(e){return ''}}
+  function yt(ex){return ex.yt || ('https://www.youtube.com/results?search_query='+encodeURIComponent((ex.n||'exercice')+' technique musculation'));}
+  function tt(ex){return ex.tt || ex.tiktok || ('https://www.tiktok.com/search?q='+encodeURIComponent((ex.n||'exercice')+' technique musculation'));}
+  function exLabel(ex){return ex.activity?'Activité sportive':(ex.t||ex.type||'Exercice');}
 
-  var G = window.GS_ELITE = window.GS_ELITE || {};
-  var PATCH_VERSION = 'elite-ranking-social-2026-05-01';
-
-  function qs(id){ return document.getElementById(id); }
-  function safe(v){ return String(v == null ? '' : v).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-  function n(v,d){ v=parseFloat(String(v == null ? '' : v).replace(',','.')); return isFinite(v) ? v : (d||0); }
-  function i(v,d){ v=parseInt(v,10); return isFinite(v) ? v : (d||0); }
-  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
-  function round(v,p){ var m=Math.pow(10,p||0); return Math.round(v*m)/m; }
-  function notify2(msg){ try{ if(typeof window.notify==='function') window.notify(msg); else console.log(msg); }catch(e){} }
-  function vib2(p){ try{ if(typeof window.vib==='function') window.vib(p||[20]); }catch(e){} }
-  function st(){ if(!window.state) window.state={}; return window.state; }
-  function sv2(){ try{ if(typeof window.sv==='function') window.sv(); }catch(e){} }
-  function me(){ return window._supaUser || null; }
-  function db(){ return window._supa || null; }
-  function prof(){ return (st().profil || {}); }
-  function profileName(){ var p=prof(); return p.name || p.display_name || (me() && me().email ? me().email.split('@')[0] : 'Athlète'); }
-  function profileUsername(){ var p=prof(); return (p.username || '').replace(/^@/,''); }
-  function profileAvatar(){ var p=prof(); return p.avatar || ''; }
-  function latestBodyweight(){
-    var p=prof();
-    var bw=n(p.poids || p.weight || p.bodyweight,0);
-    if(bw>=30 && bw<=300) return bw;
-    var logs=(st().logs||[]).filter(function(l){ return n(l.poids,0)>=30; });
-    if(logs.length) return n(logs[logs.length-1].poids,80);
-    return 80;
-  }
-  function avatarHtml(name, avatar, cls){
-    name = name || 'A';
-    return avatar ? '<div class="'+(cls||'gs5-av')+'"><img src="'+safe(avatar)+'"></div>' : '<div class="'+(cls||'gs5-av')+'">'+safe(name.charAt(0).toUpperCase())+'</div>';
-  }
-  function relDate(v){
-    if(!v) return '';
-    var t=new Date(v).getTime();
-    if(!isFinite(t)) return '';
-    var diff=Math.max(0,Date.now()-t), m=Math.floor(diff/60000);
-    if(m<1) return 'maintenant';
-    if(m<60) return m+' min';
-    var h=Math.floor(m/60); if(h<24) return h+' h';
-    var d=Math.floor(h/24); if(d<30) return d+' j';
-    var mo=Math.floor(d/30); if(mo<12) return mo+' mois';
-    return Math.floor(mo/12)+' an';
-  }
-  function isoDateFromLogDate(d){
-    if(!d) return new Date().toISOString();
-    if(/^\d{4}-\d{2}-\d{2}/.test(d)) return new Date(d).toISOString();
-    var m=String(d).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if(m) return new Date(+m[3],+m[2]-1,+m[1]).toISOString();
-    var t=new Date(d); return isFinite(t.getTime()) ? t.toISOString() : new Date().toISOString();
-  }
-
-  var EX_CFG = {
-    pullup:{aliases:['traction','tractions','pull up','pull-up','chin up','chin-up'],kind:'bodyweight_pull',forceRef:2.05,volRef:9000,endRef:32},
-    dips:{aliases:['dips','dip'],kind:'bodyweight_push',forceRef:2.15,volRef:11000,endRef:42},
-    pushup:{aliases:['pompe','pompes','push up','push-up'],kind:'bodyweight_push',forceRef:1.2,volRef:7000,endRef:80},
-    squat:{aliases:['squat','back squat','front squat'],kind:'barbell_lower',forceRef:2.25,volRef:16000,endRef:28},
-    bench:{aliases:['développé couché','developpe couche','bench press','dc barre','dc'],kind:'barbell_push',forceRef:1.65,volRef:11500,endRef:28},
-    deadlift:{aliases:['soulevé de terre','deadlift'],kind:'barbell_pull',forceRef:2.65,volRef:18000,endRef:22},
-    press:{aliases:['presse','leg press','presse à cuisse','presse a cuisse'],kind:'machine_lower',forceRef:4.0,volRef:26000,endRef:35},
-    row:{aliases:['rameur','rowing','row'],kind:'machine_pull',forceRef:1.6,volRef:12000,endRef:35},
-    run:{aliases:['course','running','run'],kind:'cardio',forceRef:1,volRef:1,endRef:60},
-    bike:{aliases:['vélo','velo','bike','cycling'],kind:'cardio',forceRef:1,volRef:1,endRef:60}
+  // Better gym metadata / branded logos.
+  window.GS_GYMS={
+    basicfit:{name:'Basic-Fit',sub:'Machines, poulies, haltères',cls:'g-basicfit',txt:'BF',color:'#ff8a00'},
+    fitnesspark:{name:'Fitness Park',sub:'Plateau libre, machines, charges',cls:'g-fitnesspark',txt:'FP',color:'#05d84f'},
+    keepcool:{name:'Keep Cool',sub:'Reprise, coaching simple',cls:'g-keepcool',txt:'KC',color:'#b832ff'},
+    onair:{name:'On Air Fitness',sub:'Performance, machines, zone libre',cls:'g-onair',txt:'OA',color:'#ff2b3e'},
+    neoness:{name:'Neoness',sub:'Fitness urbain, cours et plateau',cls:'g-neoness',txt:'N',color:'#39ff14'},
+    orangebleue:{name:"L'Orange Bleue",sub:'Coaching, machines, cours',cls:'g-orangebleue',txt:'OB',color:'#20a2ff'},
+    magicform:{name:'Magic Form',sub:'Muscu, cardio, cours',cls:'g-magicform',txt:'MF',color:'#ffe23b'},
+    gigafit:{name:'Gigafit',sub:'Plateau muscu et cardio',cls:'g-gigafit',txt:'GF',color:'#ff8a1d'},
+    onefitness:{name:'One Fitness Club',sub:'Salle complète et machines',cls:'g-onefitness',txt:'OF',color:'#e5e7eb'},
+    cmg:{name:'CMG Sports Club',sub:'Club premium, cours, plateau',cls:'g-cmg',txt:'CMG',color:'#111827'},
+    foresthill:{name:'Forest Hill',sub:'Club sport, tennis, fitness',cls:'g-foresthill',txt:'FH',color:'#0ea65b'},
+    anytime:{name:'Anytime Fitness',sub:'Accès 24/7 selon club',cls:'g-anytime',txt:'AF',color:'#8b5cf6'},
+    home:{name:'Maison / Home gym',sub:'Poids du corps, haltères, élastiques',cls:'g-home',txt:'🏠',color:'#64748b'},
+    autre:{name:'Autre salle',sub:'Salle indépendante ou autre chaîne',cls:'g-autre',txt:'+',color:'#64748b'}
   };
-  function exerciseKey(name){
-    var s=String(name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    var keys=Object.keys(EX_CFG);
-    for(var k=0;k<keys.length;k++){
-      var cfg=EX_CFG[keys[k]];
-      for(var j=0;j<cfg.aliases.length;j++){
-        var a=cfg.aliases[j].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-        if(s.indexOf(a)>-1) return keys[k];
-      }
-    }
-    return s ? s.replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,40) : 'general';
-  }
-  function cfgFor(name){
-    var key=exerciseKey(name);
-    return EX_CFG[key] || {aliases:[name||'Exercice'],kind:'generic_strength',forceRef:1.55,volRef:10000,endRef:30};
-  }
-  function isBodyweight(name){
-    var k=(cfgFor(name).kind||'').indexOf('bodyweight')===0;
-    return k || /traction|dips|pompe|pull|chin/i.test(String(name||''));
-  }
-  function epley(totalLoad,reps){
-    reps=i(reps,1);
-    if(totalLoad<=0) return 0;
-    var r=clamp(reps,1,12);
-    return totalLoad*(1+r/30);
-  }
-  function softScore(value, target, start){
-    value=Math.max(0,value); target=Math.max(1,target); start=start || target*0.25;
-    if(value<=0) return 0;
-    var raw = Math.log(1 + value/start) / Math.log(1 + target/start);
-    return clamp(Math.round(raw*85),0,100);
-  }
-  function percentileRank(value, arr){
-    arr=(arr||[]).filter(function(x){return isFinite(x)&&x>0;}).sort(function(a,b){return a-b;});
-    if(!arr.length || !isFinite(value) || value<=0) return null;
-    var below=0;
-    for(var j=0;j<arr.length;j++){ if(arr[j]<=value) below++; else break; }
-    return clamp(Math.round((below/arr.length)*100),1,99);
-  }
-  function scoreFromPercentiles(value, peers, fallbackScore){
-    var pr=percentileRank(value,peers);
-    if(pr==null) return fallbackScore;
-    return clamp(Math.round(0.65*fallbackScore + 0.35*pr),0,100);
-  }
+  window.gsGymLogo=function(k,small){var g=window.GS_GYMS[k]||window.GS_GYMS.autre;return '<span class="gs-brand-logo '+g.cls+'" style="'+(small?'width:28px;height:28px;border-radius:10px;font-size:11px':'')+'">'+E(g.txt)+'</span>';};
+  function gymChips(gyms){gyms=gyms||[]; if(!gyms.length)return '<span class="gs-card-sub">Salle non renseignée</span>'; return gyms.map(function(k){var g=window.GS_GYMS[k]||window.GS_GYMS.autre;return '<span class="gs-gym-chip"><span class="dot" style="background:'+g.color+'"></span>'+E(g.name)+'</span>';}).join('');}
 
-  function cleanLog(l){
-    l=l||{};
-    var ex=l.ex || l.exercise_name || l.exercise || '';
-    var reps=i(l.reps || l.max_reps,0);
-    var sets=i(l.sets,1) || 1;
-    var external=n(l.charge || l.external_load || l.weight_kg || l.max_weight_kg,0);
-    var bw=n(l.bodyweight || l.body_weight || l.poids,0) || latestBodyweight();
-    var total = isBodyweight(ex) ? bw + Math.max(0,external) : external;
-    if(!ex || reps<=0) return null;
-    return {
-      id:l.id || '',
-      date: isoDateFromLogDate(l.created_at || l.date || new Date().toISOString()),
-      exercise_name: ex,
-      exercise_key: exerciseKey(ex),
-      bodyweight: bw,
-      external_load: external,
-      reps: reps,
-      sets: sets,
-      total_load: total,
-      total_volume: total * reps * sets,
-      estimated_1rm: epley(total,reps),
-      relative_strength: total ? epley(total,reps)/Math.max(35,bw) : 0,
-      source:l
-    };
-  }
-
-  function antiCheatFlag(p){
-    if(!p) return {status:'rejected',reason:'empty'};
-    var reasons=[];
-    if(p.bodyweight<30 || p.bodyweight>300) reasons.push('bodyweight');
-    if(p.external_load<0 || p.external_load>600) reasons.push('load');
-    if(p.reps>250) reasons.push('reps');
-    if(p.total_volume>120000) reasons.push('volume');
-    if(p.relative_strength>5.5 && isBodyweight(p.exercise_name)) reasons.push('relative_strength');
-    if(p.estimated_1rm>650 && !isBodyweight(p.exercise_name)) reasons.push('1rm');
-    if(reasons.length>1) return {status:'rejected',reason:reasons.join(',')};
-    if(reasons.length) return {status:'suspicious',reason:reasons.join(',')};
-    return {status:'valid',reason:''};
-  }
-
-  function groupedPerformances(logs){
-    var out={};
-    (logs||[]).forEach(function(l){
-      var p=cleanLog(l);
-      if(!p) return;
-      var flag=antiCheatFlag(p);
-      if(flag.status==='rejected') return;
-      if(!out[p.exercise_key]) out[p.exercise_key]={name:p.exercise_name,key:p.exercise_key,items:[]};
-      out[p.exercise_key].items.push(p);
-    });
-    return out;
-  }
-
-  function scoreExercise(items, peers){
-    items=items||[];
-    if(!items.length) return {force:0,volume:0,endurance:0,goat:0,best_1rm:0,best_relative:0,best_reps:0,best_volume:0,count:0};
-    var name=items[0].exercise_name, cfg=cfgFor(name), bw=latestBodyweight();
-    var best1=0,bestRel=0,bestReps=0,bestVol=0,days={};
-    items.forEach(function(p){
-      best1=Math.max(best1,p.estimated_1rm);
-      bestRel=Math.max(bestRel,p.relative_strength);
-      bestReps=Math.max(bestReps,p.reps);
-      bestVol=Math.max(bestVol,p.total_volume);
-      days[p.date.slice(0,10)]=true;
-    });
-    var forceBase;
-    if(isBodyweight(name)){
-      var relTarget=cfg.forceRef||2;
-      forceBase=softScore(bestRel,relTarget,0.65);
-    }else{
-      forceBase=softScore(best1/Math.max(45,bw),cfg.forceRef||1.6,0.45);
-    }
-    var volumeBase=softScore(bestVol,cfg.volRef||10000,1800);
-    var endBase=softScore(bestReps,cfg.endRef||30,8);
-    endBase=clamp(Math.round(endBase + Math.min(10,Object.keys(days).length*1.2)),0,100);
-
-    var force=scoreFromPercentiles(isBodyweight(name)?bestRel:best1,(peers&&peers.force)||[],forceBase);
-    var volume=scoreFromPercentiles(bestVol,(peers&&peers.volume)||[],volumeBase);
-    var endurance=scoreFromPercentiles(bestReps,(peers&&peers.endurance)||[],endBase);
-
-    var goat=Math.round(force*0.40 + volume*0.35 + endurance*0.25);
-    var dominant=Math.max(force,volume,endurance), weakest=Math.min(force,volume,endurance);
-    if(dominant-weakest>55) goat=Math.round(goat*0.94 + weakest*0.06); // évite le one-trick total
-    return {
-      exercise_name:name,
-      exercise_key:exerciseKey(name),
-      force:clamp(force,0,100),
-      volume:clamp(volume,0,100),
-      endurance:clamp(endurance,0,100),
-      goat:clamp(goat,0,100),
-      best_1rm:round(best1,1),
-      best_relative:round(bestRel,2),
-      best_reps:bestReps,
-      best_volume:Math.round(bestVol),
-      count:items.length,
-      last_at:items.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);})[0].date
-    };
-  }
-
-  function aggregateScores(exScores){
-    var rows=Object.values(exScores||{}).sort(function(a,b){return b.goat-a.goat;});
-    if(!rows.length) return {goat:0,force:0,volume:0,endurance:0,exercise_count:0,top:[]};
-    function agg(field){
-      var weights=[1,.78,.58,.43,.32], s=0,w=0;
-      rows.slice(0,5).forEach(function(r,idx){s+=r[field]*weights[idx];w+=weights[idx];});
-      return Math.round(s/Math.max(1,w));
-    }
-    return {
-      goat:agg('goat'), force:agg('force'), volume:agg('volume'), endurance:agg('endurance'),
-      exercise_count:rows.length, top:rows
-    };
-  }
-
-  G.computeLocalScores=function(){
-    var groups=groupedPerformances(st().logs||[]);
-    var exScores={};
-    Object.keys(groups).forEach(function(k){ exScores[k]=scoreExercise(groups[k].items); });
-    var agg=aggregateScores(exScores);
-    st().eliteScores = {version:PATCH_VERSION,updated_at:new Date().toISOString(),exercises:exScores,aggregate:agg};
-    sv2();
-    return st().eliteScores;
+  // Profile counts from Supabase + local fallback.
+  window.renderProfilSocialCounts=async function(){
+    var followers=$('prof-followers'), following=$('prof-following');
+    var local=(S().friends||[]).length;
+    if(followers)followers.textContent=local; if(following)following.textContent=local;
+    try{
+      if(!window._supa||!window._supaUser)return;
+      var uid=window._supaUser.id;
+      var a=await window._supa.from('friend_requests').select('id',{count:'exact',head:true}).eq('to_id',uid).eq('status','accepted');
+      var b=await window._supa.from('friend_requests').select('id',{count:'exact',head:true}).eq('from_id',uid).eq('status','accepted');
+      var fa=(a.count||0)+(b.count||0);
+      if(followers)followers.textContent=fa; if(following)following.textContent=fa;
+    }catch(e){}
   };
 
-  function tier(score){
-    if(score>=95)return {name:'GOAT',emoji:'🐐',cls:'goat',next:null};
-    if(score>=85)return {name:'Legend',emoji:'👑',cls:'legend',next:95};
-    if(score>=72)return {name:'Elite',emoji:'💎',cls:'elite',next:85};
-    if(score>=58)return {name:'Gold',emoji:'🥇',cls:'gold',next:72};
-    if(score>=42)return {name:'Silver',emoji:'🥈',cls:'silver',next:58};
-    if(score>=25)return {name:'Bronze',emoji:'🥉',cls:'bronze',next:42};
-    return {name:'Rookie',emoji:'🔰',cls:'rookie',next:25};
-  }
-
-  async function syncScoresToSupabase(){
-    var sup=db(), user=me();
-    if(!sup || !user) return;
-    var scores=G.computeLocalScores();
-    var p=prof();
-    try{
-      await sup.from('profiles').upsert({
-        id:user.id,
-        email:user.email || '',
-        username:profileUsername(),
-        display_name:p.name || p.display_name || profileName(),
-        data:st()
-      },{onConflict:'id'});
-    }catch(e){}
-    var rows=Object.values(scores.exercises||{}).map(function(r){
-      return {
-        user_id:user.id,
-        exercise_key:r.exercise_key,
-        exercise_name:r.exercise_name,
-        force_score:r.force,
-        volume_score:r.volume,
-        endurance_score:r.endurance,
-        goat_score:r.goat,
-        best_1rm:r.best_1rm,
-        best_relative:r.best_relative,
-        best_reps:r.best_reps,
-        best_volume:r.best_volume,
-        performance_count:r.count,
-        updated_at:new Date().toISOString()
-      };
-    });
-    if(rows.length){
-      try{ await sup.from('user_exercise_scores').upsert(rows,{onConflict:'user_id,exercise_key'}); }catch(e){}
-    }
-    try{
-      await sup.from('user_global_scores').upsert({
-        user_id:user.id,
-        display_name:p.name || profileName(),
-        username:profileUsername(),
-        avatar_url:profileAvatar(),
-        goat_score:scores.aggregate.goat,
-        force_score:scores.aggregate.force,
-        volume_score:scores.aggregate.volume,
-        endurance_score:scores.aggregate.endurance,
-        exercise_count:scores.aggregate.exercise_count,
-        updated_at:new Date().toISOString()
-      },{onConflict:'user_id'});
-    }catch(e){}
-  }
-
-  async function insertPerformanceFromLog(l){
-    var sup=db(), user=me();
-    if(!sup || !user) return;
-    var p=cleanLog(l);
-    if(!p) return;
-    var flag=antiCheatFlag(p);
-    try{
-      await sup.from('performances').insert({
-        user_id:user.id,
-        exercise_key:p.exercise_key,
-        exercise_name:p.exercise_name,
-        bodyweight:p.bodyweight,
-        external_load:p.external_load,
-        reps:p.reps,
-        sets:p.sets,
-        total_load:p.total_load,
-        total_volume:p.total_volume,
-        estimated_1rm:p.estimated_1rm,
-        relative_strength:p.relative_strength,
-        validation_status:flag.status,
-        flags:flag.reason ? [flag.reason] : [],
-        created_at:p.date
-      });
-    }catch(e){}
-    await syncScoresToSupabase();
-  }
-
-  var oldUpsert = window.upsertLeaderboard;
-  window.upsertLeaderboard = async function(exName, weightKg, reps){
-    var l={date:new Date().toLocaleDateString('fr-FR'),ex:exName,charge:weightKg,reps:reps,sets:1,bodyweight:latestBodyweight()};
-    await insertPerformanceFromLog(l);
-    if(typeof oldUpsert==='function'){
-      try{ await oldUpsert.apply(this,arguments); }catch(e){}
-    }
+  // Avatar: plus always opens file input.
+  window.changeAvatar=function(){ var i=$('avatar-input'); if(i)i.click(); };
+  window.saveAvatar=function(e){
+    var file=e&&e.target&&e.target.files&&e.target.files[0]; if(!file)return;
+    var r=new FileReader(); r.onload=function(){ S().profil=S().profil||{}; S().profil.avatar=r.result; save(); nt('Photo de profil ajoutée'); if(typeof openProfil==='function')openProfil();}; r.readAsDataURL(file);
   };
 
-  function wrapLogFunction(name){
-    var old=window[name];
-    if(typeof old!=='function' || old._gs5Wrapped) return;
-    var fn=function(){
-      var before=(st().logs||[]).length;
-      var ret=old.apply(this,arguments);
-      setTimeout(function(){
-        var logs=st().logs||[];
-        if(logs.length>before){
-          var last=logs[logs.length-1];
-          if(last && last.ex && (last.charge || last.reps)) insertPerformanceFromLog(last);
-        }
-      },50);
-      return ret;
-    };
-    fn._gs5Wrapped=true;
-    window[name]=fn;
-  }
-
-  function installCss(){
-    if(qs('gs5-css')) return;
-    var css=document.createElement('style');
-    css.id='gs5-css';
-    css.textContent =
-      '.gs5-ov{position:fixed;inset:0;background:var(--bg);z-index:2200;display:flex;flex-direction:column;overflow:hidden}.gs5-hd{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,14px) + 8px) 16px 14px;background:rgba(7,10,14,.92);border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(18px)}.gs5-back{width:40px;height:40px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--txt);font-size:18px;font-weight:900}.gs5-title{flex:1;font-size:18px;font-weight:950;letter-spacing:-.03em}.gs5-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px 120px}.gs5-tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 14px;scrollbar-width:none}.gs5-tab{flex:0 0 auto;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--mut);font-size:12px;font-weight:950;padding:10px 13px}.gs5-tab.act{background:var(--txt);color:#071018;border-color:var(--txt)}.gs5-hero{background:linear-gradient(145deg,rgba(245,243,238,.98),rgba(219,230,247,.96));color:#071018;border-radius:32px;padding:22px;margin-bottom:14px;box-shadow:0 20px 70px rgba(0,0,0,.25)}.gs5-k{font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:950;color:#596677}.gs5-score{font-size:70px;line-height:.95;font-weight:1000;letter-spacing:-.08em}.gs5-tier{display:inline-flex;gap:6px;align-items:center;border-radius:999px;background:rgba(7,16,24,.08);padding:8px 12px;font-size:12px;font-weight:950;margin-top:8px}.gs5-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.gs5-mini{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:14px 10px;text-align:center}.gs5-mini b{display:block;font-size:24px;letter-spacing:-.05em}.gs5-mini span{display:block;font-size:10px;color:var(--mut);font-weight:950;text-transform:uppercase;letter-spacing:.08em;margin-top:4px}.gs5-card{background:rgba(18,24,33,.86);border:1px solid rgba(255,255,255,.07);border-radius:24px;padding:16px;margin-bottom:10px}.gs5-row{display:flex;align-items:center;gap:12px}.gs5-rank{width:34px;text-align:center;font-size:17px;font-weight:1000;color:var(--mut)}.gs5-rank.top{color:#f59e0b}.gs5-av{width:42px;height:42px;border-radius:16px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:1000;color:var(--txt);overflow:hidden;flex-shrink:0}.gs5-av img{width:100%;height:100%;object-fit:cover}.gs5-info{flex:1;min-width:0}.gs5-name{font-size:14px;font-weight:950;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gs5-sub{font-size:11px;color:var(--mut);font-weight:750;margin-top:3px}.gs5-val{text-align:right;font-size:23px;font-weight:1000;letter-spacing:-.05em;color:var(--txt)}.gs5-me{border-color:rgba(143,185,255,.46);background:rgba(143,185,255,.07)}.gs5-pill{display:inline-flex;border-radius:999px;padding:6px 10px;background:rgba(143,185,255,.12);color:var(--acc);font-size:11px;font-weight:950}.gs5-empty{text-align:center;color:var(--mut);padding:42px 20px}.gs5-empty b{display:block;color:var(--txt);font-size:16px;margin:8px 0 4px}.gs5-btn{border:0;border-radius:999px;background:var(--txt);color:#071018;padding:11px 15px;font-size:13px;font-weight:950}.gs5-btn.ghost{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--txt)}.gs5-btn.red{background:rgba(255,107,122,.12);border:1px solid rgba(255,107,122,.26);color:var(--red)}.gs5-sec{font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:950;color:var(--acc);margin:18px 0 10px}.gs5-input{width:100%;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.055);border-radius:18px;color:var(--txt);padding:14px;font-size:15px;outline:none}.gs5-chiprow{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px}.gs5-chip{flex:0 0 auto;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--txt2);padding:9px 12px;font-size:12px;font-weight:900}.gs5-chip.on{background:rgba(143,185,255,.16);border-color:rgba(143,185,255,.4);color:var(--txt)}.gs5-notif-btn{position:relative;background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.06)!important;border-radius:999px!important;width:36px!important;height:36px!important;display:flex!important;align-items:center!important;justify-content:center!important;margin-right:8px!important}.gs5-dot{position:absolute;right:4px;top:3px;width:9px;height:9px;border-radius:999px;background:var(--red);display:none;box-shadow:0 0 0 3px rgba(255,107,122,.16)}.gs5-dot.on{display:block}.gs5-reacts{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.gs5-react{border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:7px 10px;font-size:15px}.gs5-react.on{background:rgba(143,185,255,.14);border-color:rgba(143,185,255,.4)}';
-    document.head.appendChild(css);
-  }
-
-  function rankIcon(idx){ return idx===0?'🥇':idx===1?'🥈':idx===2?'🥉':'#'+(idx+1); }
-
-  async function fetchGlobalRows(metric){
-    var sup=db();
-    if(!sup) return [];
-    try{
-      var col = metric==='force'?'force_score':metric==='volume'?'volume_score':metric==='endurance'?'endurance_score':'goat_score';
-      var r=await sup.from('user_global_scores').select('user_id,display_name,username,avatar_url,goat_score,force_score,volume_score,endurance_score,exercise_count,updated_at').order(col,{ascending:false}).limit(100);
-      if(!r.error && r.data && r.data.length) return r.data.map(function(x){return {
-        user_id:x.user_id,name:x.display_name||x.username||'Athlète',username:x.username||'',avatar:x.avatar_url||'',goat:x.goat_score||0,force:x.force_score||0,volume:x.volume_score||0,endurance:x.endurance_score||0,exercise_count:x.exercise_count||0,updated_at:x.updated_at
-      };});
-    }catch(e){}
-    try{
-      var p=await sup.from('profiles').select('id,username,display_name,data').limit(100);
-      return (p.data||[]).map(function(x){
-        var d=(typeof x.data==='object'&&x.data)||{};
-        var ag=(d.eliteScores&&d.eliteScores.aggregate)||{};
-        return {user_id:x.id,name:x.display_name||(d.profil&&d.profil.name)||x.username||'Athlète',username:x.username||'',avatar:(d.profil&&d.profil.avatar)||'',goat:ag.goat||d.xp||0,force:ag.force||0,volume:ag.volume||0,endurance:ag.endurance||0,exercise_count:ag.exercise_count||0,updated_at:(d.eliteScores&&d.eliteScores.updated_at)||''};
-      }).sort(function(a,b){return (b[metric]||0)-(a[metric]||0);});
-    }catch(e){}
-    return [];
-  }
-
-  function renderLocalDashboard(scores){
-    var ag=scores.aggregate, tr=tier(ag.goat);
-    var next=tr.next;
-    var top=scores.aggregate.top||[];
-    var nextText=next ? '<div class="gs5-card"><div class="gs5-row"><div class="gs5-info"><div class="gs5-name">Prochaine étape : '+safe(tier(next).emoji+' '+tier(next).name)+'</div><div class="gs5-sub">Encore '+(next-ag.goat)+' points pour passer le tier suivant.</div></div><div class="gs5-val">+'+(next-ag.goat)+'</div></div></div>' : '<div class="gs5-card"><div class="gs5-row"><div class="gs5-info"><div class="gs5-name">Tier maximum atteint</div><div class="gs5-sub">Tu es dans la zone GOAT.</div></div><div class="gs5-val">🐐</div></div></div>';
-    return '<div class="gs5-hero"><div class="gs5-k">Score GOAT</div><div class="gs5-score">'+ag.goat+'<span style="font-size:24px;color:#596677">/100</span></div><div class="gs5-tier">'+tr.emoji+' '+tr.name+'</div><div style="font-size:12px;color:#596677;margin-top:10px;font-weight:800">Force 40% · Volume 35% · Endurance 25%</div></div>'
-      +'<div class="gs5-grid"><div class="gs5-mini"><b>💪 '+ag.force+'</b><span>Force King</span></div><div class="gs5-mini"><b>🔁 '+ag.volume+'</b><span>Volume Beast</span></div><div class="gs5-mini"><b>🫁 '+ag.endurance+'</b><span>Endurance</span></div></div>'
-      +nextText
-      +'<div class="gs5-sec">Tes meilleurs exercices</div>'
-      +(top.length?top.slice(0,8).map(function(r,idx){return '<div class="gs5-card"><div class="gs5-row"><div class="gs5-rank '+(idx<3?'top':'')+'">'+rankIcon(idx)+'</div><div class="gs5-info"><div class="gs5-name">'+safe(r.exercise_name)+'</div><div class="gs5-sub">1RM ~'+r.best_1rm+'kg · '+r.best_reps+' reps · '+Math.round(r.best_volume/1000)+'t volume</div></div><div class="gs5-val">'+r.goat+'</div></div></div>';}).join(''):'<div class="gs5-empty"><div style="font-size:42px">📊</div><b>Aucun score pour l’instant</b><span>Log charge + reps dans une séance pour apparaître ici.</span></div>');
-  }
-
-  function renderRankingRows(rows, metric){
-    var user=me();
-    if(!rows.length) return '<div class="gs5-empty"><div style="font-size:42px">📭</div><b>Aucun athlète classé</b><span>Les scores apparaîtront quand les utilisateurs auront loggé leurs performances.</span></div>';
-    rows=rows.slice().sort(function(a,b){return (b[metric]||0)-(a[metric]||0);});
-    return rows.slice(0,100).map(function(r,idx){
-      var isMe=user && r.user_id===user.id;
-      var score=r[metric]||0;
-      return '<div class="gs5-card '+(isMe?'gs5-me':'')+'"><div class="gs5-row"><div class="gs5-rank '+(idx<3?'top':'')+'">'+rankIcon(idx)+'</div>'+avatarHtml(r.name,r.avatar,'gs5-av')+'<div class="gs5-info"><div class="gs5-name">'+safe(r.name)+' '+(isMe?'<span class="gs5-pill">Toi</span>':'')+'</div><div class="gs5-sub">'+(r.username?'@'+safe(r.username)+' · ':'')+(r.exercise_count||0)+' exercices · '+relDate(r.updated_at)+'</div></div><div class="gs5-val">'+Math.round(score)+'</div></div></div>';
-    }).join('');
-  }
-
-  async function leaderboardTab(tab){
-    var body=qs('gs5-lb-body'); if(!body) return;
-    body.querySelectorAll('.gs5-tab').forEach(function(b){b.classList.toggle('act',b.getAttribute('data-tab')===tab);});
-    var area=qs('gs5-lb-area'); if(!area) return;
-    if(tab==='me'){
-      var sc=G.computeLocalScores();
-      area.innerHTML=renderLocalDashboard(sc);
-      syncScoresToSupabase();
-      return;
-    }
-    area.innerHTML='<div class="gs5-empty"><div style="font-size:32px">⏳</div><b>Chargement du classement…</b></div>';
-    var metric=tab;
-    var rows=await fetchGlobalRows(metric);
-    if(!me()){
-      area.innerHTML='<div class="gs5-card"><div class="gs5-row"><div style="font-size:26px">🔒</div><div class="gs5-info"><div class="gs5-name">Connecte-toi pour apparaître dans le classement</div><div class="gs5-sub">Tu peux quand même regarder les scores publics.</div></div></div></div>'+renderRankingRows(rows,metric);
-    }else{
-      area.innerHTML=renderRankingRows(rows,metric);
-    }
-  }
-  window.gs5LeaderboardTab=leaderboardTab;
-
-  window.openLeaderboard=function(){
-    installCss();
-    var old=qs('gs5-leaderboard'); if(old) old.remove();
-    var ov=document.createElement('div'); ov.id='gs5-leaderboard'; ov.className='gs5-ov';
-    ov.innerHTML='<div class="gs5-hd"><button class="gs5-back" onclick="document.getElementById(\'gs5-leaderboard\').remove()">←</button><div class="gs5-title">Classement Elite</div><button class="gs5-btn ghost" onclick="GS_ELITE.computeLocalScores();gs5LeaderboardTab(\'me\')">Actualiser</button></div><div class="gs5-body" id="gs5-lb-body"><div class="gs5-tabs"><button class="gs5-tab act" data-tab="me" onclick="gs5LeaderboardTab(\'me\')">Moi</button><button class="gs5-tab" data-tab="goat" onclick="gs5LeaderboardTab(\'goat\')">🏆 GOAT</button><button class="gs5-tab" data-tab="force" onclick="gs5LeaderboardTab(\'force\')">💪 Force</button><button class="gs5-tab" data-tab="volume" onclick="gs5LeaderboardTab(\'volume\')">🔁 Volume</button><button class="gs5-tab" data-tab="endurance" onclick="gs5LeaderboardTab(\'endurance\')">🫁 Endurance</button></div><div id="gs5-lb-area"></div></div>';
-    document.body.appendChild(ov);
-    leaderboardTab('me');
-  };
-
-  async function createNotification(userId, type, payload, actorId, relatedId){
-    var sup=db(), user=me();
-    if(!sup || !userId) return null;
-    payload=payload||{};
-    try{
-      var r=await sup.from('notifications').insert({
-        user_id:userId,
-        actor_id:actorId || (user && user.id) || null,
-        type:type,
-        status:'unread',
-        related_id:relatedId || null,
-        payload:payload,
-        created_at:new Date().toISOString()
-      }).select('id').single();
-      return r.data || null;
-    }catch(e){ return null; }
-  }
-  G.createNotification=createNotification;
-
-  async function loadSmartNotifications(){
-    var sup=db(), user=me();
-    var out=[];
-    if(!sup || !user) return out;
-    try{
-      var r=await sup.from('notifications').select('id,user_id,actor_id,type,status,related_id,payload,created_at').eq('user_id',user.id).order('created_at',{ascending:false}).limit(50);
-      if(!r.error && r.data) out=r.data;
-    }catch(e){}
-    try{
-      var fr=await sup.from('friend_requests').select('id,from_id,from_name,from_username,from_avatar,status,created_at').eq('to_id',user.id).eq('status','pending').order('created_at',{ascending:false});
-      (fr.data||[]).forEach(function(x){
-        if(!out.find(function(n){return n.type==='friend_request' && n.related_id===x.id;})){
-          out.unshift({id:'fr_'+x.id,type:'friend_request',status:'unread',related_id:x.id,actor_id:x.from_id,payload:{name:x.from_name,username:x.from_username,avatar:x.from_avatar},created_at:x.created_at});
-        }
-      });
-    }catch(e){}
-    return out;
-  }
-
-  function notifCopy(nf){
-    var p=nf.payload||{}, name=p.name||p.actor_name||'Quelqu’un';
-    if(nf.type==='friend_request') return {ico:'👥',title:name+' veut t’ajouter',sub:'Accepte pour le faire entrer dans ta Squad.'};
-    if(nf.type==='friend_accept') return {ico:'✅',title:name+' a accepté ta demande',sub:'Vous êtes maintenant dans la même Squad.'};
-    if(nf.type==='session_start') return {ico:'💪',title:name+' démarre sa séance',sub:p.receiver_done_today?'Encourage-le !':'Rejoins-le !'};
-    if(nf.type==='exercise_start') return {ico:'🏋️',title:name+' attaque '+(p.exercise||'un exercice'),sub:p.receiver_done_today?'Encourage-le !':'Rejoins-le !'};
-    if(nf.type==='record') return {ico:'🔥',title:name+' a battu un record',sub:p.exercise?(p.exercise+' · '+(p.value||'')):'Va l’encourager.'};
-    if(nf.type==='reaction') return {ico:p.reaction||'🔥',title:name+' a réagi à ton activité',sub:p.message||'Encouragement reçu.'};
-    return {ico:'⚡',title:p.title||'Nouvelle notification',sub:p.body||''};
-  }
-
-  async function updateNotifDot(){
-    var dot=qs('gs5-notif-dot'); if(!dot) return;
-    var nfs=await loadSmartNotifications();
-    var unread=nfs.filter(function(n){return n.status==='unread' || n.status==='pending';}).length;
-    dot.classList.toggle('on', unread>0);
-  }
-
-  window.openSmartNotifications=async function(){
-    installCss();
-    var old=qs('gs5-notif-ov'); if(old) old.remove();
-    var ov=document.createElement('div'); ov.id='gs5-notif-ov'; ov.className='gs5-ov';
-    ov.innerHTML='<div class="gs5-hd"><button class="gs5-back" onclick="document.getElementById(\'gs5-notif-ov\').remove()">←</button><div class="gs5-title">Notifications</div><button class="gs5-btn ghost" onclick="openSmartNotifications()">Actualiser</button></div><div class="gs5-body" id="gs5-notif-body"><div class="gs5-empty"><div style="font-size:32px">⏳</div><b>Chargement…</b></div></div>';
-    document.body.appendChild(ov);
-    var body=qs('gs5-notif-body');
-    if(!me()){ body.innerHTML='<div class="gs5-empty"><div style="font-size:42px">🔒</div><b>Compte requis</b><span>Connecte-toi pour recevoir les notifications Squad.</span></div>'; return; }
-    var nfs=await loadSmartNotifications();
-    if(!nfs.length){ body.innerHTML='<div class="gs5-empty"><div style="font-size:42px">🔕</div><b>Aucune notification</b><span>Les demandes d’amis, réactions et invitations apparaîtront ici.</span></div>'; updateNotifDot(); return; }
-    body.innerHTML=nfs.map(function(nf){
-      var c=notifCopy(nf), p=nf.payload||{};
-      var actions='';
-      if(nf.type==='friend_request'){
-        actions='<div style="display:flex;gap:8px;margin-top:12px"><button class="gs5-btn" onclick="acceptFriend(\''+safe(nf.related_id||String(nf.id).replace('fr_',''))+'\',\''+safe(p.name||'cet athlète')+'\')">Accepter</button><button class="gs5-btn red" onclick="rejectFriend(\''+safe(nf.related_id||String(nf.id).replace('fr_',''))+'\')">Refuser</button></div>';
-      }else if(nf.status==='unread'){
-        actions='<div style="margin-top:12px"><button class="gs5-btn ghost" onclick="gs5MarkNotificationRead(\''+safe(nf.id)+'\')">Marquer lu</button></div>';
-      }
-      return '<div class="gs5-card '+(nf.status==='unread'?'gs5-me':'')+'"><div class="gs5-row"><div style="font-size:28px;width:42px;text-align:center">'+c.ico+'</div><div class="gs5-info"><div class="gs5-name">'+safe(c.title)+'</div><div class="gs5-sub">'+safe(c.sub)+' · '+relDate(nf.created_at)+'</div></div></div>'+actions+'</div>';
-    }).join('');
-    try{ await db().from('notifications').update({status:'read'}).eq('user_id',me().id).eq('status','unread'); }catch(e){}
-    updateNotifDot();
-  };
-
-  window.gs5MarkNotificationRead=async function(id){
-    try{ await db().from('notifications').update({status:'read'}).eq('id',id); }catch(e){}
-    openSmartNotifications();
-  };
-
-  function ensureNotifBell(){
-    if(qs('gs5-notif-btn')) return;
-    var header=qs('app-header'); if(!header) return;
-    var btn=document.createElement('button');
-    btn.id='gs5-notif-btn'; btn.className='gs5-notif-btn'; btn.type='button'; btn.setAttribute('onclick','openSmartNotifications()');
-    btn.innerHTML='<span style="font-size:18px">🔔</span><span class="gs5-dot" id="gs5-notif-dot"></span>';
-    var last=header.querySelector('button:last-child');
-    if(last) header.insertBefore(btn,last); else header.appendChild(btn);
-    updateNotifDot();
-  }
-
-  async function loadFriendState(){
-    var sup=db(), user=me();
-    st().friends=st().friends||[];
-    st().incomingRequests=st().incomingRequests||[];
-    st().sentRequests=st().sentRequests||[];
-    if(!sup || !user) return;
-    var incoming=[], sent=[], friends=[];
-    try{
-      var inc=await sup.from('friend_requests').select('id,from_id,from_name,from_username,from_avatar,status,created_at').eq('to_id',user.id).eq('status','pending');
-      incoming=inc.data||[];
-    }catch(e){}
-    try{
-      var s=await sup.from('friend_requests').select('id,to_id,status,created_at').eq('from_id',user.id).eq('status','pending');
-      sent=s.data||[];
-    }catch(e){}
-    try{
-      var a=await sup.from('friend_requests').select('id,from_id,to_id,from_name,from_username,from_avatar,status,created_at').or('from_id.eq.'+user.id+',to_id.eq.'+user.id).eq('status','accepted');
-      var ids=[];
-      (a.data||[]).forEach(function(r){ var fid=r.from_id===user.id?r.to_id:r.from_id; if(ids.indexOf(fid)<0) ids.push(fid); });
-      if(ids.length){
-        var pr=await sup.from('profiles').select('id,username,display_name,data').in('id',ids);
-        friends=(pr.data||[]).map(function(p){
-          var d=(typeof p.data==='object'&&p.data)||{};
-          return {id:p.id,name:p.display_name||(d.profil&&d.profil.name)||p.username||'Ami',username:p.username||'',avatar:(d.profil&&d.profil.avatar)||'',xp:d.xp||0,_fullData:d};
-        });
-      }
-    }catch(e){}
-    st().incomingRequests=incoming; st().sentRequests=sent; st().friends=friends; sv2();
-  }
-  window.loadFriendRequests=loadFriendState;
-
-  async function getRelationship(targetId){
-    var user=me(), sup=db();
-    if(!user || !targetId || targetId===user.id) return {state:'self'};
-    await loadFriendState();
-    if((st().friends||[]).some(function(f){return f.id===targetId;})) return {state:'friend'};
-    var inc=(st().incomingRequests||[]).find(function(r){return r.from_id===targetId;});
-    if(inc) return {state:'incoming',request:inc};
-    var sent=(st().sentRequests||[]).find(function(r){return r.to_id===targetId;});
-    if(sent) return {state:'sent',request:sent};
-    return {state:'none'};
-  }
-
-  window.sendFriendRequest=async function(targetId,targetName,btn){
-    var sup=db(), user=me();
-    if(!sup || !user){ notify2('Connecte-toi pour ajouter ta Squad'); return; }
-    if(targetId===user.id){ notify2('Tu ne peux pas t’ajouter toi-même'); return; }
-    if(btn){btn.disabled=true;btn.textContent='...';}
-    var rel=await getRelationship(targetId);
-    if(rel.state==='friend'){ if(btn){btn.textContent='Ami';btn.className='ucard-btn sent';} return; }
-    if(rel.state==='sent'){ if(btn){btn.textContent='Envoyé';btn.className='ucard-btn sent';} return; }
-    if(rel.state==='incoming'){ await acceptFriend(rel.request.id,targetName); return; }
-    var p=prof(), rid=null;
-    try{
-      var r=await sup.from('friend_requests').insert({
-        from_id:user.id,to_id:targetId,from_name:p.name||profileName(),from_username:profileUsername(),from_avatar:profileAvatar(),status:'pending',created_at:new Date().toISOString()
-      }).select('id').single();
-      rid=(r.data&&r.data.id)||null;
-    }catch(e){
-      if(btn){btn.disabled=false;btn.textContent='+ Ajouter';}
-      notify2('Demande déjà envoyée ou table à vérifier');
-      return;
-    }
-    await createNotification(targetId,'friend_request',{name:p.name||profileName(),username:profileUsername(),avatar:profileAvatar()},user.id,rid);
-    if(btn){btn.textContent='Envoyé';btn.className='ucard-btn sent';btn.disabled=true;}
-    notify2('Demande envoyée à '+(targetName||'cet athlète')+' ✓'); vib2([40,20,40]);
-    updateNotifDot();
-  };
-
-  window.acceptFriend=async function(requestId,fromName){
-    var sup=db(), user=me(); if(!sup || !requestId) return;
-    var req=null;
-    try{
-      var rr=await sup.from('friend_requests').select('*').eq('id',requestId).single();
-      req=rr.data||null;
-    }catch(e){}
-    try{ await sup.from('friend_requests').update({status:'accepted'}).eq('id',requestId); }catch(e){}
-    if(req){
-      try{ await sup.from('friendships').upsert([{user_id:req.from_id,friend_id:req.to_id,created_at:new Date().toISOString()},{user_id:req.to_id,friend_id:req.from_id,created_at:new Date().toISOString()}],{onConflict:'user_id,friend_id'}); }catch(e){}
-      await createNotification(req.from_id,'friend_accept',{name:profileName(),username:profileUsername(),avatar:profileAvatar()},user&&user.id,requestId);
-      try{ await sup.from('notifications').update({status:'handled'}).eq('related_id',requestId).eq('type','friend_request'); }catch(e){}
-    }
-    notify2('Tu es maintenant ami avec '+(fromName||'cet athlète')+' 💪'); vib2([50,30,80]);
-    await loadFriendState();
-    try{ if(typeof window._renderFriendsUI==='function') window._renderFriendsUI(); else renderFriendsList(); }catch(e){}
-    updateNotifDot();
-    var ov=qs('gs5-notif-ov'); if(ov) openSmartNotifications();
-  };
-
-  window.rejectFriend=async function(requestId){
-    var sup=db(); if(!sup || !requestId) return;
-    try{ await sup.from('friend_requests').update({status:'declined'}).eq('id',requestId); }catch(e){ try{ await sup.from('friend_requests').delete().eq('id',requestId); }catch(_e){} }
-    try{ await sup.from('notifications').update({status:'handled'}).eq('related_id',requestId).eq('type','friend_request'); }catch(e){}
-    await loadFriendState();
-    notify2('Demande refusée');
-    try{ if(typeof window._renderFriendsUI==='function') window._renderFriendsUI(); else renderFriendsList(); }catch(e){}
-    updateNotifDot();
-    var ov=qs('gs5-notif-ov'); if(ov) openSmartNotifications();
-  };
-
-  window.searchUsers=function(query){
-    clearTimeout(window._searchTimeout);
-    var el=qs('social-results'); if(!el) return;
-    query=String(query||'').trim();
-    if(query.length<2){ el.innerHTML='<div class="gs5-empty" style="padding:28px 10px"><b>Recherche ta Squad</b><span>Entre au moins 2 caractères.</span></div>'; return; }
-    el.innerHTML='<div class="gs5-empty" style="padding:24px"><div style="font-size:26px">⏳</div><b>Recherche…</b></div>';
-    window._searchTimeout=setTimeout(async function(){
-      var sup=db(), user=me();
-      if(!sup || !user){ el.innerHTML='<div class="gs5-empty"><div style="font-size:42px">🔒</div><b>Compte requis</b><span>Connecte-toi pour chercher tes amis.</span></div>'; return; }
+  // Robust username login: username -> email column OR data.email fallback.
+  var oldLogin=window.doLogin;
+  window.doLogin=async function(){
+    var input=($('auth-email')||{}).value||'', pass=($('auth-password')||{}).value||''; input=input.trim();
+    if(!input||!pass){try{authShowView('login');authShowErr('Remplis tous les champs.')}catch(e){} return;}
+    try{setAuthLoading(true)}catch(e){}
+    var email=input;
+    if((!input.includes('@')) || input[0]==='@'){
+      var uname=input.replace(/^@/,'').toLowerCase();
       try{
-        await loadFriendState();
-        var q=query.replace(/^@/,'').toLowerCase();
-        var res=await sup.from('profiles').select('id,email,username,display_name,data').or('username.ilike.%'+q+'%,display_name.ilike.%'+query+'%,email.ilike.%'+query+'%').neq('id',user.id).limit(20);
-        var users=res.data||[];
-        if(!users.length){ el.innerHTML='<div class="gs5-empty"><div style="font-size:42px">🕵️</div><b>Aucun utilisateur trouvé</b><span>Essaie le @username exact.</span></div>'; return; }
-        var html='<div class="gs5-sec">Résultats</div>';
-        for(var idx=0;idx<users.length;idx++){
-          var u=users[idx], d=(typeof u.data==='object'&&u.data)||{}, name=u.display_name||(d.profil&&d.profil.name)||(u.email||'').split('@')[0]||'Athlète';
-          var rel=await getRelationship(u.id);
-          var label='+ Ajouter', cls='ucard-btn', disabled='';
-          if(rel.state==='friend'){label='Ami';cls='ucard-btn sent';disabled='disabled';}
-          if(rel.state==='sent'){label='Envoyé';cls='ucard-btn sent';disabled='disabled';}
-          if(rel.state==='incoming'){label='Accepter';cls='ucard-btn';}
-          var obj={id:u.id,name:name,username:u.username||'',avatar:(d.profil&&d.profil.avatar)||'',xp:d.xp||0,_fullData:d};
-          html+='<div class="ucard" style="cursor:pointer" onclick="openFriendProfile(window.GS_ELITE._u_'+idx+')">'+avatarHtml(name,obj.avatar,'ucard-av')+'<div style="flex:1"><div class="ucard-name">'+safe(name)+'</div><div class="ucard-sub">'+(u.username?'<span style="color:var(--acc)">@'+safe(u.username)+'</span> · ':'')+(d.xp||0)+' XP</div></div><button class="'+cls+'" '+disabled+' onclick="event.stopPropagation();sendFriendRequest(\''+u.id+'\',\''+safe(name).replace(/'/g,'&#39;')+'\',this)">'+label+'</button></div>';
-          G['_u_'+idx]=obj;
-        }
-        el.innerHTML=html;
-      }catch(e){ el.innerHTML='<div style="color:var(--red);font-size:13px;padding:16px">Erreur recherche : '+safe(e.message)+'</div>'; }
-    },300);
-  };
-
-  window.renderFriendsList=function(){
-    loadFriendState().then(function(){
-      var el=qs('social-friends-section'); if(!el) return;
-      var friends=st().friends||[], inc=st().incomingRequests||[];
-      var html='<div class="gs5-sec" style="margin-top:0">Squad</div>';
-      if(inc.length){
-        html+='<div class="gs5-card gs5-me"><div class="gs5-name">'+inc.length+' demande'+(inc.length>1?'s':'')+' reçue'+(inc.length>1?'s':'')+'</div><div class="gs5-sub">Accepte les membres que tu veux dans ta Squad.</div></div>';
-        inc.forEach(function(r){
-          html+='<div class="ucard">'+avatarHtml(r.from_name,r.from_avatar,'ucard-av')+'<div style="flex:1"><div class="ucard-name">'+safe(r.from_name||'Athlète')+'</div><div class="ucard-sub">'+(r.from_username?'@'+safe(r.from_username)+' · ':'')+'veut rejoindre ta Squad</div></div><div style="display:flex;flex-direction:column;gap:6px"><button class="ucard-btn" onclick="acceptFriend(\''+r.id+'\',\''+safe(r.from_name||'cet athlète')+'\')">Accepter</button><button class="ucard-btn sent" onclick="rejectFriend(\''+r.id+'\')">Refuser</button></div></div>';
-        });
-      }
-      html+='<div class="gs5-card"><div class="gs5-row"><div style="font-size:26px">🔔</div><div class="gs5-info"><div class="gs5-name">Qui peut te notifier ?</div><div class="gs5-sub">Anti-spam : choisis ton niveau de notifications.</div></div><button class="gs5-btn ghost" onclick="openSquadSettings()">Régler</button></div></div>';
-      html+='<div class="gs5-sec">Membres</div>';
-      if(friends.length){
-        friends.forEach(function(f,idx){
-          html+='<div class="ucard" style="cursor:pointer" onclick="openFriendProfile(window.GS_ELITE._f_'+idx+')">'+avatarHtml(f.name,f.avatar,'ucard-av')+'<div style="flex:1"><div class="ucard-name">'+safe(f.name||'Ami')+'</div><div class="ucard-sub">'+(f.username?'@'+safe(f.username)+' · ':'')+(f.xp||0)+' XP</div></div><span style="font-size:20px;color:var(--mut)">›</span></div>';
-          G['_f_'+idx]=f;
-        });
-      }else{
-        html+='<div class="gs5-empty"><div style="font-size:42px">👥</div><b>Ta Squad est vide</b><span>Va dans Recherche pour ajouter tes amis.</span></div>';
-      }
-      el.innerHTML=html;
-      try{ if(typeof window.updateSquadBar==='function') window.updateSquadBar(); }catch(e){}
-    });
-  };
-
-  window.openSquadSettings=function(){
-    installCss();
-    var prefs=(st().squadPrefs=st().squadPrefs||{notifyFrom:'friends',muted:{},privateIds:[]});
-    var friends=st().friends||[];
-    var old=qs('gs5-squad-settings'); if(old) old.remove();
-    var ov=document.createElement('div'); ov.id='gs5-squad-settings'; ov.className='gs5-ov';
-    var levels=[['all','Tout le monde'],['friends','Amis'],['squad','Squad'],['private','Squad privée'],['none','Personne']];
-    ov.innerHTML='<div class="gs5-hd"><button class="gs5-back" onclick="document.getElementById(\'gs5-squad-settings\').remove()">←</button><div class="gs5-title">Réglages Squad</div></div><div class="gs5-body"><div class="gs5-sec">Notifications autorisées</div><div class="gs5-chiprow">'+levels.map(function(x){return '<button class="gs5-chip '+(prefs.notifyFrom===x[0]?'on':'')+'" onclick="gs5SetNotifyLevel(\''+x[0]+'\')">'+x[1]+'</button>';}).join('')+'</div><div class="gs5-sec">Squad privée</div>'+(friends.length?friends.map(function(f){var on=(prefs.privateIds||[]).indexOf(f.id)>-1;return '<div class="gs5-card"><div class="gs5-row">'+avatarHtml(f.name,f.avatar,'gs5-av')+'<div class="gs5-info"><div class="gs5-name">'+safe(f.name)+'</div><div class="gs5-sub">'+(f.username?'@'+safe(f.username):'Membre Squad')+'</div></div><button class="gs5-btn '+(on?'':'ghost')+'" onclick="gs5TogglePrivateMember(\''+f.id+'\')">'+(on?'Retirer':'Ajouter')+'</button></div></div>';}).join(''):'<div class="gs5-empty"><b>Aucun ami</b><span>Ajoute des membres pour créer une Squad privée.</span></div>')+'</div>';
-    document.body.appendChild(ov);
-  };
-  window.gs5SetNotifyLevel=function(level){ st().squadPrefs=st().squadPrefs||{}; st().squadPrefs.notifyFrom=level; sv2(); openSquadSettings(); };
-  window.gs5TogglePrivateMember=function(id){ var p=(st().squadPrefs=st().squadPrefs||{privateIds:[]}); p.privateIds=p.privateIds||[]; var idx=p.privateIds.indexOf(id); if(idx>-1)p.privateIds.splice(idx,1); else p.privateIds.push(id); sv2(); openSquadSettings(); };
-
-  function doneToday(){
-    var today=new Date().toLocaleDateString('fr-FR');
-    var j=st().journal||{};
-    return !!(j[today] && j[today].seanceDone);
-  }
-  async function sendSquadNotification(kind, payload, mode){
-    var friends=st().friends||[];
-    var prefs=st().squadPrefs||{};
-    var ids=friends.map(function(f){return f.id;});
-    if(mode==='private') ids=ids.filter(function(id){return (prefs.privateIds||[]).indexOf(id)>-1;});
-    if(mode==='choose') ids=(payload.memberIds||ids);
-    if(!ids.length){ notify2(mode==='private'?'Squad privée vide':'Aucun membre à prévenir'); return; }
-    var p=prof();
-    for(var k=0;k<ids.length;k++){
-      await createNotification(ids[k],kind,{
-        name:p.name||profileName(),username:profileUsername(),avatar:profileAvatar(),
-        receiver_done_today:false,
-        exercise:payload.exercise||'',
-        title:payload.title||''
-      },me()&&me().id,payload.related_id||null);
+        var lookup=await window._supa.from('profiles').select('email,data').eq('username',uname).maybeSingle();
+        var row=lookup.data||{}; email=row.email || (row.data&&row.data.email) || (row.data&&row.data.auth_email) || '';
+      }catch(e){}
+      if(!email){try{setAuthLoading(false);authShowErr('Utilisateur introuvable ou email non enregistré sur le profil.')}catch(e){} return;}
     }
-    notify2('Squad prévenue ✓'); vib2([30,20,30]);
-  }
-  window.openSquadSharePrompt=function(kind,payload){
-    installCss(); payload=payload||{};
-    if(!me()){ notify2('Connecte-toi pour prévenir ta Squad'); return; }
-    loadFriendState().then(function(){
-      var old=qs('gs5-share'); if(old) old.remove();
-      var ov=document.createElement('div'); ov.id='gs5-share'; ov.className='gs5-ov'; ov.style.background='rgba(0,0,0,.64)'; ov.style.backdropFilter='blur(10px)';
-      ov.innerHTML='<div style="margin-top:auto;background:rgba(12,17,23,.98);border:1px solid rgba(255,255,255,.08);border-bottom:0;border-radius:30px 30px 0 0;padding:18px;padding-bottom:calc(env(safe-area-inset-bottom,20px) + 18px)"><div class="gs5-title" style="margin-bottom:6px">Prévenir ta Squad ?</div><div class="gs5-sub" style="margin-bottom:14px">'+safe(payload.title||'Tes amis peuvent te rejoindre ou t’encourager.')+'</div><div style="display:grid;gap:10px"><button class="gs5-btn" onclick="document.getElementById(\'gs5-share\').remove();sendSquadNotification(\''+kind+'\', window.GS_ELITE._sharePayload, \'squad\')">Partager à ma Squad</button><button class="gs5-btn ghost" onclick="document.getElementById(\'gs5-share\').remove();sendSquadNotification(\''+kind+'\', window.GS_ELITE._sharePayload, \'private\')">Partager à ma Squad privée</button><button class="gs5-btn ghost" onclick="document.getElementById(\'gs5-share\').remove()">Pas maintenant</button></div></div>';
-      G._sharePayload=payload;
-      document.body.appendChild(ov);
-    });
-  };
-  window.sendSquadNotification=sendSquadNotification;
-
-  var oldStart=window.startSession;
-  if(typeof oldStart==='function' && !oldStart._gs5Wrapped){
-    var ns=function(type){
-      var ret=oldStart.apply(this,arguments);
-      if(type==='seance' || type==='marche'){
-        setTimeout(function(){ openSquadSharePrompt(type==='marche'?'session_start':'session_start',{title:type==='marche'?'Je lance une marche / course':'Je démarre ma séance'}); },550);
-      }
-      return ret;
-    };
-    ns._gs5Wrapped=true; window.startSession=ns;
-  }
-
-  var oldLogActivity=window.logActivity;
-  window.logActivity=async function(type,payload){
-    var ret=null;
-    if(typeof oldLogActivity==='function'){ try{ ret=await oldLogActivity.apply(this,arguments); }catch(e){} }
-    if(type==='pr' || type==='record'){
-      setTimeout(function(){ openSquadSharePrompt('record',{title:'Nouveau record',exercise:payload&&payload.ex,value:payload&&payload.charge}); },300);
-    }
-    return ret;
-  };
-
-  window.toggleReaction=async function(activityId,reactionKey){
-    if(!activityId) return;
-    st().myReactions=st().myReactions||{};
-    if(st().myReactions[activityId]===reactionKey) delete st().myReactions[activityId];
-    else st().myReactions[activityId]=reactionKey;
-    sv2(); vib2([20]);
     try{
-      var sup=db(), user=me();
-      if(sup && user){
-        var ar=await sup.from('activity').select('user_id,user_name').eq('id',activityId).single();
-        var target=ar.data&&ar.data.user_id;
-        if(target && target!==user.id){
-          await sup.from('activity_reactions').upsert({activity_id:activityId,user_id:user.id,reaction:reactionKey,created_at:new Date().toISOString()},{onConflict:'activity_id,user_id'});
-          await createNotification(target,'reaction',{name:profileName(),username:profileUsername(),avatar:profileAvatar(),reaction:reactionKey==='fire'?'🔥':reactionKey==='check'?'✅':reactionKey==='party'?'🥳':'💪'},user.id,activityId);
-        }
-      }
-    }catch(e){}
-    try{ if(typeof window.loadFriendsFeed==='function') window.loadFriendsFeed(); }catch(e){}
-    try{ if(typeof window.renderAccueil==='function') window.renderAccueil(); }catch(e){}
+      var res=await window._supa.auth.signInWithPassword({email:email,password:pass});
+      try{setAuthLoading(false)}catch(e){}
+      if(res.error){try{authShowErr('Email / username ou mot de passe incorrect.')}catch(e){} return;}
+      await afterAuth(res.data.user);
+    }catch(e){try{setAuthLoading(false);authShowErr('Erreur connexion : '+e.message)}catch(_){} }
   };
 
-  window.openFriendProfile=function(u){
-    installCss();
-    u=u||{};
-    var d=u._fullData || u.data || {};
-    var scores=(d.eliteScores&&d.eliteScores.aggregate) || {goat:0,force:0,volume:0,endurance:0,exercise_count:0,top:[]};
-    var name=u.display_name||u.name||(d.profil&&d.profil.name)||'Athlète';
-    var username=u.username||'';
-    var avatar=u.avatar||(d.profil&&d.profil.avatar)||'';
-    var t=tier(scores.goat||0);
-    var ov=qs('friend-ov'), body=qs('friend-profile-body');
-    if(!ov || !body) return;
-    body.innerHTML='<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">'+avatarHtml(name,avatar,'gs5-av')+'<div style="flex:1"><div style="font-size:28px;font-weight:1000;letter-spacing:-.06em;color:var(--txt)">'+safe(name)+'</div>'+(username?'<div style="font-size:13px;color:var(--acc);font-weight:800">@'+safe(username)+'</div>':'')+'<div class="gs5-tier">'+t.emoji+' '+t.name+'</div></div></div><div class="gs5-grid"><div class="gs5-mini"><b>'+Math.round(scores.goat||0)+'</b><span>GOAT</span></div><div class="gs5-mini"><b>'+Math.round(scores.force||0)+'</b><span>Force</span></div><div class="gs5-mini"><b>'+Math.round(scores.volume||0)+'</b><span>Volume</span></div></div><div class="gs5-grid"><div class="gs5-mini"><b>'+Math.round(scores.endurance||0)+'</b><span>Endurance</span></div><div class="gs5-mini"><b>'+((d.journal&&Object.keys(d.journal).filter(function(k){return d.journal[k]&&d.journal[k].seanceDone;}).length)||0)+'</b><span>Séances</span></div><div class="gs5-mini"><b>'+(d.xp||u.xp||0)+'</b><span>XP</span></div></div><div class="gs5-sec">Records publics</div>'+((scores.top&&scores.top.length)?scores.top.slice(0,5).map(function(r,idx){return '<div class="gs5-card"><div class="gs5-row"><div class="gs5-rank">'+rankIcon(idx)+'</div><div class="gs5-info"><div class="gs5-name">'+safe(r.exercise_name)+'</div><div class="gs5-sub">1RM ~'+(r.best_1rm||0)+'kg · '+(r.best_reps||0)+' reps</div></div><div class="gs5-val">'+(r.goat||0)+'</div></div></div>';}).join(''):'<div class="gs5-empty"><b>Aucun record public</b><span>Ses performances apparaîtront ici quand il aura loggé ses sets.</span></div>')+'<div class="gs5-sec">Activité récente</div><div id="gs5-friend-feed"><div class="gs5-empty" style="padding:20px"><b>Chargement…</b></div></div>';
-    ov.classList.add('open');
-    if(db()&&u.id){
-      db().from('activity').select('*').eq('user_id',u.id).order('created_at',{ascending:false}).limit(12).then(function(res){
-        var el=qs('gs5-friend-feed'); if(!el)return;
-        var items=res.data||[];
-        if(!items.length){el.innerHTML='<div class="gs5-empty" style="padding:20px"><b>Aucune activité récente</b></div>';return;}
-        if(typeof window.renderFeedItem==='function') el.innerHTML=items.map(function(a){return window.renderFeedItem(a);}).join('');
-        else el.innerHTML=items.map(function(a){return '<div class="gs5-card"><div class="gs5-name">'+safe(a.type||'Activité')+'</div><div class="gs5-sub">'+relDate(a.created_at)+'</div></div>';}).join('');
-      });
+  // Robust user search modal — fixes undefined index, searches username/display/email if allowed.
+  window.searchUsersModal=function(query){
+    var el=$('search-modal-results'); if(!el)return;
+    query=(query||'').trim();
+    if(query.length<2){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--mut);font-size:13px">Tape au moins 2 caractères</div>';return;}
+    el.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);font-size:13px">Recherche...</div>';
+    clearTimeout(window._searchModalTimeout);
+    window._searchModalTimeout=setTimeout(async function(){
+      if(!window._supa||!window._supaUser){el.innerHTML='<div style="background:rgba(143,185,255,.08);border:1px solid rgba(143,185,255,.18);border-radius:18px;padding:18px;text-align:center;margin:8px 0"><b>Compte requis</b><div style="font-size:13px;color:var(--mut);margin:8px 0 14px">Connecte-toi pour chercher un utilisateur.</div><button type="button" onclick="document.getElementById(\'auth-screen\').style.display=\'flex\';authShowView&&authShowView(\'login\')" style="padding:11px 20px;border-radius:99px;background:var(--txt);color:#071018;font-weight:900;border:none">Connexion</button></div>';return;}
+      try{
+        var q=query.replace(/^@/,'').toLowerCase();
+        var res=await window._supa.from('profiles').select('id,username,display_name,email,data').or('username.ilike.%'+q+'%,display_name.ilike.%'+q+'%,email.ilike.%'+q+'%').neq('id',window._supaUser.id).limit(20);
+        var users=res.data||[];
+        if(!users.length){el.innerHTML='<div style="color:var(--mut);font-size:13px;padding:24px;text-align:center">Aucun utilisateur trouvé.<br><span style="font-size:12px">Vérifie le @username ou demande-lui de compléter son profil.</span></div>';return;}
+        var myReqs=[], incoming=[];
+        try{myReqs=(await window._supa.from('friend_requests').select('to_id,status').eq('from_id',window._supaUser.id)).data||[];}catch(e){}
+        try{incoming=(await window._supa.from('friend_requests').select('from_id,status').eq('to_id',window._supaUser.id).eq('status','pending')).data||[];}catch(e){}
+        var friendIds=(S().friends||[]).map(function(f){return f.id;});
+        el.innerHTML=users.map(function(u,i){
+          var data=u.data||{}, prof=data.profil||{};
+          var name=u.display_name||prof.name||u.username||'Utilisateur';
+          var isFriend=friendIds.indexOf(u.id)>=0;
+          var sent=myReqs.find(function(r){return r.to_id===u.id && r.status==='pending'});
+          var inc=incoming.find(function(r){return r.from_id===u.id});
+          var btn=isFriend?'Ami':(inc?'Accepter':(sent?'Envoyé':'Ajouter'));
+          var cls=(isFriend||sent)?'ucard-btn sent':'ucard-btn';
+          var disabled=(isFriend||sent)?'disabled':'';
+          window['_gs_user_'+i]={id:u.id,name:name,username:u.username||'',data:data};
+          return '<div class="ucard" style="margin-bottom:8px;cursor:pointer" onclick="if(typeof openFriendProfile===\'function\')openFriendProfile(window._gs_user_'+i+')">'
+            +'<div class="ucard-av">'+(prof.avatar?'<img src="'+E(prof.avatar)+'" style="width:100%;height:100%;object-fit:cover">':E(name.charAt(0).toUpperCase()))+'</div>'
+            +'<div style="flex:1;min-width:0"><div class="ucard-name">'+E(name)+'</div><div class="ucard-sub">'+(u.username?'@'+E(u.username):'username non renseigné')+'</div></div>'
+            +'<button class="'+cls+'" '+disabled+' onclick="event.stopPropagation();'+(inc?'respondFriendRequestByUser&&respondFriendRequestByUser(\''+u.id+'\',\'accepted\')':'sendFriendRequest(\''+u.id+'\',\''+E(name).replace(/&#39;/g,"\\'")+'\',this)')+'">'+btn+'</button></div>';
+        }).join('');
+      }catch(e){el.innerHTML='<div style="color:var(--red);font-size:13px;padding:12px">Erreur recherche : '+E(e.message)+'</div>';}
+    },250);
+  };
+  window.searchUsers=window.searchUsers||function(q){ if(typeof searchUsersModal==='function')searchUsersModal(q); };
+
+  // Session renderer — XP visible, no Focus, start at bottom, validate near exercise, YT + TT links, arrows restored.
+  window.renderSeance=function(){
+    if(typeof brand==='function')brand();
+    var panel=$('p-seance'); if(!panel)return;
+    var d=curDay(); var days=getDays(); window.cDay=Math.max(0,Math.min(window.cDay||0,days.length-1));
+    if((window.cEx||0)>=(d.exercises||[]).length)window.cEx=0;
+    S().checks=S().checks||{}; var checks=S().checks[window.cDay]||{};
+    var total=(d.exercises||[]).length||0, done=(d.exercises||[]).filter(function(_,i){return checks[i]}).length, pct=total?Math.round(done/total*100):0;
+    var ex=(d.exercises||[])[window.cEx||0]||{n:'Repos actif',s:'Aucune séance prévue',note:'Ajoute un exercice ou une activité sportive.'}; var exDone=!!checks[window.cEx||0];
+    var sessions=typeof getTotalSess==='function'?getTotalSess():(S().sessions||0);
+    panel.innerHTML='<div class="gs-page session-page">'
+      +'<section class="gs-hero session-hero"><div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'
+      +'<button type="button" onclick="selDay('+(window.cDay-1)+')" style="width:38px;height:38px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:'+(window.cDay>0?'var(--txt)':'rgba(255,255,255,.18)')+';font-size:18px" '+(window.cDay===0?'disabled':'')+'>←</button>'
+      +'<div style="flex:1;text-align:center"><div style="font-size:11px;font-weight:1000;text-transform:uppercase;letter-spacing:.1em;color:var(--acc)">'+E(d.type||'Séance')+'</div><div style="font-size:17px;font-weight:1000;color:var(--txt);letter-spacing:-.03em">'+E(d.name||'Programme')+'<span style="font-size:11px;color:var(--mut);font-weight:700"> · '+((window.cDay||0)+1)+'/'+Math.max(days.length,1)+'</span></div></div>'
+      +'<button type="button" onclick="selDay('+(window.cDay+1)+')" style="width:38px;height:38px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:'+(window.cDay<days.length-1?'var(--txt)':'rgba(255,255,255,.18)')+';font-size:18px" '+(window.cDay===days.length-1?'disabled':'')+'>→</button></div>'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><p class="gs-sub" style="margin:0">'+done+'/'+total+' exercices · '+E(d.dur||'')+'</p><button class="gs-btn ghost" onclick="openActivityModal('+(window.cDay||0)+')">+ Activité</button></div>'
+      +'<div class="gs-metric-grid"><div class="gs-metric"><b id="h-streak">'+(typeof getRealStreak==='function'?getRealStreak():0)+'</b><span>Streak</span></div><div class="gs-metric"><b>'+sessions+'</b><span>Séances</span></div><div class="gs-metric"><b id="h-xp">'+(S().xp||0)+'</b><span>XP</span></div></div><div class="gs-progress"><i id="bpfill" style="width:'+pct+'%"></i></div></section>'
+      +'<div class="gs-dots" id="exnav">'+(d.exercises||[]).map(function(_,i){return '<button class="gs-dot '+(checks[i]?'done ':'')+(i===(window.cEx||0)?'cur':'')+'" onclick="jumpEx('+i+')">'+(checks[i]?'✓':i+1)+'</button>';}).join('')+'</div>'
+      +'<section class="focus-card '+(exDone?'dim':'')+'" id="hero"><div class="gs-ex-top"><div><div class="focus-index" id="exnum">'+E(exLabel(ex))+' '+((window.cEx||0)+1)+' / '+total+'</div><h2 class="focus-name" id="extitle">'+E(ex.n)+'</h2></div><button class="gs-validate-inline '+(exDone?'done':'')+'" onclick="markDone()">'+(exDone?'✓ Validé':'Valider')+'</button></div><div class="focus-sets" id="exsets">'+E(ex.s||'')+'</div>'+(ex.note?'<div id="exnote" style="margin-top:14px;color:#4B5664;font-size:14px;line-height:1.45;font-weight:800">'+E(ex.note)+'</div>':'<div id="exnote" style="display:none"></div>')
+      +'<div class="focus-actions"><a class="gs-link-pill" id="exyt" href="'+E(yt(ex))+'" target="_blank">YouTube</a><a class="gs-link-pill" id="extt" href="'+E(tt(ex))+'" target="_blank">TikTok</a><button onclick="toggleML()">Log un set</button></div><div class="gs-minilog" id="minilog"><div class="mlrow"><input id="ml-c" class="mlinp" type="number" placeholder="Charge kg" inputmode="decimal"><input id="ml-r" class="mlinp" type="number" placeholder="Reps" inputmode="numeric"></div><button class="mlsave" onclick="saveML()">Enregistrer</button></div></section>'
+      +'<div class="gs-session-arrows"><button onclick="prevEx()">← Exercice précédent</button><button onclick="nextEx()">Exercice suivant →</button></div>'
+      +'<section class="rest-card"><div><div class="rest-label">Timer repos</div><div class="gs-card-sub">Garde le rythme.</div></div><div class="timer-dig" id="tdisp">00:00</div><div class="rest-controls"><button class="tb go" id="tstart" onclick="tToggle()">▶</button><button class="tb" onclick="tReset()">↺</button><button class="tb" onclick="tSet(60)">1m</button><button class="tb" onclick="tSet(90)">90s</button><button class="tb" onclick="tSet(180)">3m</button></div><div class="rest-custom"><input id="tmin" class="tinp" type="number" placeholder="min" inputmode="numeric"><input id="tsec" class="tinp" type="number" placeholder="sec" inputmode="numeric"><button class="tb go" onclick="tCustom()">Go</button></div></section>'
+      +'<div class="gs-session-start-bottom"><button id="start-sess-btn" class="gs-start-wide" onclick="startSession(\'seance\')">'+icon('play')+' Start séance</button></div></div>';
+    if(typeof tDraw==='function')tDraw();
+  };
+
+  // Activity can be inserted into a program day / current session.
+  window.openActivityModal=function(di){
+    di=(di==null?window.cDay:di)||0; var old=$('gs-activity-modal'); if(old)old.remove();
+    var html='<div id="gs-activity-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2600;display:flex;align-items:flex-end" onclick="if(event.target===this)this.remove()"><div style="width:100%;background:var(--sur);border:1px solid var(--brd);border-bottom:0;border-radius:28px 28px 0 0;padding:18px;padding-bottom:calc(env(safe-area-inset-bottom,20px) + 18px)"><div class="gs-card-title">Ajouter une activité sportive</div><div class="gs-card-sub" style="margin:6px 0 14px">Course, marche, vélo, basket, lutte, foot US, boxe… dans ton programme ou ta séance.</div><input id="act-name" class="gs-v2-input" placeholder="ex : Basket, vélo, lutte, rameur"><input id="act-detail" class="gs-v2-input" placeholder="ex : 45 min · intensité moyenne" style="margin-top:8px"><button class="gs-btn" style="width:100%;margin-top:12px" onclick="saveActivityToDay('+di+')">Ajouter au jour</button></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html); setTimeout(function(){var i=$('act-name');if(i)i.focus();},80);
+  };
+  window.saveActivityToDay=function(di){
+    var name=($('act-name')||{}).value||''; name=name.trim(); if(!name){nt('Entre le nom de l’activité');return;}
+    var det=(($('act-detail')||{}).value||'Activité libre').trim(); var days=getDays(); days[di]=days[di]||{name:'Jour',type:'Sport',dur:'',exercises:[]}; days[di].exercises=days[di].exercises||[];
+    days[di].exercises.push({n:name,s:det,note:'Activité sportive ajoutée au programme',activity:true,t:'Sport',yt:'https://www.youtube.com/results?search_query='+encodeURIComponent(name+' entraînement'),tt:'https://www.tiktok.com/search?q='+encodeURIComponent(name+' entraînement')});
+    if(!S().customDays)S().customDays={}; S().customDays[di]=days[di].exercises.map(function(x){return {n:x.n,s:x.s,note:x.note||'',yt:x.yt||'',tt:x.tt||'',activity:!!x.activity,t:x.t||''};}); save(); var ov=$('gs-activity-modal'); if(ov)ov.remove(); if(typeof renderSeance==='function')renderSeance(); if(typeof renderProgBody==='function')renderProgBody(); nt('Activité ajoutée');
+  };
+
+  // Program calculator.
+  window.openProgramCalculator=function(){
+    var old=$('gs-program-calc-ov'); if(old)old.remove(); var p=S().profil||{};
+    var html='<div id="gs-program-calc-ov" style="position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:2600;display:flex;align-items:flex-end" onclick="if(event.target===this)this.remove()"><div style="width:100%;background:var(--sur);border:1px solid var(--brd);border-bottom:0;border-radius:28px 28px 0 0;padding:18px;padding-bottom:calc(env(safe-area-inset-bottom,20px) + 18px)"><div class="gs-card-title">Calculateur Programme</div><div class="gs-card-sub" style="margin:6px 0 14px">Génère une base selon ton objectif, ton niveau et ta fréquence.</div><div class="gs-v2-grid"><select id="calc-obj" class="gs-v2-select"><option value="perte">Perte de gras</option><option value="maintien">Maintien</option><option value="prise">Prise de muscle</option></select><select id="calc-level" class="gs-v2-select"><option value="debutant">Débutant</option><option value="intermediaire">Intermédiaire</option><option value="avance">Avancé</option></select><input id="calc-freq" class="gs-v2-input" type="number" min="2" max="6" value="'+E(p.frequency||4)+'" placeholder="Séances/sem"><select id="calc-split" class="gs-v2-select"><option value="ppl">PPL</option><option value="upperlower">Upper / Lower</option><option value="fullbody">Full body</option></select></div><button class="gs-btn" style="width:100%;margin-top:12px" onclick="applyProgramCalculator()">Créer le programme</button></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html); var o=$('calc-obj'); if(o)o.value=p.objectif||'maintien'; var l=$('calc-level'); if(l)l.value=p.level||'intermediaire';
+  };
+  window.applyProgramCalculator=function(){
+    var obj=($('calc-obj')||{}).value||'maintien', freq=parseInt(($('calc-freq')||{}).value)||4, split=($('calc-split')||{}).value||'ppl';
+    S().profil=S().profil||{}; S().profil.objectif=obj; S().profil.frequency=freq; S().profil.split=split; save();
+    var ov=$('gs-program-calc-ov'); if(ov)ov.remove(); if(typeof renderProgBody==='function')renderProgBody(); nt('Programme recalculé');
+  };
+
+  // Patch renderProgBody: prepend calculator button/card.
+  var oldRenderProg=window.renderProgBody;
+  window.renderProgBody=function(){
+    if(typeof oldRenderProg==='function')oldRenderProg(); var el=$('fl-prog-body'); if(!el)return;
+    if(!el.querySelector('.gs-program-calc')){
+      el.insertAdjacentHTML('afterbegin','<div class="gs-program-calc"><div class="gs-card-title">Calculateur Programme</div><div class="gs-card-sub">Pas là ? Lance le calculateur pour adapter objectif, fréquence et split.</div><button onclick="openProgramCalculator()">Ouvrir le calculateur</button></div>');
     }
   };
 
-  function installQuickGymButton(){
-    var oldOpen=window.openQuickAction;
-    if(typeof oldOpen==='function' && !oldOpen._gs5Gym){
-      var fn=function(){
-        oldOpen.apply(this,arguments);
-        setTimeout(function(){
-          var ov=qs('quick-action-ov');
-          if(!ov || qs('gs5-gym-arrival')) return;
-          var grid=ov.querySelector('.gs-menu-grid');
-          if(grid){
-            var btn=document.createElement('button');
-            btn.id='gs5-gym-arrival'; btn.className='gs-menu-btn'; btn.type='button';
-            btn.setAttribute('onclick',"document.getElementById('quick-action-ov').remove();openSquadSharePrompt('session_start',{title:'Je suis à la salle'})");
-            btn.innerHTML='<span class="gs-menu-logo">📍</span><span><span class="gs-menu-title">Je suis à la salle</span><span class="gs-menu-sub">Prévenir ta Squad</span></span>';
-            grid.insertBefore(btn,grid.firstChild);
-          }
-        },40);
-      };
-      fn._gs5Gym=true; window.openQuickAction=fn;
-    }
+  // Touch/drag reorder for program edit overlay.
+  window._gsReorderMode=false;
+  function installDragList(di){
+    var d=getDays()[di]; if(!d||!$('edit-ov'))return;
+    var ov=$('edit-ov');
+    var html='<div class="gs-reorder-toolbar"><div class="gs-reorder-copy">'+(window._gsReorderMode?'Mode modification : maintiens une carte puis glisse-la.':'Appuie sur Modifier pour déplacer les exercices au doigt.')+'</div><button class="gs-reorder-btn '+(window._gsReorderMode?'on':'')+'" onclick="gsToggleEditDrag('+di+')">'+(window._gsReorderMode?'Terminer':'Modifier')+'</button></div><div class="gs-drag-list" id="gs-edit-drag-list">'+(d.exercises||[]).map(function(ex,i){return '<div class="gs-drag-item '+(window._gsReorderMode?'edit':'')+'" data-i="'+i+'" '+(window._gsReorderMode?'onpointerdown="gsDragEditStart(event,this,'+di+')"':'')+'><div class="gs-drag-main"><div class="gs-drag-grip">'+(window._gsReorderMode?'☰':(i+1))+'</div><div style="flex:1;min-width:0"><div class="gs-drag-title">'+E(ex.n)+'</div><div class="gs-drag-meta">'+E(ex.s||'3 x 10-12 reps')+'</div></div></div><div class="gs-drag-actions"><button class="gs-mini-btn" onclick="event.stopPropagation();openExoEditModal('+di+','+i+')">Modifier séries</button><button class="gs-mini-btn danger" onclick="event.stopPropagation();removeExoFromDay('+di+','+i+');editDay('+di+')">×</button></div></div>';}).join('')+'</div><button class="gs-btn ghost" style="width:100%;margin-top:8px" onclick="openActivityModal('+di+')">+ Ajouter une activité sportive</button>';
+    var firstCard=ov.querySelector('.card');
+    if(firstCard){ov.querySelectorAll('.card').forEach(function(c){c.remove();}); var saveBtn=Array.from(ov.querySelectorAll('button')).find(function(b){return /SAUVEGARDER/.test(b.textContent)}); ov.querySelector('div[style*="margin-bottom:14px"]').insertAdjacentHTML('afterend',html); if(saveBtn)saveBtn.style.display='none';}
   }
+  var oldEditDay=window.editDay;
+  window.editDay=function(di){ if(typeof oldEditDay==='function')oldEditDay(di); setTimeout(function(){installDragList(di);},0); };
+  window.gsToggleEditDrag=function(di){window._gsReorderMode=!window._gsReorderMode; installDragList(di);};
+  var drag=null;
+  window.gsDragEditStart=function(ev,el,di){
+    if(!window._gsReorderMode)return; ev.preventDefault(); drag={el:el,di:di,list:el.parentElement}; el.classList.add('dragging'); try{el.setPointerCapture(ev.pointerId)}catch(e){} document.addEventListener('pointermove',gsDragMove); document.addEventListener('pointerup',gsDragEnd,{once:true});
+  };
+  function afterEl(container,y){var els=[].slice.call(container.querySelectorAll('.gs-drag-item:not(.dragging)')); return els.reduce(function(closest,child){var box=child.getBoundingClientRect();var offset=y-box.top-box.height/2; if(offset<0 && offset>closest.offset)return {offset:offset,element:child}; return closest;},{offset:-Infinity,element:null}).element;}
+  window.gsDragMove=function(ev){if(!drag)return; ev.preventDefault(); var after=afterEl(drag.list,ev.clientY); if(after==null)drag.list.appendChild(drag.el); else drag.list.insertBefore(drag.el,after);};
+  window.gsDragEnd=function(){
+    if(!drag)return; document.removeEventListener('pointermove',gsDragMove); var days=getDays(), d=days[drag.di]; var order=[].slice.call(drag.list.querySelectorAll('.gs-drag-item')).map(function(x){return parseInt(x.getAttribute('data-i'),10)}); d.exercises=order.map(function(i){return d.exercises[i];}); if(!S().customDays)S().customDays={}; S().customDays[drag.di]=d.exercises.map(function(x){return {n:x.n,s:x.s,note:x.note||'',yt:x.yt||'',tt:x.tt||'',activity:!!x.activity,t:x.t||''};}); save(); drag.el.classList.remove('dragging'); drag=null; installDragList((window.cDay||0)); nt('Ordre modifié'); if(typeof renderSeance==='function')renderSeance();
+  };
 
-  function boot(){
-    installCss();
-    ensureNotifBell();
-    wrapLogFunction('saveML');
-    wrapLogFunction('saveLog');
-    installQuickGymButton();
-    try{ G.computeLocalScores(); }catch(e){}
-    setTimeout(function(){ syncScoresToSupabase(); loadFriendState(); updateNotifDot(); },900);
-    setInterval(updateNotifDot,30000);
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  // Open hamburger patch: scrollable and better gym logos. Rebuild after old function.
+  var oldHam=window.openHamburger;
+  window.openHamburger=function(){
+    if(typeof oldHam==='function')oldHam();
+    var sh=$('more-sh'); if(!sh)return;
+    sh.style.maxHeight='86vh'; sh.style.overflowY='auto'; sh.style.webkitOverflowScrolling='touch';
+    var p=S().profil||{}, gyms=p.gyms||[];
+    var gymBlock='<div class="gs-menu-section">Salles de sport</div><div class="gs-menu-grid"><button class="gs-menu-btn" onclick="closeHamburger();showNearestGyms&&showNearestGyms()"><span class="gs-menu-logo">📍</span><span><span class="gs-menu-title">Trouver une salle près de moi</span><span class="gs-menu-sub">Maps selon tes salles sélectionnées</span></span></button>'+
+      (gyms.length?gyms.map(function(k){var g=window.GS_GYMS[k]||window.GS_GYMS.autre;return '<button class="gs-menu-btn" onclick="closeHamburger();navigateToGym&&navigateToGym(\''+k+'\')">'+window.gsGymLogo(k)+'<span><span class="gs-menu-title">'+E(g.name)+'</span><span class="gs-menu-sub">'+E(g.sub)+'</span></span></button>';}).join(''):'<button class="gs-menu-btn" onclick="closeHamburger();openProfilSettings&&openProfilSettings()"><span class="gs-menu-logo">+</span><span><span class="gs-menu-title">Ajouter mes salles</span><span class="gs-menu-sub">Basic-Fit, Fitness Park, autre…</span></span></button>')+'</div>';
+    if(!sh.innerHTML.includes('Salles de sport'))sh.insertAdjacentHTML('beforeend',gymBlock);
+  };
 
+  // Profile patch with gym logos + avatar + counts.
+  var oldProfil=window.openProfil;
+  window.openProfil=function(){
+    if(typeof oldProfil==='function')oldProfil();
+    setTimeout(function(){
+      var p=S().profil||{}; var top=document.querySelector('.gs-profile-top .gs-card-sub'); if(top){var sports=(p.sports&&p.sports.length)?' · '+p.sports.join(', '):''; top.innerHTML=gymChips(p.gyms||[])+sports;}
+      var av=document.querySelector('.gs-avatar'); if(av){av.setAttribute('onclick','changeAvatar()'); if(!$('avatar-input'))av.insertAdjacentHTML('afterend','<input type="file" id="avatar-input" accept="image/*" style="display:none" onchange="saveAvatar(event)">');}
+      renderProfilSocialCounts();
+    },0);
+  };
+
+  // Settings patch: add gym selector list if missing.
+  var oldSettings=window.openProfilSettings;
+  window.openProfilSettings=function(){
+    if(typeof oldSettings==='function')oldSettings();
+    setTimeout(function(){
+      var ov=$('profile-settings-v1'); if(!ov||$('gs-settings-gyms'))return; var p=S().profil||{};
+      var html='<div class="gs-card" id="gs-settings-gyms"><div class="gs-card-title">Salles de sport</div><div class="gs-card-sub" style="margin:6px 0 12px">Sélectionne tes salles pour le profil et le menu.</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+Object.keys(window.GS_GYMS).map(function(k){var g=window.GS_GYMS[k]; var on=(p.gyms||[]).indexOf(k)>=0; return '<button type="button" class="gs-ob-option '+(on?'sel':'')+'" data-gym-set="'+k+'" onclick="gsToggleProfileGym(\''+k+'\')">'+window.gsGymLogo(k,true)+' <span style="display:inline-block;margin-left:8px;color:inherit;font-size:13px">'+E(g.name)+'</span></button>';}).join('')+'</div></div>';
+      var saveBtn=ov.querySelector('button.gs-btn[onclick*="saveProfilSettingsV2"]'); if(saveBtn)saveBtn.insertAdjacentHTML('beforebegin',html);
+    },0);
+  };
+  window.gsToggleProfileGym=function(k){S().profil=S().profil||{}; var a=S().profil.gyms=S().profil.gyms||[]; var i=a.indexOf(k); if(i>=0)a.splice(i,1); else a.push(k); var b=document.querySelector('[data-gym-set="'+k+'"]'); if(b)b.classList.toggle('sel'); save();};
+  var oldSaveSettings=window.saveProfilSettingsV2;
+  window.saveProfilSettingsV2=function(){ if(typeof oldSaveSettings==='function')oldSaveSettings(); save(); };
+
+  // Keep focus label away in programme phases.
+  var oldBuild=window.buildPhases;
+  if(oldBuild){window.buildPhases=function(obj){var arr=oldBuild(obj); return arr.map(function(p){p.focusLabel='XP';return p;});};}
+
+  // On load/apply once.
+  setTimeout(function(){try{document.querySelectorAll('#header-logo').forEach(function(x){x.textContent='G-SQUAD';});}catch(e){}},200);
 })();
 </script>
 
-<script type="text/plain" id="gs-supabase-sql">
--- G-SQUAD Elite Ranking + Smart Squad Social
--- À exécuter dans Supabase SQL Editor si les tables n'existent pas encore.
 
-create table if not exists public.performances (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null,
-  exercise_key text not null,
-  exercise_name text not null,
-  bodyweight numeric default 0,
-  external_load numeric default 0,
-  reps int default 0,
-  sets int default 1,
-  total_load numeric default 0,
-  total_volume numeric default 0,
-  estimated_1rm numeric default 0,
-  relative_strength numeric default 0,
-  validation_status text default 'valid',
-  flags text[] default '{}',
-  created_at timestamptz default now()
-);
 
-create table if not exists public.user_exercise_scores (
-  user_id uuid not null,
-  exercise_key text not null,
-  exercise_name text not null,
-  force_score int default 0,
-  volume_score int default 0,
-  endurance_score int default 0,
-  goat_score int default 0,
-  best_1rm numeric default 0,
-  best_relative numeric default 0,
-  best_reps int default 0,
-  best_volume numeric default 0,
-  performance_count int default 0,
-  updated_at timestamptz default now(),
-  primary key(user_id, exercise_key)
-);
-
-create table if not exists public.user_global_scores (
-  user_id uuid primary key,
-  display_name text,
-  username text,
-  avatar_url text,
-  goat_score int default 0,
-  force_score int default 0,
-  volume_score int default 0,
-  endurance_score int default 0,
-  exercise_count int default 0,
-  updated_at timestamptz default now()
-);
-
-create table if not exists public.friend_requests (
-  id uuid primary key default gen_random_uuid(),
-  from_id uuid not null,
-  to_id uuid not null,
-  from_name text,
-  from_username text,
-  from_avatar text,
-  status text default 'pending',
-  created_at timestamptz default now(),
-  unique(from_id,to_id)
-);
-
-create table if not exists public.friendships (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null,
-  friend_id uuid not null,
-  created_at timestamptz default now(),
-  unique(user_id,friend_id)
-);
-
-create table if not exists public.notifications (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null,
-  actor_id uuid,
-  type text not null,
-  status text default 'unread',
-  related_id uuid,
-  payload jsonb default '{}',
-  created_at timestamptz default now()
-);
-
-create table if not exists public.activity_reactions (
-  id uuid primary key default gen_random_uuid(),
-  activity_id uuid not null,
-  user_id uuid not null,
-  reaction text not null,
-  created_at timestamptz default now(),
-  unique(activity_id,user_id)
-);
-
-create index if not exists idx_performances_user_exercise on public.performances(user_id, exercise_key, created_at desc);
-create index if not exists idx_scores_goat on public.user_global_scores(goat_score desc);
-create index if not exists idx_scores_force on public.user_global_scores(force_score desc);
-create index if not exists idx_scores_volume on public.user_global_scores(volume_score desc);
-create index if not exists idx_scores_endurance on public.user_global_scores(endurance_score desc);
-create index if not exists idx_notifications_user_status on public.notifications(user_id, status, created_at desc);
-create index if not exists idx_friend_requests_to_status on public.friend_requests(to_id, status);
-</script>
-
-<script>
-/* G-SQUAD — Gyms + visible leaderboard patch */
+<!-- G-SQUAD HOTFIX V4 — onboarding multi-étapes, icônes, séance/profil clean -->
+<style id="gs-v4-clean-css">
+  #header-logo{font-size:22px!important;letter-spacing:.16em!important;font-weight:1000!important;line-height:1!important;white-space:nowrap}
+  .gs-clean-page{padding:18px 18px 112px;min-height:100%;background:transparent;color:var(--txt)}
+  .gs-clean-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+  .gs-clean-kicker{font-size:11px;font-weight:1000;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:7px}
+  .gs-clean-title{font-size:30px;line-height:1.02;font-weight:1000;letter-spacing:-.055em;margin:0;color:var(--txt)}
+  .gs-clean-sub{font-size:13px;line-height:1.42;color:var(--txt2);margin-top:6px}
+  .gs-icon-btn{width:44px;height:44px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);color:var(--txt);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .gs-soft-card{background:rgba(18,24,33,.86);border:1px solid rgba(255,255,255,.075);border-radius:26px;padding:18px;margin-bottom:12px;box-shadow:0 16px 44px rgba(0,0,0,.16)}
+  .gs-soft-card.done,.gs-ex-card.done{opacity:.48;filter:saturate(.75);background:rgba(18,24,33,.50)}
+  .gs-stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:12px 0}
+  .gs-stat{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.065);border-radius:18px;padding:13px 10px;text-align:left;min-width:0}
+  .gs-stat b{display:block;font-size:22px;font-weight:1000;letter-spacing:-.05em;line-height:1;color:var(--txt)}
+  .gs-stat span{display:block;margin-top:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gs-ex-list{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 14px;scrollbar-width:none}.gs-ex-list::-webkit-scrollbar{display:none}
+  .gs-ex-pill{min-width:42px;height:42px;border-radius:15px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);color:var(--txt2);font-weight:1000;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .gs-ex-pill.current{background:var(--txt);color:#071018;border-color:var(--txt)}.gs-ex-pill.done{background:rgba(115,214,162,.14);color:var(--grn);border-color:rgba(115,214,162,.35)}.gs-ex-pill.logged{background:rgba(143,185,255,.13);color:var(--acc);border-color:rgba(143,185,255,.35)}
+  .gs-ex-card{background:linear-gradient(180deg,rgba(245,243,238,.99),rgba(224,233,246,.96));color:#071018;border-radius:32px;padding:20px;margin-bottom:12px;box-shadow:0 18px 52px rgba(0,0,0,.23);transition:opacity .18s,filter .18s,transform .18s}
+  .gs-ex-card.done{background:linear-gradient(180deg,rgba(111,121,135,.25),rgba(80,90,104,.18));color:var(--txt);border:1px solid rgba(255,255,255,.075);box-shadow:none}
+  .gs-ex-top{display:flex;align-items:flex-start;gap:12px;justify-content:space-between}.gs-ex-index{font-size:11px;font-weight:1000;letter-spacing:.12em;text-transform:uppercase;color:#64707F;margin-bottom:7px}.gs-ex-card.done .gs-ex-index{color:var(--mut)}
+  .gs-ex-name{font-size:33px;line-height:.98;letter-spacing:-.065em;font-weight:1000;margin:0;word-break:break-word}.gs-ex-sets{font-size:16px;color:#3C4654;font-weight:900;margin-top:9px}.gs-ex-card.done .gs-ex-sets{color:var(--txt2)}
+  .gs-ex-note{font-size:13px;line-height:1.45;color:#506070;margin-top:10px}.gs-ex-card.done .gs-ex-note{color:var(--txt2)}
+  .gs-validate-mini{border:0;border-radius:999px;background:#071018;color:white;font-weight:1000;padding:11px 14px;white-space:nowrap}.gs-ex-card.done .gs-validate-mini{background:rgba(115,214,162,.14);color:var(--grn);border:1px solid rgba(115,214,162,.28)}
+  .gs-ex-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.gs-ex-actions a,.gs-ex-actions button{border-radius:999px;border:1px solid rgba(7,16,24,.10);background:rgba(7,16,24,.065);color:#071018;font-weight:1000;font-size:13px;padding:10px 13px;text-decoration:none}.gs-ex-card.done .gs-ex-actions a,.gs-ex-card.done .gs-ex-actions button{border-color:rgba(255,255,255,.08);background:rgba(255,255,255,.045);color:var(--txt)}
+  .gs-log-box{display:none;margin-top:14px;background:rgba(7,16,24,.08);border-radius:20px;padding:12px}.gs-log-box.open{display:block}.gs-log-box input{min-width:0;flex:1;border:1px solid rgba(7,16,24,.10);background:rgba(255,255,255,.72);border-radius:14px;padding:12px;color:#071018;font-size:15px}.gs-log-box button{width:100%;margin-top:8px;border:0;border-radius:14px;background:#071018;color:white;font-weight:1000;padding:13px}
+  .gs-session-nav{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0 18px}.gs-session-nav button{border-radius:18px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);color:var(--txt);font-weight:1000;padding:14px}.gs-session-nav button:disabled{opacity:.35}
+  .gs-start-bottom{position:sticky;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:10;background:rgba(7,10,14,.76);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:10px;margin-top:18px}.gs-start-bottom button{width:100%;border:0;border-radius:18px;background:var(--txt);color:#071018;font-weight:1000;padding:17px;font-size:15px}
+  .gs-profile-clean{min-height:100%;padding:calc(env(safe-area-inset-top,12px) + 12px) 18px 42px;background:var(--bg);color:var(--txt)}
+  .gs-prof-top{display:grid;grid-template-columns:102px 1fr;gap:18px;align-items:center;margin:18px 0}.gs-prof-avatar{width:102px;height:102px;border-radius:34px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.075);display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:1000;position:relative;overflow:hidden}.gs-prof-avatar img{width:100%;height:100%;object-fit:cover}.gs-prof-plus{position:absolute;right:7px;bottom:7px;width:32px;height:32px;border-radius:99px;background:var(--txt);color:#071018;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:1000;box-shadow:0 10px 25px rgba(0,0,0,.3)}
+  .gs-prof-name{font-size:34px;font-weight:1000;letter-spacing:-.065em;line-height:1;margin:0}.gs-prof-user{color:var(--acc);font-weight:900;margin-top:7px;font-size:14px}.gs-prof-meta{color:var(--txt2);font-size:13px;line-height:1.35;margin-top:9px}
+  .gs-prof-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}.gs-prof-stat{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:15px 8px;text-align:center}.gs-prof-stat b{display:block;color:var(--acc);font-size:24px;font-weight:1000;letter-spacing:-.04em}.gs-prof-stat span{display:block;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;margin-top:5px}
+  .gs-chipline{display:flex;gap:8px;flex-wrap:wrap}.gs-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);border-radius:999px;padding:8px 11px;color:var(--txt2);font-size:12px;font-weight:900}.gs-chip i{width:9px;height:9px;border-radius:999px;display:inline-block;background:var(--acc)}
+  .gs-profile-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.gs-profile-action-grid button{border-radius:18px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);color:var(--txt);font-weight:1000;padding:14px}.gs-profile-action-grid button.primary{background:var(--txt);color:#071018;border-color:var(--txt)}
+  .gs-onboard-v4{position:fixed;inset:0;z-index:10005;background:radial-gradient(circle at 50% -8%,#172235 0%,#070A0E 48%,#05070A 100%);color:var(--txt);display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,20px) + 18px) 22px 28px;overflow:auto}.gs-onboard-box{width:100%;max-width:430px;margin:0 auto}.gs-onboard-logo{font-size:24px;font-weight:1000;letter-spacing:.18em;text-align:center;margin:4px 0 22px}.gs-onboard-progress{display:flex;gap:5px;margin-bottom:24px}.gs-onboard-progress i{height:3px;flex:1;border-radius:99px;background:rgba(255,255,255,.10)}.gs-onboard-progress i.on{background:var(--acc)}.gs-onboard-title{font-size:34px;line-height:1.02;font-weight:1000;letter-spacing:-.065em;margin-bottom:8px}.gs-onboard-sub{font-size:14px;color:var(--txt2);line-height:1.45;margin-bottom:20px}.gs-onboard-input,.gs-onboard-select{width:100%;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.055);border-radius:20px;padding:17px 16px;color:var(--txt);font-size:16px;margin-bottom:10px}.gs-onboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.gs-onboard-choice{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);border-radius:22px;padding:16px;text-align:left;color:var(--txt);font-weight:1000}.gs-onboard-choice.sel{border-color:rgba(143,185,255,.55);background:rgba(143,185,255,.14)}.gs-onboard-choice span{display:block;font-size:12px;color:var(--txt2);font-weight:700;margin-top:5px;line-height:1.35}.gs-onboard-actions{display:flex;gap:10px;margin-top:18px}.gs-onboard-actions button{flex:1;border-radius:18px;border:1px solid rgba(255,255,255,.08);padding:16px;font-weight:1000;background:rgba(255,255,255,.045);color:var(--txt)}.gs-onboard-actions button.primary{background:var(--txt);color:#071018;border-color:var(--txt)}.gs-onboard-skip{width:100%;background:transparent;border:0;color:var(--mut);font-weight:900;margin-top:12px;padding:12px}
+  .gs-icon-emoji{font-size:22px;line-height:1}.gs-menu-logo .gs-icon-emoji,.priority-ico .gs-icon-emoji{font-size:24px}
+  .gs-menu-btn>span:last-child{display:flex!important;flex-direction:column!important;gap:3px!important;min-width:0!important}.gs-menu-title{display:block!important;line-height:1.15!important}.gs-menu-sub{display:block!important;line-height:1.28!important;white-space:normal!important}
+  @media(max-width:380px){#header-logo{font-size:19px!important}.gs-ex-name{font-size:28px}.gs-stat-row,.gs-prof-stats{gap:7px}.gs-stat span,.gs-prof-stat span{font-size:9px}.gs-onboard-title{font-size:30px}}
+</style>
+<script id="gs-v4-clean-js">
 (function(){
-  'use strict';
-  var GYMS = [
-    {id:'basicfit',name:'Basic-Fit',short:'Basic-Fit',hint:'Machines, poulies, haltères',color:'#FF7A1A',emoji:'🟠'},
-    {id:'fitnesspark',name:'Fitness Park',short:'Fitness Park',hint:'Plateau libre, machines, charges',color:'#43B02A',emoji:'🟢'},
-    {id:'keepcool',name:'Keep Cool',short:'Keep Cool',hint:'Reprise, coaching simple',color:'#C8006A',emoji:'🟣'},
-    {id:'onair',name:'On Air Fitness',short:'On Air',hint:'Performance, machines, zone libre',color:'#E11D48',emoji:'🔴'},
-    {id:'neoness',name:'Neoness',short:'Neoness',hint:'Fitness urbain, cours et plateau',color:'#B6FF00',emoji:'🟩'},
-    {id:'orangebleue',name:"L'Orange Bleue",short:"L'Orange Bleue",hint:'Coaching, machines, cours',color:'#2F80ED',emoji:'🔵'},
-    {id:'magicform',name:'Magic Form',short:'Magic Form',hint:'Muscu, cardio, cours',color:'#F59E0B',emoji:'🟡'},
-    {id:'gigafit',name:'Gigafit',short:'Gigafit',hint:'Plateau muscu et cardio',color:'#F97316',emoji:'🟧'},
-    {id:'onefitness',name:'One Fitness Club',short:'One Fitness',hint:'Salle complète et machines',color:'#8FB9FF',emoji:'⚪'},
-    {id:'cmg',name:'CMG Sports Club',short:'CMG',hint:'Club premium, cours, plateau',color:'#94A3B8',emoji:'⚫'},
-    {id:'foresthill',name:'Forest Hill',short:'Forest Hill',hint:'Club sport, tennis, fitness',color:'#22C55E',emoji:'🌲'},
-    {id:'anytimefitness',name:'Anytime Fitness',short:'Anytime',hint:'Accès 24/7 selon club',color:'#7C3AED',emoji:'🕘'},
-    {id:'home',name:'Maison / Home gym',short:'Maison',hint:'Poids du corps, haltères, élastiques',color:'#A7B0BC',emoji:'🏠'},
-    {id:'autre',name:'Autre salle',short:'Autre',hint:'Salle indépendante ou autre chaîne',color:'#64707F',emoji:'➕'}
-  ];
-  window.GS_GYM_CATALOG = GYMS;
+  function $(id){return document.getElementById(id)}
+  function st(){return window.state||(window.state={})}
+  function esc(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}
+  function save(){try{if(typeof sv==='function')sv();else localStorage.setItem('gsquad_state_v1',JSON.stringify(st()))}catch(e){}}
+  function toast(t){try{if(typeof notify==='function')notify(t);else if(typeof nt==='function')nt(t)}catch(e){}}
+  function icon(name){var map={home:'🏠',session:'⚡',workout:'🏋️',nutrition:'🍽️',walk:'🚶',run:'🏃',bike:'🚴',program:'📈',rank:'🏆',bell:'🔔',exercise:'💪',gym:'📍',profile:'👤',settings:'⚙️',music:'🎧',squad:'👥',search:'🔎',photo:'📷',xp:'✨',validate:'✅',tiktok:'🎵',youtube:'▶️',logout:'↩️',calc:'🧮',scale:'⚖️',height:'📏',goal:'🎯',start:'🚀',mail:'✉️',lock:'🔒',user:'@'};return '<span class="gs-icon-emoji">'+(map[name]||'•')+'</span>'}
+  window.gsNiceIcon=icon;
 
-  function $(id){ return document.getElementById(id); }
-  function q(sel,root){ return (root||document).querySelector(sel); }
-  function qa(sel,root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
-  function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-  function notifySafe(msg){ try{ if(typeof window.notify==='function') window.notify(msg); }catch(e){} }
-  function saveSafe(){ try{ if(typeof window.sv==='function') window.sv(); else localStorage.setItem('ath7',JSON.stringify(window.state||{})); }catch(e){} }
-  function gym(id){ return GYMS.find(function(g){return g.id===id;}) || {id:id,name:id,short:id,hint:'Salle',color:'#64707F',emoji:'•'}; }
-  function gymNames(list){ return (list||[]).map(function(id){return gym(id).short||gym(id).name;}); }
-  function profile(){ window.state=window.state||{}; window.state.profil=window.state.profil||{}; if(!Array.isArray(window.state.profil.gyms)) window.state.profil.gyms=[]; return window.state.profil; }
-  function onboardingGyms(){
-    var arr=[];
-    try{ if(Array.isArray(window.obGyms)) arr=window.obGyms.slice(); }catch(e){}
-    try{ if(typeof obGyms!=='undefined' && Array.isArray(obGyms) && obGyms.length) arr=obGyms.slice(); }catch(e){}
-    return arr;
+  // Onboarding multi-step non obligatoire, sauvegardé et retrouvable depuis Profil
+  var OB_STEPS=['username','name','email','password','height','weight','bmi','goal','nutrition','program','start'];
+  window.gsOnboardStep=0;
+  function prof(){var s=st();s.profil=s.profil||{};return s.profil}
+  function setP(k,v){prof()[k]=v;save()}
+  function bmiVal(){var p=prof(),h=parseFloat(p.taille||p.height||0),w=parseFloat(p.poids||p.weight||0);return h&&w?Math.round((w/Math.pow(h/100,2))*10)/10:null}
+  function macroCalc(){var p=prof(),w=parseFloat(p.poids||p.weight||75),h=parseFloat(p.taille||p.height||175),freq=parseInt(p.frequency||4,10),obj=p.objectif||'maintien';var base=Math.round((10*w+6.25*h-5*25+5)*(1.35+Math.min(freq,6)*0.045));if(obj==='perte')base-=300;if(obj==='prise')base+=250;return {kcal:Math.max(1500,base),prot:Math.round(w*2),carbs:Math.round((base*0.45)/4),fat:Math.round((base*0.25)/9)}}
+  function programProposal(){var p=prof(),f=parseInt(p.frequency||4,10),obj=p.objectif||'maintien',level=p.level||'intermediaire';var split=f<=3?'Full body':(f===4?'Upper / Lower':'PPL');var txt=split+' · '+f+' séances/semaine';if(obj==='perte')txt+=' · cardio léger 2×';if(obj==='prise')txt+=' · surcharge progressive';if(level==='debutant')txt+=' · priorité technique';return txt}
+  window.openOnboardingWizard=function(step){window.gsOnboardStep=typeof step==='number'?step:0;renderOnboardingWizard()}
+  window.closeOnboardingWizard=function(){var ov=$('gs-onboard-v4');if(ov)ov.remove()}
+  window.gsObPick=function(k,v){setP(k,v);renderOnboardingWizard()}
+  window.gsObNext=function(){var p=prof(),step=OB_STEPS[window.gsOnboardStep],el=$('gs-ob-main-input');
+    if(el&&el.value.trim()){var val=el.value.trim(); if(step==='username')p.username=val.replace(/^@/,'').toLowerCase(); if(step==='name')p.name=val; if(step==='email')p.email=val; if(step==='password')p.localPasswordSet=true; if(step==='height')p.taille=val; if(step==='weight')p.poids=val; if(step==='goal_sessions')p.frequency=val;}
+    save(); if(window.gsOnboardStep<OB_STEPS.length-1){window.gsOnboardStep++;renderOnboardingWizard()}else{st().onboarded=true;save();closeOnboardingWizard();try{bootApp()}catch(e){} toast('Bienvenue sur G-SQUAD')}
   }
-  function setOnboardingGyms(arr){
-    window.obGyms = arr.slice();
-    try{ obGyms = arr.slice(); }catch(e){}
+  window.gsObPrev=function(){if(window.gsOnboardStep>0){window.gsOnboardStep--;renderOnboardingWizard()}}
+  window.gsObSkip=function(){st().onboarded=true;save();closeOnboardingWizard();try{bootApp()}catch(e){} toast('Tu peux compléter ça dans Profil')}
+  function renderOnboardingWizard(){
+    var old=$('gs-onboard-v4');if(old)old.remove();var p=prof(),s=OB_STEPS[window.gsOnboardStep],i=window.gsOnboardStep,body='';
+    var title='',sub='';
+    if(s==='username'){title='Choisis ton @username';sub='Tu pourras être retrouvé par ta Squad. Cette étape est optionnelle.';body='<input id="gs-ob-main-input" class="gs-onboard-input" placeholder="ex: dany_lifts" value="'+esc(p.username||'')+'" autocomplete="off">'}
+    if(s==='name'){title='Ton nom';sub='Le nom affiché sur ton profil et dans les classements.';body='<input id="gs-ob-main-input" class="gs-onboard-input" placeholder="ex: Dany" value="'+esc(p.name||'')+'">'}
+    if(s==='email'){title='Ton email';sub='Optionnel ici. Utile si tu veux synchroniser ton compte Supabase.';body='<input id="gs-ob-main-input" class="gs-onboard-input" type="email" placeholder="email@exemple.com" value="'+esc(p.email||'')+'">'}
+    if(s==='password'){title='Mot de passe';sub='Optionnel dans cet onboarding. Le vrai compte reste géré par Supabase.';body='<input id="gs-ob-main-input" class="gs-onboard-input" type="password" placeholder="Mot de passe">'}
+    if(s==='height'){title='Ta taille';sub='Pour calculer l’IMC et adapter les objectifs.';body='<input id="gs-ob-main-input" class="gs-onboard-input" type="number" inputmode="decimal" placeholder="Taille en cm" value="'+esc(p.taille||'')+'">'}
+    if(s==='weight'){title='Ton poids';sub='Pour les macros et certains scores de performance.';body='<input id="gs-ob-main-input" class="gs-onboard-input" type="number" inputmode="decimal" placeholder="Poids en kg" value="'+esc(p.poids||'')+'">'}
+    if(s==='bmi'){var b=bmiVal();title='Ton IMC';sub='Calcul automatique. Ce n’est pas un jugement, juste un repère.';body='<div class="gs-soft-card"><div class="gs-stat-row"><div class="gs-stat"><b>'+(b?b:'—')+'</b><span>IMC</span></div><div class="gs-stat"><b>'+esc(p.taille||'—')+'</b><span>cm</span></div><div class="gs-stat"><b>'+esc(p.poids||'—')+'</b><span>kg</span></div></div><div class="gs-clean-sub">Tu peux modifier taille/poids plus tard dans Profil.</div></div>'}
+    if(s==='goal'){title='Objectif + séances';sub='On adapte le programme à ton rythme.';body='<div class="gs-onboard-grid"><button class="gs-onboard-choice '+(p.objectif==='perte'?'sel':'')+'" onclick="gsObPick(\'objectif\',\'perte\')">Perte<span>Être plus sec</span></button><button class="gs-onboard-choice '+(p.objectif==='maintien'?'sel':'')+'" onclick="gsObPick(\'objectif\',\'maintien\')">Maintien<span>Progresser proprement</span></button><button class="gs-onboard-choice '+(p.objectif==='prise'?'sel':'')+'" onclick="gsObPick(\'objectif\',\'prise\')">Prise<span>Muscle et force</span></button><button class="gs-onboard-choice" onclick="var v=prompt(\'Nombre de séances par semaine ?\',\''+esc(p.frequency||4)+'\');if(v){gsObPick(\'frequency\',v)}">'+esc(p.frequency||4)+' séances<span>Appuie pour changer</span></button></div>'}
+    if(s==='nutrition'){var m=macroCalc();title='Calculateur nutrition';sub='Une base simple, modifiable ensuite.';body='<div class="gs-soft-card"><div class="gs-stat-row"><div class="gs-stat"><b>'+m.kcal+'</b><span>kcal</span></div><div class="gs-stat"><b>'+m.prot+'g</b><span>protéines</span></div><div class="gs-stat"><b>'+m.carbs+'g</b><span>glucides</span></div></div><button class="gs-onboard-choice" style="width:100%" onclick="var m=macroCalc();prof=window.state.profil;prof.kcal=m.kcal;prof.protein=m.prot;prof.carbs=m.carbs;prof.fat=m.fat;sv&&sv();notify&&notify(\'Macros sauvegardées\')">Sauvegarder ces macros<span>Lipides estimés : '+m.fat+'g</span></button></div>'}
+    if(s==='program'){title='Proposition programme';sub='Selon ton objectif, ton niveau et ton nombre de séances.';body='<div class="gs-soft-card"><div class="gs-clean-kicker">Programme conseillé</div><div class="gs-clean-title" style="font-size:25px">'+esc(programProposal())+'</div><div class="gs-clean-sub">Tu peux le retrouver et le recalculer dans Programme.</div><button class="gs-onboard-choice" style="width:100%;margin-top:14px" onclick="gsObPick(\'programProposal\',\''+esc(programProposal()).replace(/&#39;/g,"\\'")+'\')">Valider cette base<span>Modifiable plus tard</span></button></div>'}
+    if(s==='start'){title='START';sub='Ton profil est prêt. Tu peux commencer maintenant ou revenir compléter plus tard.';body='<div class="gs-soft-card"><div class="gs-clean-title" style="font-size:28px">Bienvenue dans G-SQUAD</div><div class="gs-clean-sub">Séance, XP, nutrition, classement et Squad sont prêts.</div></div>'}
+    var bars=OB_STEPS.map(function(_,x){return '<i class="'+(x<=i?'on':'')+'"></i>'}).join('');
+    var html='<div class="gs-onboard-v4" id="gs-onboard-v4"><div class="gs-onboard-box"><div class="gs-onboard-logo">G-SQUAD</div><div class="gs-onboard-progress">'+bars+'</div><div class="gs-onboard-title">'+title+'</div><div class="gs-onboard-sub">'+sub+'</div>'+body+'<div class="gs-onboard-actions"><button onclick="gsObPrev()" '+(i===0?'disabled style="opacity:.35"':'')+'>Retour</button><button class="primary" onclick="gsObNext()">'+(s==='start'?'START':'Continuer')+'</button></div><button class="gs-onboard-skip" onclick="gsObSkip()">Passer — retrouvable dans Profil</button></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html);var inp=$('gs-ob-main-input');if(inp)setTimeout(function(){try{inp.focus()}catch(e){}},80)
   }
-  function toggleIn(arr,id){ var out=(arr||[]).slice(); var i=out.indexOf(id); if(i>-1) out.splice(i,1); else out.push(id); return out; }
-  function optionHtml(id, selected, mode){
-    var g=gym(id), active=selected.indexOf(id)>-1, fn=mode==='profile'?'toggleProfilGym':'selGym';
-    return '<button type="button" class="gs-gym-option '+(active?'sel':'')+'" id="'+(mode==='profile'?'pg-':'ob-gym-')+esc(id)+'" onclick="'+fn+'(\''+esc(id)+'\')">'
-      +'<span class="gs-gym-mark" style="--gym-color:'+esc(g.color)+'">'+esc(g.emoji)+'</span>'
-      +'<span class="gs-gym-copy"><b>'+esc(g.name)+'</b><small>'+esc(g.hint)+'</small></span>'
-      +(active?'<span class="gs-gym-check">✓</span>':'')+'</button>';
-  }
-  function gymsGridHtml(selected, mode){ return '<div class="gs-gym-grid">'+GYMS.map(function(g){return optionHtml(g.id,selected,mode);}).join('')+'</div>'; }
-  function installGymCss(){
-    if($('gs-gym-rank-style')) return;
-    var st=document.createElement('style'); st.id='gs-gym-rank-style';
-    st.textContent = [
-      '.gs-gym-grid{display:grid;grid-template-columns:1fr;gap:9px;margin-top:10px}',
-      '@media(min-width:420px){.gs-gym-grid{grid-template-columns:1fr 1fr}}',
-      '.gs-gym-option{width:100%;display:flex;align-items:center;gap:11px;text-align:left;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.075);border-radius:18px;padding:13px 12px;color:var(--txt);cursor:pointer;min-height:68px}',
-      '.gs-gym-option.sel{background:rgba(143,185,255,.14);border-color:rgba(143,185,255,.48);box-shadow:0 0 0 1px rgba(143,185,255,.08) inset}',
-      '.gs-gym-mark{width:38px;height:38px;border-radius:14px;background:color-mix(in srgb,var(--gym-color) 16%,transparent);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;border:1px solid color-mix(in srgb,var(--gym-color) 35%,transparent)}',
-      '.gs-gym-copy{min-width:0;flex:1}.gs-gym-copy b{display:block;font-size:14px;font-weight:950;letter-spacing:-.02em}.gs-gym-copy small{display:block;margin-top:3px;font-size:11px;line-height:1.25;color:var(--mut);font-weight:750}',
-      '.gs-gym-check{width:24px;height:24px;border-radius:999px;background:var(--txt);color:#071018;display:flex;align-items:center;justify-content:center;font-weight:950;font-size:12px;flex-shrink:0}',
-      '.gs-gym-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.gs-gym-tag{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:7px 10px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);color:var(--txt2);font-size:12px;font-weight:850}',
-      '.gs-rank-fab{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,8px) + 88px);z-index:760;width:50px;height:50px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(145deg,rgba(245,243,238,.98),rgba(219,230,247,.96));color:#071018;display:flex;align-items:center;justify-content:center;font-size:23px;box-shadow:0 18px 48px rgba(0,0,0,.35)}',
-      '.gs-rank-ov{position:fixed;inset:0;z-index:2600;background:#070A0E;color:var(--txt);display:flex;flex-direction:column;overflow:hidden}.gs-rank-head{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,14px) + 8px) 16px 14px;background:rgba(7,10,14,.94);border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(18px);flex-shrink:0}.gs-rank-back{width:40px;height:40px;border-radius:14px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08);color:var(--txt);font-size:18px;font-weight:950}.gs-rank-title{flex:1;font-size:18px;font-weight:950;letter-spacing:-.03em}.gs-rank-body{flex:1;overflow-y:auto;padding:16px 16px 120px;-webkit-overflow-scrolling:touch}.gs-rank-tabs{display:flex;gap:7px;overflow-x:auto;padding:2px 0 14px;scrollbar-width:none}.gs-rank-tab{flex:0 0 auto;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--mut);font-size:12px;font-weight:950;padding:10px 13px}.gs-rank-tab.act{background:var(--txt);color:#071018;border-color:var(--txt)}',
-      '.gs-rank-hero{background:linear-gradient(145deg,rgba(245,243,238,.98),rgba(219,230,247,.96));color:#071018;border-radius:32px;padding:22px;margin-bottom:14px;box-shadow:0 22px 70px rgba(0,0,0,.25)}.gs-rank-k{font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:950;color:#596677}.gs-rank-score{font-size:70px;line-height:.95;font-weight:1000;letter-spacing:-.08em}.gs-rank-tier{display:inline-flex;gap:6px;align-items:center;border-radius:999px;background:rgba(7,16,24,.08);padding:8px 12px;font-size:12px;font-weight:950;margin-top:8px}.gs-rank-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.gs-rank-mini{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:14px 9px;text-align:center}.gs-rank-mini b{display:block;font-size:22px;letter-spacing:-.05em}.gs-rank-mini span{display:block;font-size:9px;color:var(--mut);font-weight:950;text-transform:uppercase;letter-spacing:.07em;margin-top:4px}',
-      '.gs-rank-card{background:rgba(18,24,33,.86);border:1px solid rgba(255,255,255,.07);border-radius:24px;padding:16px;margin-bottom:10px}.gs-rank-row{display:flex;align-items:center;gap:12px}.gs-rank-num{width:38px;text-align:center;font-size:17px;font-weight:1000;color:var(--mut)}.gs-rank-num.top{color:#f59e0b}.gs-rank-av{width:42px;height:42px;border-radius:16px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:1000;color:var(--txt);overflow:hidden;flex-shrink:0}.gs-rank-av img{width:100%;height:100%;object-fit:cover}.gs-rank-info{flex:1;min-width:0}.gs-rank-name{font-size:14px;font-weight:950;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gs-rank-sub{font-size:11px;color:var(--mut);font-weight:750;margin-top:3px}.gs-rank-val{text-align:right;font-size:23px;font-weight:1000;letter-spacing:-.05em;color:var(--txt)}.gs-rank-me{border-color:rgba(143,185,255,.46);background:rgba(143,185,255,.07)}.gs-rank-pill{display:inline-flex;border-radius:999px;padding:5px 8px;background:rgba(143,185,255,.12);color:var(--acc);font-size:10px;font-weight:950;margin-left:4px}.gs-rank-empty{text-align:center;color:var(--mut);padding:42px 20px}.gs-rank-empty b{display:block;color:var(--txt);font-size:16px;margin:8px 0 4px}.gs-rank-sec{font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:950;color:var(--acc);margin:18px 0 10px}'
-    ].join('');
-    document.head.appendChild(st);
-  }
+  window.renderOnboardingWizard=renderOnboardingWizard;
+  // replace old onboarding overlay on app start
+  setTimeout(function(){var ob=$('onboard');if(ob){ob.style.display='none';ob.innerHTML=''} if(st().onboarded===false){openOnboardingWizard(0)}},250);
 
-  window.selGym = function(id){
-    var arr=toggleIn(onboardingGyms(),id);
-    setOnboardingGyms(arr);
-    refreshGymPickers();
-  };
-  window.toggleProfilGym = function(id){
-    var p=profile(); p.gyms=toggleIn(p.gyms,id); saveSafe(); refreshGymPickers(); updateProfileGymTags(); if(typeof window.updateHamburgerGyms==='function') window.updateHamburgerGyms(); notifySafe('Salles mises à jour');
-  };
+  // clean session renderer
+  function days(){try{if(typeof getDays==='function')return getDays()}catch(e){} return window.DAYS||[]}
+  function day(){var ds=days();var idx=window.cDay||0;return ds[idx]||{name:'Séance',type:'Training',dur:'',exercises:[]}}
+  function logged(i,ex){try{if(st().loggedSets&&st().loggedSets[(window.cDay||0)+'_'+i])return true;if(typeof isExLoggedToday==='function'&&ex)return isExLoggedToday(ex.n)}catch(e){}return false}
+  window.toggleCleanLog=function(){var l=$('gs-log-box');if(l)l.classList.toggle('open')}
+  window.openTikTokForExercise=function(q){q=encodeURIComponent(q||'exercice musculation');var web='https://www.tiktok.com/search?q='+q;var app='tiktok://search?keyword='+q;try{window.location.href=app;setTimeout(function(){window.open(web,'_blank')},850)}catch(e){window.open(web,'_blank')}return false}
+  var oldSaveML=window.saveML;
+  window.saveML=function(){var i=window.cEx||0;if(!st().loggedSets)st().loggedSets={};st().loggedSets[(window.cDay||0)+'_'+i]=true;save();if(typeof oldSaveML==='function'){oldSaveML()}else{toast('Set enregistré')}try{renderSeance()}catch(e){}}
+  window.renderSeance=function(){
+    var panel=$('p-seance');if(!panel)return;var d=day(),exs=d.exercises||[];if((window.cEx||0)>=exs.length)window.cEx=0;var i=window.cEx||0,ex=exs[i]||{n:'Repos actif',s:'Ajoute un exercice',note:'Tu peux ajouter une activité sportive au programme.'};st().checks=st().checks||{};var chk=st().checks[window.cDay||0]||{};var done=exs.filter(function(_,j){return chk[j]}).length,total=Math.max(exs.length,1),pct=Math.round(done/total*100);var exDone=!!chk[i],exLogged=logged(i,ex),dim=exDone||exLogged;
+    var xp=st().xp||0, streak=0,sess=0;try{streak=getRealStreak()}catch(e){}try{sess=getTotalSess()}catch(e){sess=st().sessions||0}
+    var yt=ex.yt||('https://www.youtube.com/results?search_query='+encodeURIComponent((ex.n||'exercice')+' technique'));
+    var html='<div class="gs-clean-page session-v4"><div class="gs-clean-head"><div><div class="gs-clean-kicker">Séance</div><h1 class="gs-clean-title">'+esc(d.name||'Aujourd’hui')+'</h1><div class="gs-clean-sub">'+esc(d.type||'Training')+' · '+done+'/'+total+' exercices · '+esc(d.dur||'')+'</div></div><button class="gs-icon-btn" onclick="openActivityModal&&openActivityModal('+(window.cDay||0)+')">'+icon('workout')+'</button></div>'+
+    '<div class="gs-soft-card"><div class="gs-stat-row"><div class="gs-stat"><b>'+xp+'</b><span>XP</span></div><div class="gs-stat"><b>'+streak+'</b><span>Streak</span></div><div class="gs-stat"><b>'+pct+'%</b><span>Avancement</span></div></div><div class="gs-progress"><i style="width:'+pct+'%"></i></div></div>'+
+    '<div class="gs-ex-list">'+exs.map(function(e,j){var c=j===i?'current ':'';if(chk[j])c+='done ';else if(logged(j,e))c+='logged ';return '<button class="gs-ex-pill '+c+'" onclick="jumpEx('+j+')">'+(chk[j]?'✓':(j+1))+'</button>'}).join('')+'</div>'+
+    '<div class="gs-ex-card '+(dim?'done':'')+'"><div class="gs-ex-top"><div style="min-width:0"><div class="gs-ex-index">Exercice '+(i+1)+' / '+total+'</div><h2 class="gs-ex-name">'+esc(ex.n||'Exercice')+'</h2><div class="gs-ex-sets">'+esc(ex.s||'3 x 10-12 reps')+'</div></div><button class="gs-validate-mini" onclick="markDone()">'+(exDone?'Validé':'Valider')+'</button></div>'+(ex.note?'<div class="gs-ex-note">'+esc(ex.note)+'</div>':'')+'<div class="gs-ex-actions"><button onclick="toggleCleanLog()">Log set</button><a href="'+esc(yt)+'" target="_blank">'+icon('youtube')+' YouTube</a><button onclick="return openTikTokForExercise(\''+esc(ex.n||'exercice').replace(/&#39;/g,"\\'")+'\')">'+icon('tiktok')+' TikTok</button></div><div id="gs-log-box" class="gs-log-box"><div style="display:flex;gap:8px"><input id="ml-c" type="number" inputmode="decimal" placeholder="kg"><input id="ml-r" type="number" inputmode="numeric" placeholder="reps"></div><button onclick="saveML()">Enregistrer le set</button></div></div>'+
+    '<div class="gs-session-nav"><button onclick="prevEx()" '+(i===0?'disabled':'')+'>← Exercice précédent</button><button onclick="nextEx()" '+(i>=exs.length-1?'disabled':'')+'>Exercice suivant →</button></div>'+
+    '<div class="gs-start-bottom"><button onclick="startSession&&startSession(\'seance\')">'+icon('start')+' START SÉANCE</button></div></div>';
+    panel.innerHTML=html;
+  }
+  var oldMark=window.markDone;
+  window.markDone=function(){var before=JSON.stringify(st().checks||{});if(typeof oldMark==='function')oldMark();else{st().checks=st().checks||{};st().checks[window.cDay||0]=st().checks[window.cDay||0]||{};st().checks[window.cDay||0][window.cEx||0]=!st().checks[window.cDay||0][window.cEx||0];save()}try{renderSeance()}catch(e){} }
 
-  function refreshGymPickers(){
-    installGymCss();
-    var ob=$('ob-gyms'); if(ob){ ob.innerHTML=gymsGridHtml(onboardingGyms(),'onboarding'); ob.classList.add('gs-gym-enhanced'); }
-    var pg=$('prof-gym-picker'); if(pg){ pg.innerHTML=gymsGridHtml(profile().gyms,'profile'); pg.classList.add('gs-gym-enhanced'); pg.style.display='block'; pg.style.gridTemplateColumns=''; }
-    qa('[data-gs-profile-gyms]').forEach(function(el){ el.innerHTML=gymsGridHtml(profile().gyms,'profile'); });
+  // Clean profile renderer + access onboarding
+  window.openProfil=function(){
+    var p=prof(),ov=$('profil-ov');if(!ov)return;var total=0,streak=0;try{total=getTotalSess()}catch(e){total=st().sessions||0}try{streak=getRealStreak()}catch(e){}
+    var gyms=(p.gyms||[]).map(function(g){var data=(window.GS_GYMS&&window.GS_GYMS[g])||{name:g,color:'var(--acc)'};return '<span class="gs-chip"><i style="background:'+(data.color||'var(--acc)')+'"></i>'+esc(data.name||g)+'</span>'}).join('')||'<span class="gs-chip"><i></i>Sport non renseigné</span>';
+    var sports=(p.sports||[]).map(function(s){return '<span class="gs-chip"><i></i>'+esc((window.SPORTS_LABELS&&window.SPORTS_LABELS[s])||s)+'</span>'}).join('');
+    var bmi=bmiVal(), mac=macroCalc();
+    ov.innerHTML='<div class="gs-profile-clean"><div class="gs-clean-head"><button class="gs-icon-btn" onclick="closeProfil()">←</button><div style="font-size:17px;font-weight:1000;letter-spacing:-.03em">Profil</div><button class="gs-icon-btn" onclick="openProfilSettings&&openProfilSettings()">'+icon('settings')+'</button></div><div class="gs-prof-top"><div class="gs-prof-avatar" onclick="changeAvatar()">'+(p.avatar?'<img src="'+esc(p.avatar)+'">':esc((p.name||'G').charAt(0).toUpperCase()))+'<span class="gs-prof-plus">+</span></div><div><h1 class="gs-prof-name">'+esc(p.name||'Ton profil')+'</h1><div class="gs-prof-user">'+(p.username?'@'+esc(p.username):'@username')+'</div><div class="gs-prof-meta">'+esc(p.objectif||'Objectif non renseigné')+' · '+esc(p.frequency||0)+' séances/sem</div></div></div><input type="file" id="avatar-input" accept="image/*" style="display:none" onchange="saveAvatar(event)"><div class="gs-prof-stats"><div class="gs-prof-stat"><b id="prof-followers">'+((st().friends||[]).length)+'</b><span>Abonnés</span></div><div class="gs-prof-stat"><b id="prof-following">'+((st().friends||[]).length)+'</b><span>Abonnements</span></div><div class="gs-prof-stat"><b>'+(st().xp||0)+'</b><span>XP</span></div></div><div class="gs-soft-card"><div class="gs-clean-title" style="font-size:22px">Performance</div><div class="gs-clean-sub">'+streak+' jours de streak · '+total+' séances · IMC '+(bmi||'—')+'</div><div class="gs-stat-row"><div class="gs-stat"><b>'+mac.kcal+'</b><span>kcal</span></div><div class="gs-stat"><b>'+mac.prot+'g</b><span>prot</span></div><div class="gs-stat"><b>'+mac.carbs+'g</b><span>glucides</span></div></div></div><div class="gs-soft-card"><div class="gs-clean-kicker">Salles & sports</div><div class="gs-chipline">'+gyms+sports+'</div></div><div class="gs-profile-action-grid"><button class="primary" onclick="openOnboardingWizard(0)">Compléter inscription</button><button onclick="openProgramCalculator&&openProgramCalculator()">Calculateur programme</button><button onclick="openLeaderboard&&openLeaderboard()">Classement</button><button onclick="logout&&logout()">Déconnexion</button></div></div>';
+    ov.classList.add('open');try{renderProfilSocialCounts&&renderProfilSocialCounts()}catch(e){}
   }
 
-  window.renderProfilGyms = function(){ refreshGymPickers(); updateProfileGymTags(); };
-  function updateProfileGymTags(){
-    var p=(window.state&&window.state.profil)||{}, gyms=Array.isArray(p.gyms)?p.gyms:[];
-    var html=gyms.length ? '<div class="gs-gym-tags">'+gyms.map(function(id){var g=gym(id);return '<span class="gs-gym-tag"><span style="color:'+esc(g.color)+'">●</span>'+esc(g.short||g.name)+'</span>';}).join('')+'</div>' : '<div class="gs-card-sub">Salle non renseignée</div>';
-    var st=$('profil-salle-tag'); if(st) st.innerHTML=html;
-    qa('[data-gs-gym-tags]').forEach(function(el){ el.innerHTML=html; });
-  }
-
-  window.updateHamburgerGyms = function(){
-    var el=$('ham-gym-btn');
-    if(!el) return;
-    var gyms=profile().gyms;
-    if(!gyms.length){
-      el.innerHTML='<button class="ham-btn" onclick="closeHamburger&&closeHamburger();openProfilSettings&&openProfilSettings()"><span style="width:36px;height:36px;border-radius:12px;background:rgba(143,185,255,.12);display:flex;align-items:center;justify-content:center">🏋️</span><div><div class="ham-title">Choisir ma salle</div><div class="ham-sub">Basic-Fit, Fitness Park, On Air, etc.</div></div></button>';
-      return;
-    }
-    el.innerHTML=gyms.map(function(id){var g=gym(id);return '<button class="ham-btn" onclick="navigateToGym(\''+esc(id)+'\')"><span style="width:36px;height:36px;border-radius:12px;background:'+esc(g.color)+'22;display:flex;align-items:center;justify-content:center">'+esc(g.emoji)+'</span><div><div class="ham-title">'+esc(g.short||g.name)+'</div><div class="ham-sub">Trouver près de moi</div></div><span style="margin-left:auto;color:var(--mut)">›</span></button>';}).join('');
-  };
-
-  window.navigateToGym = function(id){
-    var g=gym(id), q=(id==='home'||id==='autre')?'salle de sport':g.name;
-    var url='https://www.google.com/maps/search/'+encodeURIComponent(q+' près de moi');
-    try{ if(/iPhone|iPad|Macintosh/.test(navigator.userAgent)) url='https://maps.apple.com/?q='+encodeURIComponent(q+' près de moi'); }catch(e){}
-    window.open(url,'_blank');
-  };
-  window.showNearestGyms = function(){
-    installGymCss();
-    var old=$('gs-gym-ov'); if(old) old.remove();
-    var html='<div id="gs-gym-ov" class="gs-rank-ov"><div class="gs-rank-head"><button class="gs-rank-back" onclick="document.getElementById(\'gs-gym-ov\').remove()">←</button><div class="gs-rank-title">Salles de sport</div></div><div class="gs-rank-body"><div class="gs-rank-hero"><div class="gs-rank-k">Autour de toi</div><div style="font-size:31px;font-weight:1000;letter-spacing:-.06em;line-height:1.05;margin-top:8px">Choisis une enseigne<br>à rechercher.</div><div style="font-size:13px;color:#596677;font-weight:800;margin-top:10px">Ouvre Maps directement, sans base payante.</div></div><div class="gs-gym-grid">'
-      +GYMS.map(function(g){return '<button type="button" class="gs-gym-option" onclick="navigateToGym(\''+esc(g.id)+'\')"><span class="gs-gym-mark" style="--gym-color:'+esc(g.color)+'">'+esc(g.emoji)+'</span><span class="gs-gym-copy"><b>'+esc(g.name)+'</b><small>'+esc(g.hint)+'</small></span><span style="color:var(--mut);font-size:20px">›</span></button>';}).join('')+'</div></div></div>';
-    document.body.insertAdjacentHTML('beforeend',html);
-  };
-
-  function injectGymsIntoSettings(){
-    refreshGymPickers();
-    var set=$('profile-settings-v1'); if(!set || set.querySelector('.gs-gym-settings')) return;
-    var target=q('.gs-profile',set)||set;
-    var saveBtn=qa('button',target).filter(function(b){return /sauvegarder/i.test(b.textContent||'');}).pop();
-    var block=document.createElement('div'); block.className='gs-card gs-gym-settings';
-    block.innerHTML='<div class="gs-card-title">Salles de sport</div><div class="gs-card-sub" style="margin:6px 0 12px">Sélectionne une ou plusieurs salles. Elles apparaissent dans ton profil et le menu.</div><div data-gs-profile-gyms></div>';
-    if(saveBtn && saveBtn.parentNode===target) target.insertBefore(block,saveBtn); else target.appendChild(block);
-    refreshGymPickers();
-  }
-
-  function injectGymsIntoProfile(){
-    var ov=$('profil-ov'); if(!ov || !ov.classList.contains('open') || ov.querySelector('.gs-profile-gym-card')) return;
-    var cards=qa('.gs-card',ov); var after=cards.length?cards[0]:null;
-    var block=document.createElement('div'); block.className='gs-card gs-profile-gym-card'; block.setAttribute('data-gs-gym-tags','1');
-    if(after) after.insertAdjacentElement('afterend',block); else (q('.gs-profile',ov)||ov).appendChild(block);
-    updateProfileGymTags();
-  }
-
-  function addGymAndRankToMenu(){
-    var sh=$('more-sh'); if(!sh || !sh.classList.contains('open')) return;
-    if(!sh.querySelector('.gs-rank-menu-btn')){
-      var firstGrid=q('.gs-menu-grid',sh)||sh;
-      firstGrid.insertAdjacentHTML('afterbegin','<button type="button" class="gs-menu-btn gs-rank-menu-btn" onclick="closeHamburger&&closeHamburger();openLeaderboard()"><span class="gs-menu-logo">🏆</span><span><span class="gs-menu-title">Classement Elite</span><span class="gs-menu-sub">GOAT · Force · Volume · Endurance</span></span></button>');
-    }
-    if(!sh.querySelector('.gs-menu-gyms-block')){
-      var block='<div class="gs-menu-section gs-menu-gyms-block">Mes salles</div><div class="gs-menu-grid gs-menu-gyms-block" id="ham-gym-btn"></div>';
-      var account=qa('.gs-menu-section',sh).filter(function(x){return /Compte/i.test(x.textContent||'');})[0];
-      if(account) account.insertAdjacentHTML('beforebegin',block); else sh.insertAdjacentHTML('beforeend',block);
-      window.updateHamburgerGyms();
-    }
-  }
-
-  function addRankButtonToHeader(){
-    var hdr=$('app-header'); if(!hdr || $('gs-rank-header-btn')) return;
-    var btn=document.createElement('button'); btn.id='gs-rank-header-btn'; btn.type='button'; btn.setAttribute('onclick','openLeaderboard()'); btn.innerHTML='🏆';
-    btn.style.cssText='background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:999px;width:36px;height:36px;color:var(--txt);font-size:16px;display:flex;align-items:center;justify-content:center;margin-right:8px;flex-shrink:0';
-    var search=hdr.lastElementChild; hdr.insertBefore(btn,search||null);
-  }
-  function addRankFab(){
-    if($('gs-rank-fab')) return;
-    var b=document.createElement('button'); b.id='gs-rank-fab'; b.className='gs-rank-fab'; b.type='button'; b.setAttribute('onclick','openLeaderboard()'); b.textContent='🏆'; document.body.appendChild(b);
-  }
-  function injectRankIntoHome(){
-    var panel=$('p-accueil'); if(!panel || panel.querySelector('.gs-home-rank-card')) return;
-    var first=q('.gs-card',panel) || q('.home-priorities',panel);
-    var local=getLocalScores(); var ag=local.aggregate;
-    var card=document.createElement('div'); card.className='gs-card gs-home-rank-card';
-    card.innerHTML='<div class="gs-row"><div style="font-size:32px">🏆</div><div style="flex:1"><div class="gs-card-title">Classement Elite</div><div class="gs-card-sub">GOAT '+ag.goat+'/100 · Force '+ag.force+' · Volume '+ag.volume+' · Endurance '+ag.endurance+'</div></div><button class="gs-btn secondary" onclick="openLeaderboard()">Ouvrir</button></div>';
-    if(first) first.insertAdjacentElement('afterend',card); else panel.appendChild(card);
-  }
-
-  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
-  function num(v,d){ v=parseFloat(v); return isFinite(v)?v:(d||0); }
-  function int(v,d){ v=parseInt(v,10); return isFinite(v)?v:(d||0); }
-  function isBodyEx(name){ return /traction|pull|chin|dips|pompe|push/i.test(String(name||'')); }
-  function soft(v,target){ if(v<=0) return 0; return clamp(Math.round((Math.log(1+v/(target*.25))/Math.log(1+target/(target*.25)))*85),0,100); }
-  function exKey(name){ return String(name||'general').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,40)||'general'; }
-  function latestBw(){ var p=(window.state&&window.state.profil)||{}; return num(p.poids||p.weight,75)||75; }
-  function fallbackScores(){
-    var logs=(window.state&&Array.isArray(window.state.logs))?window.state.logs:[];
-    var bw=latestBw(), by={};
-    logs.forEach(function(l){
-      var name=l.ex||l.exercise_name||l.exercise||l.n||''; var reps=int(l.reps||l.max_reps,0); var sets=int(l.sets,1)||1; var charge=num(l.charge||l.external_load||l.weight_kg||l.max_weight_kg,0);
-      if(!name || reps<=0) return;
-      var total=isBodyEx(name)?bw+Math.max(0,charge):charge; if(total<=0) return;
-      var key=exKey(name); if(!by[key]) by[key]={exercise_name:name,exercise_key:key,best_1rm:0,best_reps:0,best_volume:0,count:0};
-      var one=total*(1+Math.min(reps,12)/30), vol=total*reps*sets;
-      by[key].best_1rm=Math.max(by[key].best_1rm,one); by[key].best_reps=Math.max(by[key].best_reps,reps); by[key].best_volume=Math.max(by[key].best_volume,vol); by[key].count++;
-    });
-    Object.keys(by).forEach(function(k){ var r=by[k], rel=r.best_1rm/Math.max(45,bw); r.force=soft(rel,isBodyEx(r.exercise_name)?2.05:1.75); r.volume=soft(r.best_volume,12000); r.endurance=soft(r.best_reps,isBodyEx(r.exercise_name)?50:30); r.goat=Math.round(r.force*.40+r.volume*.35+r.endurance*.25); r.best_1rm=Math.round(r.best_1rm); r.best_volume=Math.round(r.best_volume); });
-    var rows=Object.values(by).sort(function(a,b){return b.goat-a.goat;});
-    function agg(f){ if(!rows.length) return 0; var w=[1,.78,.58,.43,.32], s=0,t=0; rows.slice(0,5).forEach(function(r,i){s+=(r[f]||0)*w[i];t+=w[i];}); return Math.round(s/t); }
-    return {version:'visible-patch',updated_at:new Date().toISOString(),exercises:by,aggregate:{goat:agg('goat'),force:agg('force'),volume:agg('volume'),endurance:agg('endurance'),exercise_count:rows.length,top:rows}};
-  }
-  function getLocalScores(){
-    try{ if(window.GS_ELITE && typeof window.GS_ELITE.computeLocalScores==='function'){ var sc=window.GS_ELITE.computeLocalScores(); if(sc&&sc.aggregate) return sc; } }catch(e){}
-    var st=window.state||{}; if(st.eliteScores&&st.eliteScores.aggregate) return st.eliteScores;
-    return fallbackScores();
-  }
-  function tier(score){ if(score>=95)return ['🐐','GOAT']; if(score>=85)return ['👑','Legend']; if(score>=72)return ['💎','Elite']; if(score>=58)return ['🥇','Gold']; if(score>=42)return ['🥈','Silver']; if(score>=25)return ['🥉','Bronze']; return ['🔰','Rookie']; }
-  function avatar(name,src){ return '<div class="gs-rank-av">'+(src?'<img src="'+esc(src)+'">':esc(String(name||'G').charAt(0).toUpperCase()))+'</div>'; }
-  function userName(){ var p=(window.state&&window.state.profil)||{}; return p.name||p.display_name||p.username||'Toi'; }
-  function userUsername(){ var p=(window.state&&window.state.profil)||{}; return p.username||''; }
-  function currentUserId(){ return (window._supaUser&&window._supaUser.id)||'local-user'; }
-  function localRow(){ var sc=getLocalScores(), p=(window.state&&window.state.profil)||{}, ag=sc.aggregate||{}; return {user_id:currentUserId(),name:userName(),username:userUsername(),avatar:p.avatar||'',goat:ag.goat||0,force:ag.force||0,volume:ag.volume||0,endurance:ag.endurance||0,exercise_count:ag.exercise_count||0,updated_at:ag.updated_at||sc.updated_at||new Date().toISOString()}; }
-  async function syncLeaderboard(){
-    if(!window._supa || !window._supaUser) return;
-    var r=localRow();
-    try{ await window._supa.from('user_global_scores').upsert({user_id:window._supaUser.id,display_name:r.name,username:r.username,avatar_url:r.avatar,goat_score:r.goat,force_score:r.force,volume_score:r.volume,endurance_score:r.endurance,exercise_count:r.exercise_count,updated_at:new Date().toISOString()},{onConflict:'user_id'}); }catch(e){}
-  }
-  async function fetchRows(metric){
-    var rows=[], col={goat:'goat_score',force:'force_score',volume:'volume_score',endurance:'endurance_score'}[metric]||'goat_score';
-    if(window._supa){
-      try{ var r=await window._supa.from('user_global_scores').select('user_id,display_name,username,avatar_url,goat_score,force_score,volume_score,endurance_score,exercise_count,updated_at').order(col,{ascending:false}).limit(100); if(!r.error && r.data) rows=r.data.map(function(x){return {user_id:x.user_id,name:x.display_name||x.username||'Athlète',username:x.username||'',avatar:x.avatar_url||'',goat:x.goat_score||0,force:x.force_score||0,volume:x.volume_score||0,endurance:x.endurance_score||0,exercise_count:x.exercise_count||0,updated_at:x.updated_at};}); }catch(e){}
-      if(!rows.length){ try{ var p=await window._supa.from('profiles').select('id,username,display_name,data').limit(100); rows=(p.data||[]).map(function(x){var d=(typeof x.data==='object'&&x.data)||{}, ag=(d.eliteScores&&d.eliteScores.aggregate)||{}; return {user_id:x.id,name:x.display_name||(d.profil&&d.profil.name)||x.username||'Athlète',username:x.username||'',avatar:(d.profil&&d.profil.avatar)||'',goat:ag.goat||d.xp||0,force:ag.force||0,volume:ag.volume||0,endurance:ag.endurance||0,exercise_count:ag.exercise_count||0,updated_at:(d.eliteScores&&d.eliteScores.updated_at)||''};}); }catch(e){} }
-    }
-    var me=localRow();
-    if(!rows.some(function(x){return x.user_id===me.user_id;})) rows.push(me);
-    return rows.sort(function(a,b){return (b[metric]||0)-(a[metric]||0);});
-  }
-  function rankIcon(i){ return i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1); }
-  function renderMe(){
-    var sc=getLocalScores(), ag=sc.aggregate||{}, tr=tier(ag.goat||0), top=(ag.top||Object.values(sc.exercises||{}).sort(function(a,b){return b.goat-a.goat;})).slice(0,8);
-    return '<div class="gs-rank-hero"><div class="gs-rank-k">Score GOAT</div><div class="gs-rank-score">'+(ag.goat||0)+'<span style="font-size:24px;color:#596677">/100</span></div><div class="gs-rank-tier">'+tr[0]+' '+tr[1]+'</div><div style="font-size:12px;color:#596677;margin-top:10px;font-weight:850">Force 40% · Volume 35% · Endurance 25%</div></div><div class="gs-rank-grid"><div class="gs-rank-mini"><b>💪 '+(ag.force||0)+'</b><span>Force King</span></div><div class="gs-rank-mini"><b>🔁 '+(ag.volume||0)+'</b><span>Volume Beast</span></div><div class="gs-rank-mini"><b>🫁 '+(ag.endurance||0)+'</b><span>Endurance</span></div></div><div class="gs-rank-sec">Tes meilleurs exercices</div>'+(top.length?top.map(function(r,i){return '<div class="gs-rank-card"><div class="gs-rank-row"><div class="gs-rank-num '+(i<3?'top':'')+'">'+rankIcon(i)+'</div><div class="gs-rank-info"><div class="gs-rank-name">'+esc(r.exercise_name||'Exercice')+'</div><div class="gs-rank-sub">1RM ~'+Math.round(r.best_1rm||0)+'kg · '+(r.best_reps||0)+' reps · '+Math.round((r.best_volume||0)/1000)+'t volume</div></div><div class="gs-rank-val">'+(r.goat||0)+'</div></div></div>';}).join(''):'<div class="gs-rank-empty"><div style="font-size:42px">📊</div><b>Aucun score pour l’instant</b><span>Log charge + reps pendant une séance pour alimenter le classement.</span></div>');
-  }
-  function renderRows(rows,metric){
-    if(!rows.length) return '<div class="gs-rank-empty"><div style="font-size:42px">📭</div><b>Aucun athlète classé</b><span>Le classement apparaîtra dès que des performances seront enregistrées.</span></div>';
-    var uid=currentUserId();
-    return rows.map(function(r,i){ var me=r.user_id===uid, score=Math.round(r[metric]||0); return '<div class="gs-rank-card '+(me?'gs-rank-me':'')+'"><div class="gs-rank-row"><div class="gs-rank-num '+(i<3?'top':'')+'">'+rankIcon(i)+'</div>'+avatar(r.name,r.avatar)+'<div class="gs-rank-info"><div class="gs-rank-name">'+esc(r.name||'Athlète')+(me?'<span class="gs-rank-pill">Toi</span>':'')+'</div><div class="gs-rank-sub">'+(r.username?'@'+esc(r.username)+' · ':'')+(r.exercise_count||0)+' exercices</div></div><div class="gs-rank-val">'+score+'</div></div></div>'; }).join('');
-  }
-  window.gsRankTab = async function(tab){
-    var area=$('gs-rank-area'); if(!area) return;
-    qa('.gs-rank-tab').forEach(function(b){ b.classList.toggle('act',b.getAttribute('data-tab')===tab); });
-    if(tab==='me'){ area.innerHTML=renderMe(); syncLeaderboard(); return; }
-    area.innerHTML='<div class="gs-rank-empty"><div style="font-size:32px">⏳</div><b>Chargement du classement…</b></div>';
-    var rows=await fetchRows(tab); area.innerHTML=renderRows(rows,tab);
-  };
-  window.openLeaderboard = function(){
-    installGymCss();
-    var old=$('gs-rank-ov')||$('gs5-leaderboard'); if(old) old.remove();
-    var html='<div id="gs-rank-ov" class="gs-rank-ov"><div class="gs-rank-head"><button class="gs-rank-back" onclick="document.getElementById(\'gs-rank-ov\').remove()">←</button><div class="gs-rank-title">Classement Elite</div><button class="gs-rank-back" style="font-size:15px" onclick="gsRankTab(document.querySelector(\'.gs-rank-tab.act\')?.getAttribute(\'data-tab\')||\'me\')">↻</button></div><div class="gs-rank-body"><div class="gs-rank-tabs"><button class="gs-rank-tab act" data-tab="me" onclick="gsRankTab(\'me\')">Moi</button><button class="gs-rank-tab" data-tab="goat" onclick="gsRankTab(\'goat\')">🏆 GOAT</button><button class="gs-rank-tab" data-tab="force" onclick="gsRankTab(\'force\')">💪 Force</button><button class="gs-rank-tab" data-tab="volume" onclick="gsRankTab(\'volume\')">🔁 Volume</button><button class="gs-rank-tab" data-tab="endurance" onclick="gsRankTab(\'endurance\')">🫁 Endurance</button></div><div id="gs-rank-area"></div></div></div>';
-    document.body.insertAdjacentHTML('beforeend',html); window.gsRankTab('me');
-  };
-
-  function wrap(name,after){ var old=window[name]; if(typeof old==='function'&&!old.__gsGymRankWrapped){ var fn=function(){ var r=old.apply(this,arguments); setTimeout(after,0); return r; }; fn.__gsGymRankWrapped=true; window[name]=fn; } }
-  function install(){ installGymCss(); refreshGymPickers(); addRankButtonToHeader(); addRankFab(); injectRankIntoHome(); wrap('openHamburger',function(){addGymAndRankToMenu();}); wrap('openProfilSettings',function(){injectGymsIntoSettings();}); wrap('openProfil',function(){injectGymsIntoProfile(); updateProfileGymTags();}); wrap('renderAccueil',function(){injectRankIntoHome();}); setTimeout(function(){addGymAndRankToMenu(); injectGymsIntoSettings(); injectGymsIntoProfile(); updateProfileGymTags();},200); }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',install); else install();
+  // Icons/menu cleanup after opening hamburger
+  var previousHam=window.openHamburger;
+  window.openHamburger=function(){if(typeof previousHam==='function')previousHam();setTimeout(function(){var sh=$('more-sh');if(!sh)return;sh.style.maxHeight='86vh';sh.style.overflowY='auto';sh.style.webkitOverflowScrolling='touch';sh.querySelectorAll('.gs-menu-logo').forEach(function(el){var txt=(el.textContent||'').trim();if(txt==='🏆')el.innerHTML=icon('rank');else if(txt==='🔔')el.innerHTML=icon('bell');else if(txt==='📈')el.innerHTML=icon('program');else if(txt==='📍')el.innerHTML=icon('gym');else if(txt==='⚡')el.innerHTML=icon('exercise');else if(txt==='⚙️')el.innerHTML=icon('settings')});},0)}
+  setTimeout(function(){var logo=$('header-logo');if(logo)logo.textContent='G-SQUAD';try{if(document.querySelector('#p-seance.act'))renderSeance()}catch(e){}},500)
 })();
 </script>
 
