@@ -8568,62 +8568,253 @@ create index if not exists idx_notifications_user_status on public.notifications
 create index if not exists idx_friend_requests_to_status on public.friend_requests(to_id, status);
 </script>
 
-
-
 <script>
-// G-SQUAD — Logout button patch
+/* G-SQUAD — Gyms + visible leaderboard patch */
 (function(){
-  function $(id){return document.getElementById(id);}
-  function safeNotify(msg){try{if(typeof notify==='function')notify(msg);}catch(e){}}
-  function closeEl(id){var el=$(id);if(el){el.classList.remove('open');if(id==='profile-settings-v1')el.remove();}}
+  'use strict';
+  var GYMS = [
+    {id:'basicfit',name:'Basic-Fit',short:'Basic-Fit',hint:'Machines, poulies, haltères',color:'#FF7A1A',emoji:'🟠'},
+    {id:'fitnesspark',name:'Fitness Park',short:'Fitness Park',hint:'Plateau libre, machines, charges',color:'#43B02A',emoji:'🟢'},
+    {id:'keepcool',name:'Keep Cool',short:'Keep Cool',hint:'Reprise, coaching simple',color:'#C8006A',emoji:'🟣'},
+    {id:'onair',name:'On Air Fitness',short:'On Air',hint:'Performance, machines, zone libre',color:'#E11D48',emoji:'🔴'},
+    {id:'neoness',name:'Neoness',short:'Neoness',hint:'Fitness urbain, cours et plateau',color:'#B6FF00',emoji:'🟩'},
+    {id:'orangebleue',name:"L'Orange Bleue",short:"L'Orange Bleue",hint:'Coaching, machines, cours',color:'#2F80ED',emoji:'🔵'},
+    {id:'magicform',name:'Magic Form',short:'Magic Form',hint:'Muscu, cardio, cours',color:'#F59E0B',emoji:'🟡'},
+    {id:'gigafit',name:'Gigafit',short:'Gigafit',hint:'Plateau muscu et cardio',color:'#F97316',emoji:'🟧'},
+    {id:'onefitness',name:'One Fitness Club',short:'One Fitness',hint:'Salle complète et machines',color:'#8FB9FF',emoji:'⚪'},
+    {id:'cmg',name:'CMG Sports Club',short:'CMG',hint:'Club premium, cours, plateau',color:'#94A3B8',emoji:'⚫'},
+    {id:'foresthill',name:'Forest Hill',short:'Forest Hill',hint:'Club sport, tennis, fitness',color:'#22C55E',emoji:'🌲'},
+    {id:'anytimefitness',name:'Anytime Fitness',short:'Anytime',hint:'Accès 24/7 selon club',color:'#7C3AED',emoji:'🕘'},
+    {id:'home',name:'Maison / Home gym',short:'Maison',hint:'Poids du corps, haltères, élastiques',color:'#A7B0BC',emoji:'🏠'},
+    {id:'autre',name:'Autre salle',short:'Autre',hint:'Salle indépendante ou autre chaîne',color:'#64707F',emoji:'➕'}
+  ];
+  window.GS_GYM_CATALOG = GYMS;
 
-  window.gsLogout = window.deconnexion = async function(){
-    if(!confirm('Se déconnecter de G-SQUAD ?'))return;
-    try{closeEl('profile-settings-v1');closeEl('profil-ov');closeEl('more-ov');closeEl('more-sh');closeEl('social-ov');closeEl('friend-profile-ov');}catch(e){}
-    try{if(window._supa&&window._supa.auth){await window._supa.auth.signOut();}}catch(e){console.warn('Déconnexion Supabase impossible:',e);}
-    try{window._supaUser=null;}catch(e){}
-    try{
-      var auth=$('auth-screen'), onboard=$('onboard');
-      if(onboard)onboard.style.display='none';
-      if(auth){auth.style.display='flex';if(typeof authShowView==='function')authShowView('landing');}
-    }catch(e){}
-    safeNotify('Déconnecté.');
+  function $(id){ return document.getElementById(id); }
+  function q(sel,root){ return (root||document).querySelector(sel); }
+  function qa(sel,root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
+  function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function notifySafe(msg){ try{ if(typeof window.notify==='function') window.notify(msg); }catch(e){} }
+  function saveSafe(){ try{ if(typeof window.sv==='function') window.sv(); else localStorage.setItem('ath7',JSON.stringify(window.state||{})); }catch(e){} }
+  function gym(id){ return GYMS.find(function(g){return g.id===id;}) || {id:id,name:id,short:id,hint:'Salle',color:'#64707F',emoji:'•'}; }
+  function gymNames(list){ return (list||[]).map(function(id){return gym(id).short||gym(id).name;}); }
+  function profile(){ window.state=window.state||{}; window.state.profil=window.state.profil||{}; if(!Array.isArray(window.state.profil.gyms)) window.state.profil.gyms=[]; return window.state.profil; }
+  function onboardingGyms(){
+    var arr=[];
+    try{ if(Array.isArray(window.obGyms)) arr=window.obGyms.slice(); }catch(e){}
+    try{ if(typeof obGyms!=='undefined' && Array.isArray(obGyms) && obGyms.length) arr=obGyms.slice(); }catch(e){}
+    return arr;
+  }
+  function setOnboardingGyms(arr){
+    window.obGyms = arr.slice();
+    try{ obGyms = arr.slice(); }catch(e){}
+  }
+  function toggleIn(arr,id){ var out=(arr||[]).slice(); var i=out.indexOf(id); if(i>-1) out.splice(i,1); else out.push(id); return out; }
+  function optionHtml(id, selected, mode){
+    var g=gym(id), active=selected.indexOf(id)>-1, fn=mode==='profile'?'toggleProfilGym':'selGym';
+    return '<button type="button" class="gs-gym-option '+(active?'sel':'')+'" id="'+(mode==='profile'?'pg-':'ob-gym-')+esc(id)+'" onclick="'+fn+'(\''+esc(id)+'\')">'
+      +'<span class="gs-gym-mark" style="--gym-color:'+esc(g.color)+'">'+esc(g.emoji)+'</span>'
+      +'<span class="gs-gym-copy"><b>'+esc(g.name)+'</b><small>'+esc(g.hint)+'</small></span>'
+      +(active?'<span class="gs-gym-check">✓</span>':'')+'</button>';
+  }
+  function gymsGridHtml(selected, mode){ return '<div class="gs-gym-grid">'+GYMS.map(function(g){return optionHtml(g.id,selected,mode);}).join('')+'</div>'; }
+  function installGymCss(){
+    if($('gs-gym-rank-style')) return;
+    var st=document.createElement('style'); st.id='gs-gym-rank-style';
+    st.textContent = [
+      '.gs-gym-grid{display:grid;grid-template-columns:1fr;gap:9px;margin-top:10px}',
+      '@media(min-width:420px){.gs-gym-grid{grid-template-columns:1fr 1fr}}',
+      '.gs-gym-option{width:100%;display:flex;align-items:center;gap:11px;text-align:left;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.075);border-radius:18px;padding:13px 12px;color:var(--txt);cursor:pointer;min-height:68px}',
+      '.gs-gym-option.sel{background:rgba(143,185,255,.14);border-color:rgba(143,185,255,.48);box-shadow:0 0 0 1px rgba(143,185,255,.08) inset}',
+      '.gs-gym-mark{width:38px;height:38px;border-radius:14px;background:color-mix(in srgb,var(--gym-color) 16%,transparent);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;border:1px solid color-mix(in srgb,var(--gym-color) 35%,transparent)}',
+      '.gs-gym-copy{min-width:0;flex:1}.gs-gym-copy b{display:block;font-size:14px;font-weight:950;letter-spacing:-.02em}.gs-gym-copy small{display:block;margin-top:3px;font-size:11px;line-height:1.25;color:var(--mut);font-weight:750}',
+      '.gs-gym-check{width:24px;height:24px;border-radius:999px;background:var(--txt);color:#071018;display:flex;align-items:center;justify-content:center;font-weight:950;font-size:12px;flex-shrink:0}',
+      '.gs-gym-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.gs-gym-tag{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:7px 10px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);color:var(--txt2);font-size:12px;font-weight:850}',
+      '.gs-rank-fab{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,8px) + 88px);z-index:760;width:50px;height:50px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(145deg,rgba(245,243,238,.98),rgba(219,230,247,.96));color:#071018;display:flex;align-items:center;justify-content:center;font-size:23px;box-shadow:0 18px 48px rgba(0,0,0,.35)}',
+      '.gs-rank-ov{position:fixed;inset:0;z-index:2600;background:#070A0E;color:var(--txt);display:flex;flex-direction:column;overflow:hidden}.gs-rank-head{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,14px) + 8px) 16px 14px;background:rgba(7,10,14,.94);border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(18px);flex-shrink:0}.gs-rank-back{width:40px;height:40px;border-radius:14px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08);color:var(--txt);font-size:18px;font-weight:950}.gs-rank-title{flex:1;font-size:18px;font-weight:950;letter-spacing:-.03em}.gs-rank-body{flex:1;overflow-y:auto;padding:16px 16px 120px;-webkit-overflow-scrolling:touch}.gs-rank-tabs{display:flex;gap:7px;overflow-x:auto;padding:2px 0 14px;scrollbar-width:none}.gs-rank-tab{flex:0 0 auto;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--mut);font-size:12px;font-weight:950;padding:10px 13px}.gs-rank-tab.act{background:var(--txt);color:#071018;border-color:var(--txt)}',
+      '.gs-rank-hero{background:linear-gradient(145deg,rgba(245,243,238,.98),rgba(219,230,247,.96));color:#071018;border-radius:32px;padding:22px;margin-bottom:14px;box-shadow:0 22px 70px rgba(0,0,0,.25)}.gs-rank-k{font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:950;color:#596677}.gs-rank-score{font-size:70px;line-height:.95;font-weight:1000;letter-spacing:-.08em}.gs-rank-tier{display:inline-flex;gap:6px;align-items:center;border-radius:999px;background:rgba(7,16,24,.08);padding:8px 12px;font-size:12px;font-weight:950;margin-top:8px}.gs-rank-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.gs-rank-mini{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:14px 9px;text-align:center}.gs-rank-mini b{display:block;font-size:22px;letter-spacing:-.05em}.gs-rank-mini span{display:block;font-size:9px;color:var(--mut);font-weight:950;text-transform:uppercase;letter-spacing:.07em;margin-top:4px}',
+      '.gs-rank-card{background:rgba(18,24,33,.86);border:1px solid rgba(255,255,255,.07);border-radius:24px;padding:16px;margin-bottom:10px}.gs-rank-row{display:flex;align-items:center;gap:12px}.gs-rank-num{width:38px;text-align:center;font-size:17px;font-weight:1000;color:var(--mut)}.gs-rank-num.top{color:#f59e0b}.gs-rank-av{width:42px;height:42px;border-radius:16px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:1000;color:var(--txt);overflow:hidden;flex-shrink:0}.gs-rank-av img{width:100%;height:100%;object-fit:cover}.gs-rank-info{flex:1;min-width:0}.gs-rank-name{font-size:14px;font-weight:950;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gs-rank-sub{font-size:11px;color:var(--mut);font-weight:750;margin-top:3px}.gs-rank-val{text-align:right;font-size:23px;font-weight:1000;letter-spacing:-.05em;color:var(--txt)}.gs-rank-me{border-color:rgba(143,185,255,.46);background:rgba(143,185,255,.07)}.gs-rank-pill{display:inline-flex;border-radius:999px;padding:5px 8px;background:rgba(143,185,255,.12);color:var(--acc);font-size:10px;font-weight:950;margin-left:4px}.gs-rank-empty{text-align:center;color:var(--mut);padding:42px 20px}.gs-rank-empty b{display:block;color:var(--txt);font-size:16px;margin:8px 0 4px}.gs-rank-sec{font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:950;color:var(--acc);margin:18px 0 10px}'
+    ].join('');
+    document.head.appendChild(st);
+  }
+
+  window.selGym = function(id){
+    var arr=toggleIn(onboardingGyms(),id);
+    setOnboardingGyms(arr);
+    refreshGymPickers();
+  };
+  window.toggleProfilGym = function(id){
+    var p=profile(); p.gyms=toggleIn(p.gyms,id); saveSafe(); refreshGymPickers(); updateProfileGymTags(); if(typeof window.updateHamburgerGyms==='function') window.updateHamburgerGyms(); notifySafe('Salles mises à jour');
   };
 
-  function logoutButtonHTML(){
-    return '<button type="button" class="gs-menu-btn gs-logout-btn" onclick="gsLogout()" style="border-color:rgba(255,107,122,.28)!important;color:var(--red)!important">'
-      +'<span class="gs-menu-logo" style="background:rgba(255,107,122,.10);color:var(--red)">↪</span>'
-      +'<span><span class="gs-menu-title">Déconnexion</span><span class="gs-menu-sub">Quitter ce compte G-SQUAD</span></span>'
-      +'</button>';
+  function refreshGymPickers(){
+    installGymCss();
+    var ob=$('ob-gyms'); if(ob){ ob.innerHTML=gymsGridHtml(onboardingGyms(),'onboarding'); ob.classList.add('gs-gym-enhanced'); }
+    var pg=$('prof-gym-picker'); if(pg){ pg.innerHTML=gymsGridHtml(profile().gyms,'profile'); pg.classList.add('gs-gym-enhanced'); pg.style.display='block'; pg.style.gridTemplateColumns=''; }
+    qa('[data-gs-profile-gyms]').forEach(function(el){ el.innerHTML=gymsGridHtml(profile().gyms,'profile'); });
   }
 
-  function injectLogoutButtons(){
-    var sh=$('more-sh');
-    if(sh && !sh.querySelector('.gs-logout-btn')){
-      var grid=sh.querySelector('.gs-menu-section:last-of-type + .gs-menu-grid')||sh.querySelector('.gs-menu-grid:last-of-type');
-      if(grid)grid.insertAdjacentHTML('beforeend',logoutButtonHTML());
-      else sh.insertAdjacentHTML('beforeend','<div class="gs-menu-section">Compte</div><div class="gs-menu-grid">'+logoutButtonHTML()+'</div>');
+  window.renderProfilGyms = function(){ refreshGymPickers(); updateProfileGymTags(); };
+  function updateProfileGymTags(){
+    var p=(window.state&&window.state.profil)||{}, gyms=Array.isArray(p.gyms)?p.gyms:[];
+    var html=gyms.length ? '<div class="gs-gym-tags">'+gyms.map(function(id){var g=gym(id);return '<span class="gs-gym-tag"><span style="color:'+esc(g.color)+'">●</span>'+esc(g.short||g.name)+'</span>';}).join('')+'</div>' : '<div class="gs-card-sub">Salle non renseignée</div>';
+    var st=$('profil-salle-tag'); if(st) st.innerHTML=html;
+    qa('[data-gs-gym-tags]').forEach(function(el){ el.innerHTML=html; });
+  }
+
+  window.updateHamburgerGyms = function(){
+    var el=$('ham-gym-btn');
+    if(!el) return;
+    var gyms=profile().gyms;
+    if(!gyms.length){
+      el.innerHTML='<button class="ham-btn" onclick="closeHamburger&&closeHamburger();openProfilSettings&&openProfilSettings()"><span style="width:36px;height:36px;border-radius:12px;background:rgba(143,185,255,.12);display:flex;align-items:center;justify-content:center">🏋️</span><div><div class="ham-title">Choisir ma salle</div><div class="ham-sub">Basic-Fit, Fitness Park, On Air, etc.</div></div></button>';
+      return;
     }
-    var settings=$('profile-settings-v1');
-    if(settings && !settings.querySelector('.gs-logout-btn')){
-      var profile=settings.querySelector('.gs-profile')||settings;
-      profile.insertAdjacentHTML('beforeend','<div class="gs-card" style="border-color:rgba(255,107,122,.18);margin-bottom:30px"><div class="gs-card-title">Compte</div><div class="gs-card-sub">Déconnecte ce compte sans supprimer tes données locales.</div><div class="gs-menu-grid" style="margin-top:12px">'+logoutButtonHTML()+'</div></div>');
+    el.innerHTML=gyms.map(function(id){var g=gym(id);return '<button class="ham-btn" onclick="navigateToGym(\''+esc(id)+'\')"><span style="width:36px;height:36px;border-radius:12px;background:'+esc(g.color)+'22;display:flex;align-items:center;justify-content:center">'+esc(g.emoji)+'</span><div><div class="ham-title">'+esc(g.short||g.name)+'</div><div class="ham-sub">Trouver près de moi</div></div><span style="margin-left:auto;color:var(--mut)">›</span></button>';}).join('');
+  };
+
+  window.navigateToGym = function(id){
+    var g=gym(id), q=(id==='home'||id==='autre')?'salle de sport':g.name;
+    var url='https://www.google.com/maps/search/'+encodeURIComponent(q+' près de moi');
+    try{ if(/iPhone|iPad|Macintosh/.test(navigator.userAgent)) url='https://maps.apple.com/?q='+encodeURIComponent(q+' près de moi'); }catch(e){}
+    window.open(url,'_blank');
+  };
+  window.showNearestGyms = function(){
+    installGymCss();
+    var old=$('gs-gym-ov'); if(old) old.remove();
+    var html='<div id="gs-gym-ov" class="gs-rank-ov"><div class="gs-rank-head"><button class="gs-rank-back" onclick="document.getElementById(\'gs-gym-ov\').remove()">←</button><div class="gs-rank-title">Salles de sport</div></div><div class="gs-rank-body"><div class="gs-rank-hero"><div class="gs-rank-k">Autour de toi</div><div style="font-size:31px;font-weight:1000;letter-spacing:-.06em;line-height:1.05;margin-top:8px">Choisis une enseigne<br>à rechercher.</div><div style="font-size:13px;color:#596677;font-weight:800;margin-top:10px">Ouvre Maps directement, sans base payante.</div></div><div class="gs-gym-grid">'
+      +GYMS.map(function(g){return '<button type="button" class="gs-gym-option" onclick="navigateToGym(\''+esc(g.id)+'\')"><span class="gs-gym-mark" style="--gym-color:'+esc(g.color)+'">'+esc(g.emoji)+'</span><span class="gs-gym-copy"><b>'+esc(g.name)+'</b><small>'+esc(g.hint)+'</small></span><span style="color:var(--mut);font-size:20px">›</span></button>';}).join('')+'</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html);
+  };
+
+  function injectGymsIntoSettings(){
+    refreshGymPickers();
+    var set=$('profile-settings-v1'); if(!set || set.querySelector('.gs-gym-settings')) return;
+    var target=q('.gs-profile',set)||set;
+    var saveBtn=qa('button',target).filter(function(b){return /sauvegarder/i.test(b.textContent||'');}).pop();
+    var block=document.createElement('div'); block.className='gs-card gs-gym-settings';
+    block.innerHTML='<div class="gs-card-title">Salles de sport</div><div class="gs-card-sub" style="margin:6px 0 12px">Sélectionne une ou plusieurs salles. Elles apparaissent dans ton profil et le menu.</div><div data-gs-profile-gyms></div>';
+    if(saveBtn && saveBtn.parentNode===target) target.insertBefore(block,saveBtn); else target.appendChild(block);
+    refreshGymPickers();
+  }
+
+  function injectGymsIntoProfile(){
+    var ov=$('profil-ov'); if(!ov || !ov.classList.contains('open') || ov.querySelector('.gs-profile-gym-card')) return;
+    var cards=qa('.gs-card',ov); var after=cards.length?cards[0]:null;
+    var block=document.createElement('div'); block.className='gs-card gs-profile-gym-card'; block.setAttribute('data-gs-gym-tags','1');
+    if(after) after.insertAdjacentElement('afterend',block); else (q('.gs-profile',ov)||ov).appendChild(block);
+    updateProfileGymTags();
+  }
+
+  function addGymAndRankToMenu(){
+    var sh=$('more-sh'); if(!sh || !sh.classList.contains('open')) return;
+    if(!sh.querySelector('.gs-rank-menu-btn')){
+      var firstGrid=q('.gs-menu-grid',sh)||sh;
+      firstGrid.insertAdjacentHTML('afterbegin','<button type="button" class="gs-menu-btn gs-rank-menu-btn" onclick="closeHamburger&&closeHamburger();openLeaderboard()"><span class="gs-menu-logo">🏆</span><span><span class="gs-menu-title">Classement Elite</span><span class="gs-menu-sub">GOAT · Force · Volume · Endurance</span></span></button>');
     }
-    var profil=$('profil-ov');
-    if(profil&&profil.classList.contains('open')&&!profil.querySelector('.gs-profile-logout-shortcut')){
-      var main=profil.querySelector('.gs-profile');
-      if(main)main.insertAdjacentHTML('beforeend','<button type="button" class="gs-btn ghost gs-profile-logout-shortcut" onclick="gsLogout()" style="width:100%;margin:22px 0 8px;border-color:rgba(255,107,122,.25);color:var(--red)">Déconnexion</button>');
+    if(!sh.querySelector('.gs-menu-gyms-block')){
+      var block='<div class="gs-menu-section gs-menu-gyms-block">Mes salles</div><div class="gs-menu-grid gs-menu-gyms-block" id="ham-gym-btn"></div>';
+      var account=qa('.gs-menu-section',sh).filter(function(x){return /Compte/i.test(x.textContent||'');})[0];
+      if(account) account.insertAdjacentHTML('beforebegin',block); else sh.insertAdjacentHTML('beforeend',block);
+      window.updateHamburgerGyms();
     }
   }
 
-  function wrap(name){
-    var old=window[name];
-    if(typeof old!=='function'||old.__logoutWrapped)return;
-    var wrapped=function(){var r=old.apply(this,arguments);setTimeout(injectLogoutButtons,0);return r;};
-    wrapped.__logoutWrapped=true;window[name]=wrapped;
+  function addRankButtonToHeader(){
+    var hdr=$('app-header'); if(!hdr || $('gs-rank-header-btn')) return;
+    var btn=document.createElement('button'); btn.id='gs-rank-header-btn'; btn.type='button'; btn.setAttribute('onclick','openLeaderboard()'); btn.innerHTML='🏆';
+    btn.style.cssText='background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:999px;width:36px;height:36px;color:var(--txt);font-size:16px;display:flex;align-items:center;justify-content:center;margin-right:8px;flex-shrink:0';
+    var search=hdr.lastElementChild; hdr.insertBefore(btn,search||null);
   }
-  function install(){wrap('openHamburger');wrap('openProfil');wrap('openProfilSettings');injectLogoutButtons();}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(install,0);});else setTimeout(install,0);
+  function addRankFab(){
+    if($('gs-rank-fab')) return;
+    var b=document.createElement('button'); b.id='gs-rank-fab'; b.className='gs-rank-fab'; b.type='button'; b.setAttribute('onclick','openLeaderboard()'); b.textContent='🏆'; document.body.appendChild(b);
+  }
+  function injectRankIntoHome(){
+    var panel=$('p-accueil'); if(!panel || panel.querySelector('.gs-home-rank-card')) return;
+    var first=q('.gs-card',panel) || q('.home-priorities',panel);
+    var local=getLocalScores(); var ag=local.aggregate;
+    var card=document.createElement('div'); card.className='gs-card gs-home-rank-card';
+    card.innerHTML='<div class="gs-row"><div style="font-size:32px">🏆</div><div style="flex:1"><div class="gs-card-title">Classement Elite</div><div class="gs-card-sub">GOAT '+ag.goat+'/100 · Force '+ag.force+' · Volume '+ag.volume+' · Endurance '+ag.endurance+'</div></div><button class="gs-btn secondary" onclick="openLeaderboard()">Ouvrir</button></div>';
+    if(first) first.insertAdjacentElement('afterend',card); else panel.appendChild(card);
+  }
+
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+  function num(v,d){ v=parseFloat(v); return isFinite(v)?v:(d||0); }
+  function int(v,d){ v=parseInt(v,10); return isFinite(v)?v:(d||0); }
+  function isBodyEx(name){ return /traction|pull|chin|dips|pompe|push/i.test(String(name||'')); }
+  function soft(v,target){ if(v<=0) return 0; return clamp(Math.round((Math.log(1+v/(target*.25))/Math.log(1+target/(target*.25)))*85),0,100); }
+  function exKey(name){ return String(name||'general').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,40)||'general'; }
+  function latestBw(){ var p=(window.state&&window.state.profil)||{}; return num(p.poids||p.weight,75)||75; }
+  function fallbackScores(){
+    var logs=(window.state&&Array.isArray(window.state.logs))?window.state.logs:[];
+    var bw=latestBw(), by={};
+    logs.forEach(function(l){
+      var name=l.ex||l.exercise_name||l.exercise||l.n||''; var reps=int(l.reps||l.max_reps,0); var sets=int(l.sets,1)||1; var charge=num(l.charge||l.external_load||l.weight_kg||l.max_weight_kg,0);
+      if(!name || reps<=0) return;
+      var total=isBodyEx(name)?bw+Math.max(0,charge):charge; if(total<=0) return;
+      var key=exKey(name); if(!by[key]) by[key]={exercise_name:name,exercise_key:key,best_1rm:0,best_reps:0,best_volume:0,count:0};
+      var one=total*(1+Math.min(reps,12)/30), vol=total*reps*sets;
+      by[key].best_1rm=Math.max(by[key].best_1rm,one); by[key].best_reps=Math.max(by[key].best_reps,reps); by[key].best_volume=Math.max(by[key].best_volume,vol); by[key].count++;
+    });
+    Object.keys(by).forEach(function(k){ var r=by[k], rel=r.best_1rm/Math.max(45,bw); r.force=soft(rel,isBodyEx(r.exercise_name)?2.05:1.75); r.volume=soft(r.best_volume,12000); r.endurance=soft(r.best_reps,isBodyEx(r.exercise_name)?50:30); r.goat=Math.round(r.force*.40+r.volume*.35+r.endurance*.25); r.best_1rm=Math.round(r.best_1rm); r.best_volume=Math.round(r.best_volume); });
+    var rows=Object.values(by).sort(function(a,b){return b.goat-a.goat;});
+    function agg(f){ if(!rows.length) return 0; var w=[1,.78,.58,.43,.32], s=0,t=0; rows.slice(0,5).forEach(function(r,i){s+=(r[f]||0)*w[i];t+=w[i];}); return Math.round(s/t); }
+    return {version:'visible-patch',updated_at:new Date().toISOString(),exercises:by,aggregate:{goat:agg('goat'),force:agg('force'),volume:agg('volume'),endurance:agg('endurance'),exercise_count:rows.length,top:rows}};
+  }
+  function getLocalScores(){
+    try{ if(window.GS_ELITE && typeof window.GS_ELITE.computeLocalScores==='function'){ var sc=window.GS_ELITE.computeLocalScores(); if(sc&&sc.aggregate) return sc; } }catch(e){}
+    var st=window.state||{}; if(st.eliteScores&&st.eliteScores.aggregate) return st.eliteScores;
+    return fallbackScores();
+  }
+  function tier(score){ if(score>=95)return ['🐐','GOAT']; if(score>=85)return ['👑','Legend']; if(score>=72)return ['💎','Elite']; if(score>=58)return ['🥇','Gold']; if(score>=42)return ['🥈','Silver']; if(score>=25)return ['🥉','Bronze']; return ['🔰','Rookie']; }
+  function avatar(name,src){ return '<div class="gs-rank-av">'+(src?'<img src="'+esc(src)+'">':esc(String(name||'G').charAt(0).toUpperCase()))+'</div>'; }
+  function userName(){ var p=(window.state&&window.state.profil)||{}; return p.name||p.display_name||p.username||'Toi'; }
+  function userUsername(){ var p=(window.state&&window.state.profil)||{}; return p.username||''; }
+  function currentUserId(){ return (window._supaUser&&window._supaUser.id)||'local-user'; }
+  function localRow(){ var sc=getLocalScores(), p=(window.state&&window.state.profil)||{}, ag=sc.aggregate||{}; return {user_id:currentUserId(),name:userName(),username:userUsername(),avatar:p.avatar||'',goat:ag.goat||0,force:ag.force||0,volume:ag.volume||0,endurance:ag.endurance||0,exercise_count:ag.exercise_count||0,updated_at:ag.updated_at||sc.updated_at||new Date().toISOString()}; }
+  async function syncLeaderboard(){
+    if(!window._supa || !window._supaUser) return;
+    var r=localRow();
+    try{ await window._supa.from('user_global_scores').upsert({user_id:window._supaUser.id,display_name:r.name,username:r.username,avatar_url:r.avatar,goat_score:r.goat,force_score:r.force,volume_score:r.volume,endurance_score:r.endurance,exercise_count:r.exercise_count,updated_at:new Date().toISOString()},{onConflict:'user_id'}); }catch(e){}
+  }
+  async function fetchRows(metric){
+    var rows=[], col={goat:'goat_score',force:'force_score',volume:'volume_score',endurance:'endurance_score'}[metric]||'goat_score';
+    if(window._supa){
+      try{ var r=await window._supa.from('user_global_scores').select('user_id,display_name,username,avatar_url,goat_score,force_score,volume_score,endurance_score,exercise_count,updated_at').order(col,{ascending:false}).limit(100); if(!r.error && r.data) rows=r.data.map(function(x){return {user_id:x.user_id,name:x.display_name||x.username||'Athlète',username:x.username||'',avatar:x.avatar_url||'',goat:x.goat_score||0,force:x.force_score||0,volume:x.volume_score||0,endurance:x.endurance_score||0,exercise_count:x.exercise_count||0,updated_at:x.updated_at};}); }catch(e){}
+      if(!rows.length){ try{ var p=await window._supa.from('profiles').select('id,username,display_name,data').limit(100); rows=(p.data||[]).map(function(x){var d=(typeof x.data==='object'&&x.data)||{}, ag=(d.eliteScores&&d.eliteScores.aggregate)||{}; return {user_id:x.id,name:x.display_name||(d.profil&&d.profil.name)||x.username||'Athlète',username:x.username||'',avatar:(d.profil&&d.profil.avatar)||'',goat:ag.goat||d.xp||0,force:ag.force||0,volume:ag.volume||0,endurance:ag.endurance||0,exercise_count:ag.exercise_count||0,updated_at:(d.eliteScores&&d.eliteScores.updated_at)||''};}); }catch(e){} }
+    }
+    var me=localRow();
+    if(!rows.some(function(x){return x.user_id===me.user_id;})) rows.push(me);
+    return rows.sort(function(a,b){return (b[metric]||0)-(a[metric]||0);});
+  }
+  function rankIcon(i){ return i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1); }
+  function renderMe(){
+    var sc=getLocalScores(), ag=sc.aggregate||{}, tr=tier(ag.goat||0), top=(ag.top||Object.values(sc.exercises||{}).sort(function(a,b){return b.goat-a.goat;})).slice(0,8);
+    return '<div class="gs-rank-hero"><div class="gs-rank-k">Score GOAT</div><div class="gs-rank-score">'+(ag.goat||0)+'<span style="font-size:24px;color:#596677">/100</span></div><div class="gs-rank-tier">'+tr[0]+' '+tr[1]+'</div><div style="font-size:12px;color:#596677;margin-top:10px;font-weight:850">Force 40% · Volume 35% · Endurance 25%</div></div><div class="gs-rank-grid"><div class="gs-rank-mini"><b>💪 '+(ag.force||0)+'</b><span>Force King</span></div><div class="gs-rank-mini"><b>🔁 '+(ag.volume||0)+'</b><span>Volume Beast</span></div><div class="gs-rank-mini"><b>🫁 '+(ag.endurance||0)+'</b><span>Endurance</span></div></div><div class="gs-rank-sec">Tes meilleurs exercices</div>'+(top.length?top.map(function(r,i){return '<div class="gs-rank-card"><div class="gs-rank-row"><div class="gs-rank-num '+(i<3?'top':'')+'">'+rankIcon(i)+'</div><div class="gs-rank-info"><div class="gs-rank-name">'+esc(r.exercise_name||'Exercice')+'</div><div class="gs-rank-sub">1RM ~'+Math.round(r.best_1rm||0)+'kg · '+(r.best_reps||0)+' reps · '+Math.round((r.best_volume||0)/1000)+'t volume</div></div><div class="gs-rank-val">'+(r.goat||0)+'</div></div></div>';}).join(''):'<div class="gs-rank-empty"><div style="font-size:42px">📊</div><b>Aucun score pour l’instant</b><span>Log charge + reps pendant une séance pour alimenter le classement.</span></div>');
+  }
+  function renderRows(rows,metric){
+    if(!rows.length) return '<div class="gs-rank-empty"><div style="font-size:42px">📭</div><b>Aucun athlète classé</b><span>Le classement apparaîtra dès que des performances seront enregistrées.</span></div>';
+    var uid=currentUserId();
+    return rows.map(function(r,i){ var me=r.user_id===uid, score=Math.round(r[metric]||0); return '<div class="gs-rank-card '+(me?'gs-rank-me':'')+'"><div class="gs-rank-row"><div class="gs-rank-num '+(i<3?'top':'')+'">'+rankIcon(i)+'</div>'+avatar(r.name,r.avatar)+'<div class="gs-rank-info"><div class="gs-rank-name">'+esc(r.name||'Athlète')+(me?'<span class="gs-rank-pill">Toi</span>':'')+'</div><div class="gs-rank-sub">'+(r.username?'@'+esc(r.username)+' · ':'')+(r.exercise_count||0)+' exercices</div></div><div class="gs-rank-val">'+score+'</div></div></div>'; }).join('');
+  }
+  window.gsRankTab = async function(tab){
+    var area=$('gs-rank-area'); if(!area) return;
+    qa('.gs-rank-tab').forEach(function(b){ b.classList.toggle('act',b.getAttribute('data-tab')===tab); });
+    if(tab==='me'){ area.innerHTML=renderMe(); syncLeaderboard(); return; }
+    area.innerHTML='<div class="gs-rank-empty"><div style="font-size:32px">⏳</div><b>Chargement du classement…</b></div>';
+    var rows=await fetchRows(tab); area.innerHTML=renderRows(rows,tab);
+  };
+  window.openLeaderboard = function(){
+    installGymCss();
+    var old=$('gs-rank-ov')||$('gs5-leaderboard'); if(old) old.remove();
+    var html='<div id="gs-rank-ov" class="gs-rank-ov"><div class="gs-rank-head"><button class="gs-rank-back" onclick="document.getElementById(\'gs-rank-ov\').remove()">←</button><div class="gs-rank-title">Classement Elite</div><button class="gs-rank-back" style="font-size:15px" onclick="gsRankTab(document.querySelector(\'.gs-rank-tab.act\')?.getAttribute(\'data-tab\')||\'me\')">↻</button></div><div class="gs-rank-body"><div class="gs-rank-tabs"><button class="gs-rank-tab act" data-tab="me" onclick="gsRankTab(\'me\')">Moi</button><button class="gs-rank-tab" data-tab="goat" onclick="gsRankTab(\'goat\')">🏆 GOAT</button><button class="gs-rank-tab" data-tab="force" onclick="gsRankTab(\'force\')">💪 Force</button><button class="gs-rank-tab" data-tab="volume" onclick="gsRankTab(\'volume\')">🔁 Volume</button><button class="gs-rank-tab" data-tab="endurance" onclick="gsRankTab(\'endurance\')">🫁 Endurance</button></div><div id="gs-rank-area"></div></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html); window.gsRankTab('me');
+  };
+
+  function wrap(name,after){ var old=window[name]; if(typeof old==='function'&&!old.__gsGymRankWrapped){ var fn=function(){ var r=old.apply(this,arguments); setTimeout(after,0); return r; }; fn.__gsGymRankWrapped=true; window[name]=fn; } }
+  function install(){ installGymCss(); refreshGymPickers(); addRankButtonToHeader(); addRankFab(); injectRankIntoHome(); wrap('openHamburger',function(){addGymAndRankToMenu();}); wrap('openProfilSettings',function(){injectGymsIntoSettings();}); wrap('openProfil',function(){injectGymsIntoProfile(); updateProfileGymTags();}); wrap('renderAccueil',function(){injectRankIntoHome();}); setTimeout(function(){addGymAndRankToMenu(); injectGymsIntoSettings(); injectGymsIntoProfile(); updateProfileGymTags();},200); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',install); else install();
 })();
 </script>
 
