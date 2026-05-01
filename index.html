@@ -8255,5 +8255,354 @@ document.addEventListener('DOMContentLoaded',function(){
   .ob-gym-ico .gs-brand-logo.real-logo{width:42px!important;height:42px!important;border-radius:14px!important;}
 </style>
 
+
+<!-- PATCH 2026-05-02 — bouton déconnexion visible partout -->
+<style id="gs-force-visible-logout-css">
+  .gs-logout-btn{
+    width:100%!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:10px!important;
+    min-height:54px!important;
+    margin:12px 0 0!important;
+    padding:15px 16px!important;
+    border-radius:20px!important;
+    border:1px solid rgba(255,107,122,.36)!important;
+    background:rgba(255,107,122,.12)!important;
+    color:#FF6B7A!important;
+    font-family:'DM Sans',system-ui,-apple-system,BlinkMacSystemFont,sans-serif!important;
+    font-size:15px!important;
+    font-weight:1000!important;
+    letter-spacing:-.02em!important;
+    text-align:center!important;
+  }
+  .gs-logout-btn span{display:inline!important;color:inherit!important;line-height:1!important;white-space:nowrap!important;}
+  .gs-menu-grid .gs-logout-btn{min-height:64px!important;justify-content:flex-start!important;text-align:left!important;}
+  .gs-logout-icon{width:38px!important;height:38px!important;border-radius:14px!important;display:flex!important;align-items:center!important;justify-content:center!important;background:rgba(255,107,122,.14)!important;flex:0 0 38px!important;font-size:20px!important;}
+  .gs-profile-clean>.gs-logout-btn,.gs-profile>.gs-logout-btn{margin-top:14px!important;}
+</style>
+<script id="gs-force-visible-logout-js">
+(function(){
+  function $(id){return document.getElementById(id);}
+  function toast(msg){try{ if(typeof notify==='function') notify(msg); else if(typeof nt==='function') nt(msg); }catch(e){}}
+  function closeEl(id){var el=$(id); if(!el)return; el.classList.remove('open'); if(id!=='more-sh') el.style.display='none';}
+
+  window.gsLogout = window.logout = window.deconnexion = async function(){
+    if(!confirm('Se déconnecter ?')) return;
+    try{
+      if(window._supa && window._supa.auth && window._supa.auth.signOut){ await window._supa.auth.signOut(); }
+    }catch(e){ console.warn('Déconnexion Supabase impossible', e); }
+    try{ window._supaUser=null; window.currentUser=null; }catch(e){}
+    try{ localStorage.removeItem('gs_skip_auth'); localStorage.removeItem('gs_auth_skipped'); }catch(e){}
+    ['profil-ov','profile-settings-v1','hamburger-ov','more-ov','social-ov','leaderboard-ov','notif-ov','gs-onboard-v4'].forEach(closeEl);
+    var more=$('more-sh'); if(more) more.classList.remove('open');
+    var auth=$('auth-screen');
+    if(auth){ auth.style.display='flex'; auth.classList.add('open'); }
+    var landing=$('auth-view-landing'); if(landing) landing.style.display='block';
+    ['auth-view-login','auth-view-signup-s1','auth-view-signup-s2','auth-view-signup-s3'].forEach(function(id){var el=$(id); if(el)el.style.display='none';});
+    toast('Déconnecté');
+  };
+
+  function logoutBtn(label){
+    return '<button type="button" class="gs-logout-btn" onclick="gsLogout()" data-gs-logout-btn="1"><span class="gs-logout-icon">↩</span><span>'+label+'</span></button>';
+  }
+
+  function injectMenuLogout(){
+    var sh=$('more-sh'); if(!sh || sh.querySelector('[data-gs-logout-menu]')) return;
+    sh.insertAdjacentHTML('beforeend', '<div class="gs-menu-section" data-gs-logout-menu="1">Compte</div><div class="gs-menu-grid" data-gs-logout-menu-grid="1">'+logoutBtn('Se déconnecter')+'</div>');
+  }
+
+  function injectProfileLogout(){
+    var ov=$('profil-ov'); if(!ov || ov.querySelector('[data-gs-logout-profile]')) return;
+    var root=ov.querySelector('.gs-profile-clean') || ov.querySelector('.gs-profile') || ov.firstElementChild;
+    if(root){
+      var wrap=document.createElement('div');
+      wrap.setAttribute('data-gs-logout-profile','1');
+      wrap.innerHTML=logoutBtn('Se déconnecter');
+      root.appendChild(wrap);
+    }
+  }
+
+  function injectSettingsLogout(){
+    var ov=$('profile-settings-v1'); if(!ov || ov.querySelector('[data-gs-logout-settings]')) return;
+    var root=ov.querySelector('.gs-profile') || ov.firstElementChild;
+    if(root){
+      var wrap=document.createElement('div');
+      wrap.className='gs-card';
+      wrap.setAttribute('data-gs-logout-settings','1');
+      wrap.innerHTML='<div class="gs-card-title">Compte</div><div class="gs-card-sub" style="margin:6px 0 12px">Quitter la session actuelle sans supprimer tes données locales.</div>'+logoutBtn('Se déconnecter');
+      root.appendChild(wrap);
+    }
+  }
+
+  function injectAll(){injectMenuLogout();injectProfileLogout();injectSettingsLogout();}
+
+  var oldHamb=window.openHamburger;
+  window.openHamburger=function(){
+    var r=oldHamb&&oldHamb.apply(this,arguments);
+    setTimeout(injectMenuLogout,0); setTimeout(injectMenuLogout,120); setTimeout(injectMenuLogout,350);
+    return r;
+  };
+  var oldProfil=window.openProfil;
+  window.openProfil=function(){
+    var r=oldProfil&&oldProfil.apply(this,arguments);
+    setTimeout(injectProfileLogout,0); setTimeout(injectProfileLogout,120); setTimeout(injectProfileLogout,350);
+    return r;
+  };
+  var oldSettings=window.openProfilSettings;
+  window.openProfilSettings=function(){
+    var r=oldSettings&&oldSettings.apply(this,arguments);
+    setTimeout(injectSettingsLogout,0); setTimeout(injectSettingsLogout,120); setTimeout(injectSettingsLogout,350);
+    return r;
+  };
+
+  document.addEventListener('DOMContentLoaded',function(){
+    injectAll();
+    try{ new MutationObserver(injectAll).observe(document.body,{childList:true,subtree:true}); }catch(e){}
+  });
+  setTimeout(injectAll,500);
+  setTimeout(injectAll,1500);
+})();
+</script>
+
+
+
+<style id="gs-password-settings-css">
+  .gs-password-wrap{position:relative;width:100%;display:block;margin-bottom:10px}
+  .gs-password-wrap>input{padding-right:52px!important;margin-bottom:0!important;width:100%!important}
+  .gs-eye-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.07);color:var(--txt);font-size:17px;display:flex;align-items:center;justify-content:center;z-index:2}
+  .gs-pass-note{font-size:12px;line-height:1.4;color:var(--txt2);margin:8px 0 12px}
+</style>
+<script id="gs-password-settings-patch">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
+  function P(){return S().profil}
+  function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('gsquad_state_v1',JSON.stringify(window.state));}catch(e){}}
+  function toast(msg){try{if(typeof window.notify==='function')window.notify(msg);else if(typeof window.nt==='function')window.nt(msg);else alert(msg);}catch(e){}}
+  function E(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});}
+  window.gsTogglePassword=function(id,btn){var input=$(id);if(!input)return;var hidden=input.getAttribute('type')==='password';input.setAttribute('type',hidden?'text':'password');if(btn)btn.textContent=hidden?'🙈':'👁️';};
+  window.gsAddPasswordEye=function(id){var input=$(id);if(!input||input.dataset.gsEyeReady==='1')return;var type=(input.getAttribute('type')||'').toLowerCase();if(type!=='password'&&input.dataset.gsPassword!=='1')return;input.dataset.gsEyeReady='1';var wrap=document.createElement('div');wrap.className='gs-password-wrap';input.parentNode.insertBefore(wrap,input);wrap.appendChild(input);var btn=document.createElement('button');btn.type='button';btn.className='gs-eye-btn';btn.textContent='👁️';btn.setAttribute('aria-label','Afficher / masquer le mot de passe');btn.onclick=function(){window.gsTogglePassword(id,btn)};wrap.appendChild(btn);};
+  function enhancePasswords(){['auth-password','auth-password2','gs-ob-main-input','gs-current-password','gs-new-password','gs-confirm-password'].forEach(window.gsAddPasswordEye)}
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(enhancePasswords,50);setTimeout(enhancePasswords,500)});try{new MutationObserver(function(){enhancePasswords()}).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
+  window.gsEnhancePasswords=enhancePasswords;
+
+  var STEPS=['email','password','username','name','height','weight','bmi','goal','nutrition','program','start'];
+  window.gsOnboardStep=window.gsOnboardStep||0;
+  function bmiVal(){var p=P(),h=parseFloat(p.taille||p.height||0),w=parseFloat(p.poids||p.weight||0);return h&&w?Math.round((w/Math.pow(h/100,2))*10)/10:null}
+  function macroCalc(){var p=P(),w=parseFloat(p.poids||p.weight||75),h=parseFloat(p.taille||p.height||175),freq=parseInt(p.frequency||4,10),obj=p.objectif||'maintien';var base=Math.round((10*w+6.25*h-5*25+5)*(1.35+Math.min(freq,6)*0.045));if(obj==='perte')base-=300;if(obj==='prise')base+=250;return {kcal:Math.max(1500,base),prot:Math.round(w*2),carbs:Math.round((base*0.45)/4),fat:Math.round((base*0.25)/9)}}
+  function programProposal(){var p=P(),f=parseInt(p.frequency||4,10),obj=p.objectif||'maintien',level=p.level||'intermediaire';var split=f<=3?'Full body':(f===4?'Upper / Lower':'PPL');var txt=split+' · '+f+' séances/semaine';if(obj==='perte')txt+=' · cardio léger 2×';if(obj==='prise')txt+=' · surcharge progressive';if(level==='debutant')txt+=' · priorité technique';return txt}
+  window.closeOnboardingWizard=function(){var ov=$('gs-onboard-v4');if(ov)ov.remove()};
+  window.openOnboardingWizard=function(step){window.gsOnboardStep=typeof step==='number'?step:0;window.renderOnboardingWizard()};
+  window.gsObPrev=function(){if(window.gsOnboardStep>0){window.gsOnboardStep--;window.renderOnboardingWizard()}};
+  window.gsObSkip=function(){S().onboarded=true;save();window.closeOnboardingWizard();try{window.bootApp&&window.bootApp()}catch(e){}toast('Tu peux compléter ça dans Profil')};
+  window.gsObPick=function(k,v){P()[k]=v;save();window.renderOnboardingWizard()};
+  window.gsObNext=function(){var p=P(),step=STEPS[window.gsOnboardStep],el=$('gs-ob-main-input');if(el){var val=el.value.trim();if(step==='email')p.email=val;if(step==='password'){p.localPasswordSet=!!val;if(val)p.passwordLastChangedAt=new Date().toISOString()}if(step==='username')p.username=val.replace(/[^a-zA-Z0-9_]/g,'').replace(/^@/,'').toLowerCase();if(step==='name')p.name=val;if(step==='height')p.taille=val;if(step==='weight')p.poids=val}save();if(window.gsOnboardStep<STEPS.length-1){window.gsOnboardStep++;window.renderOnboardingWizard()}else{S().onboarded=true;save();window.closeOnboardingWizard();try{window.bootApp&&window.bootApp()}catch(e){}toast('Bienvenue sur G-SQUAD')}};
+  window.renderOnboardingWizard=function(){
+    var old=$('gs-onboard-v4');if(old)old.remove();var p=P(),s=STEPS[window.gsOnboardStep],i=window.gsOnboardStep,title='',sub='',body='';
+    if(s==='email'){title='Ton email';sub='Étape 1/11 — optionnel. Tu peux continuer sans compte et compléter plus tard.';body='<input id="gs-ob-main-input" class="gs-onboard-input" type="email" placeholder="email@exemple.com" value="'+E(p.email||'')+'" autocomplete="email">'}
+    if(s==='password'){title='Mot de passe';sub='Étape 2/11 — optionnel. Appuie sur l’œil pour le visualiser.';body='<input id="gs-ob-main-input" class="gs-onboard-input" type="password" data-gs-password="1" placeholder="Mot de passe" autocomplete="new-password">'}
+    if(s==='username'){title='Choisis ton @username';sub='Pour être retrouvé par ta Squad.';body='<input id="gs-ob-main-input" class="gs-onboard-input" placeholder="ex: dany_lifts" value="'+E(p.username||'')+'" autocomplete="off">'}
+    if(s==='name'){title='Ton nom';sub='Le nom affiché sur ton profil.';body='<input id="gs-ob-main-input" class="gs-onboard-input" placeholder="ex: Dany" value="'+E(p.name||'')+'" autocomplete="name">'}
+    if(s==='height'){title='Ta taille';sub='Pour calculer l’IMC et adapter les objectifs.';body='<input id="gs-ob-main-input" class="gs-onboard-input" type="number" inputmode="decimal" placeholder="Taille en cm" value="'+E(p.taille||'')+'">'}
+    if(s==='weight'){title='Ton poids';sub='Pour les macros et certains scores relatifs.';body='<input id="gs-ob-main-input" class="gs-onboard-input" type="number" inputmode="decimal" placeholder="Poids en kg" value="'+E(p.poids||'')+'">'}
+    if(s==='bmi'){var b=bmiVal();title='Ton IMC';sub='Calcul automatique. C’est juste un repère.';body='<div class="gs-soft-card"><div class="gs-stat-row"><div class="gs-stat"><b>'+(b?b:'—')+'</b><span>IMC</span></div><div class="gs-stat"><b>'+E(p.taille||'—')+'</b><span>cm</span></div><div class="gs-stat"><b>'+E(p.poids||'—')+'</b><span>kg</span></div></div></div>'}
+    if(s==='goal'){title='Objectif + séances';sub='On adapte le programme à ton rythme.';body='<div class="gs-onboard-grid"><button class="gs-onboard-choice '+(p.objectif==='perte'?'sel':'')+'" onclick="gsObPick(\'objectif\',\'perte\')">Perte<span>Être plus sec</span></button><button class="gs-onboard-choice '+(p.objectif==='maintien'?'sel':'')+'" onclick="gsObPick(\'objectif\',\'maintien\')">Maintien<span>Progresser proprement</span></button><button class="gs-onboard-choice '+(p.objectif==='prise'?'sel':'')+'" onclick="gsObPick(\'objectif\',\'prise\')">Prise<span>Muscle et force</span></button><button class="gs-onboard-choice" onclick="var v=prompt(\'Nombre de séances par semaine ?\',\''+E(p.frequency||4)+'\');if(v){state.profil.frequency=v;sv&&sv();renderOnboardingWizard();}">'+E(p.frequency||4)+' séances<span>Appuie pour changer</span></button></div>'}
+    if(s==='nutrition'){var m=macroCalc();title='Calculateur nutrition';sub='Une base simple, modifiable ensuite.';body='<div class="gs-soft-card"><div class="gs-stat-row"><div class="gs-stat"><b>'+m.kcal+'</b><span>kcal</span></div><div class="gs-stat"><b>'+m.prot+'g</b><span>protéines</span></div><div class="gs-stat"><b>'+m.carbs+'g</b><span>glucides</span></div></div><button class="gs-onboard-choice" style="width:100%" onclick="state.profil.kcal='+m.kcal+';state.profil.protein='+m.prot+';state.profil.carbs='+m.carbs+';state.profil.fat='+m.fat+';sv&&sv();notify&&notify(\'Macros sauvegardées\')">Sauvegarder ces macros<span>Lipides : '+m.fat+'g</span></button></div>'}
+    if(s==='program'){title='Proposition programme';sub='Selon ton objectif et ton nombre de séances.';body='<div class="gs-soft-card"><div class="gs-clean-kicker">Programme conseillé</div><div class="gs-clean-title" style="font-size:25px">'+E(programProposal())+'</div><div class="gs-clean-sub">Tu peux le retrouver et le recalculer dans Programme.</div></div>'}
+    if(s==='start'){title='START';sub='Ton profil est prêt. Tu peux compléter plus tard dans Profil.';body='<div class="gs-soft-card"><div class="gs-clean-title" style="font-size:28px">Bienvenue dans G-SQUAD</div><div class="gs-clean-sub">Séance, XP, nutrition, classement et Squad sont prêts.</div></div>'}
+    var bars=STEPS.map(function(_,x){return '<i class="'+(x<=i?'on':'')+'"></i>'}).join('');document.body.insertAdjacentHTML('beforeend','<div class="gs-onboard-v4" id="gs-onboard-v4"><div class="gs-onboard-box"><div class="gs-onboard-logo">G-SQUAD</div><div class="gs-onboard-progress">'+bars+'</div><div class="gs-onboard-title">'+title+'</div><div class="gs-onboard-sub">'+sub+'</div>'+body+'<div class="gs-onboard-actions"><button onclick="gsObPrev()" '+(i===0?'disabled style="opacity:.35"':'')+'>Retour</button><button class="primary" onclick="gsObNext()">'+(s==='start'?'START':'Continuer')+'</button></div><button class="gs-onboard-skip" onclick="gsObSkip()">Passer — retrouvable dans Profil</button></div></div>');setTimeout(enhancePasswords,0);var inp=$('gs-ob-main-input');if(inp)setTimeout(function(){try{inp.focus()}catch(e){}},80)};
+  function passwordCardHtml(){return '<div class="gs-card" id="gs-password-settings-card"><div class="gs-card-title">Mot de passe</div><div class="gs-pass-note">Par sécurité, l’app ne peut pas afficher ton mot de passe actuel. Tu peux visualiser ce que tu tapes avec l’œil, puis le changer ici.</div><div class="lfield"><label>Mot de passe actuel</label><input id="gs-current-password" type="password" data-gs-password="1" autocomplete="current-password" placeholder="Actuel"></div><div class="lfield"><label>Nouveau mot de passe</label><input id="gs-new-password" type="password" data-gs-password="1" autocomplete="new-password" placeholder="Nouveau mot de passe"></div><div class="lfield"><label>Confirmer</label><input id="gs-confirm-password" type="password" data-gs-password="1" autocomplete="new-password" placeholder="Confirme le nouveau mot de passe"></div><button id="gs-save-password-btn" class="gs-btn" style="width:100%" onclick="gsUpdatePasswordSettings()">Changer le mot de passe</button></div>'}
+  window.gsInjectPasswordSettings=function(){var ov=$('profile-settings-v1');if(!ov||$('gs-password-settings-card'))return;var holder=ov.querySelector('.gs-profile')||ov.firstElementChild||ov;holder.insertAdjacentHTML('beforeend',passwordCardHtml());setTimeout(enhancePasswords,0)};
+  var oldOpen=window.openProfilSettings;window.openProfilSettings=function(){if(typeof oldOpen==='function')oldOpen.apply(this,arguments);setTimeout(window.gsInjectPasswordSettings,0);setTimeout(window.gsInjectPasswordSettings,250)};
+  setTimeout(enhancePasswords,300);
+})();
+</script>
+
+<script id="gs-password-current-verify-patch">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
+  function P(){return S().profil}
+  function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('gsquad_state_v1',JSON.stringify(window.state));}catch(e){}}
+  function toast(msg){try{if(typeof window.notify==='function')window.notify(msg);else if(typeof window.nt==='function')window.nt(msg);else alert(msg);}catch(e){}}
+  window.gsUpdatePasswordSettings=async function(){
+    var cur=$('gs-current-password'), np=$('gs-new-password'), cp=$('gs-confirm-password');
+    var current=(cur&&cur.value)||'', newPass=(np&&np.value)||'', confirm=(cp&&cp.value)||'';
+    if(!window._supa || !window._supa.auth || !window._supaUser){toast('Connecte-toi pour modifier le mot de passe du compte.');return;}
+    if(!current){toast('Entre ton mot de passe actuel.');return;}
+    if(!newPass || newPass.length<6){toast('Mot de passe trop court : minimum 6 caractères.');return;}
+    if(newPass!==confirm){toast('Les deux mots de passe ne correspondent pas.');return;}
+    var btn=$('gs-save-password-btn'); if(btn){btn.disabled=true;btn.textContent='Vérification…';}
+    try{
+      var email=(window._supaUser&&window._supaUser.email) || P().email || '';
+      if(email){
+        var check=await window._supa.auth.signInWithPassword({email:email,password:current});
+        if(check&&check.error){toast('Mot de passe actuel incorrect.'); if(btn){btn.disabled=false;btn.textContent='Changer le mot de passe';} return;}
+      }
+      if(btn)btn.textContent='Modification…';
+      var res=await window._supa.auth.updateUser({password:newPass});
+      if(res&&res.error){toast(res.error.message||'Impossible de changer le mot de passe.');}
+      else{P().passwordLastChangedAt=new Date().toISOString();save(); if(cur)cur.value=''; if(np)np.value=''; if(cp)cp.value=''; toast('Mot de passe modifié.');}
+    }catch(e){toast('Erreur pendant la modification du mot de passe.');}
+    if(btn){btn.disabled=false;btn.textContent='Changer le mot de passe';}
+  };
+})();
+</script>
+
+
+<!-- PATCH 2026-05-02 — preview mot de passe + réglages propres + vrais logos salles -->
+<style id="gs-final-password-settings-logos-css">
+  .gs-pwd-wrap{position:relative;width:100%}
+  .gs-pwd-wrap input{padding-right:56px!important}
+  .gs-pwd-eye{position:absolute;right:9px;top:9px;width:42px;height:42px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.065);color:var(--txt);font-weight:1000;display:flex;align-items:center;justify-content:center;z-index:2}
+  .gs-settings-v5{min-height:100%;padding:calc(env(safe-area-inset-top,12px) + 12px) 18px 44px;background:var(--bg);color:var(--txt)}
+  .gs-settings-section{background:rgba(18,24,33,.86);border:1px solid rgba(255,255,255,.075);border-radius:26px;padding:18px;margin-bottom:12px;box-shadow:0 16px 44px rgba(0,0,0,.16)}
+  .gs-settings-title{font-size:19px;font-weight:1000;letter-spacing:-.045em;color:var(--txt);margin-bottom:4px}
+  .gs-settings-sub{font-size:13px;line-height:1.4;color:var(--txt2);margin-bottom:14px}
+  .gs-settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .gs-settings-field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+  .gs-settings-field label{font-size:11px;font-weight:1000;letter-spacing:.10em;text-transform:uppercase;color:var(--mut)}
+  .gs-settings-field input,.gs-settings-field select{width:100%;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.055);border-radius:18px;padding:15px 14px;color:var(--txt);font-size:15px;font-family:inherit;outline:none}
+  .gs-settings-field input:focus,.gs-settings-field select:focus{border-color:rgba(143,185,255,.5)}
+  .gs-settings-btn{width:100%;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.055);color:var(--txt);font-weight:1000;padding:15px 14px;font-family:inherit;font-size:14px}
+  .gs-settings-btn.primary{background:var(--txt);color:#071018;border-color:var(--txt)}
+  .gs-settings-btn.danger{background:rgba(255,107,122,.12);border-color:rgba(255,107,122,.36);color:#FF6B7A}
+  .gs-gym-grid-v5{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .gs-gym-tile-v5{min-height:92px;border-radius:22px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);color:var(--txt);padding:14px;text-align:left;display:flex;flex-direction:column;gap:9px;justify-content:space-between;overflow:hidden}
+  .gs-gym-tile-v5.sel{border-color:rgba(143,185,255,.55);background:rgba(143,185,255,.14);box-shadow:inset 0 0 0 1px rgba(143,185,255,.12)}
+  .gs-gym-tile-v5 b{font-size:14px;line-height:1.08;font-weight:1000;letter-spacing:-.03em;color:var(--txt)}
+  .gs-gym-tile-v5 span:last-child{font-size:11px;color:var(--txt2);line-height:1.25;font-weight:700}
+  .gs-brand-logo.real-logo{width:58px!important;height:42px!important;border-radius:14px!important;background:#fff!important;border:1px solid rgba(255,255,255,.16)!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:5px!important;overflow:hidden!important;box-shadow:none!important;flex:0 0 auto!important;letter-spacing:0!important}
+  .gs-brand-logo.real-logo.small{width:42px!important;height:34px!important;border-radius:12px!important;padding:4px!important}
+  .gs-brand-logo.real-logo img{width:100%!important;height:100%!important;object-fit:contain!important;display:block!important;border-radius:0!important}
+  .gs-brand-logo.real-logo.g-keepcool,.gs-brand-logo.real-logo.g-onair,.gs-brand-logo.real-logo.g-fitnesspark{background:#071018!important}
+  .gs-brand-logo.real-logo.g-goldsgym{background:#f7d927!important}
+  .gs-brand-logo.real-logo.g-basicfit{background:#fff!important}
+  .gs-chip .gs-brand-logo.real-logo{width:25px!important;height:22px!important;border-radius:7px!important;padding:2px!important}
+  .gs-settings-sport-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .gs-settings-sport{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);border-radius:17px;color:var(--txt);padding:12px;text-align:left;font-weight:1000;font-size:13px}
+  .gs-settings-sport.sel{border-color:rgba(143,185,255,.55);background:rgba(143,185,255,.14)}
+  @media(max-width:380px){.gs-settings-grid,.gs-gym-grid-v5,.gs-settings-sport-grid{grid-template-columns:1fr}.gs-brand-logo.real-logo{width:54px!important;height:38px!important}}
+</style>
+<script id="gs-final-password-settings-logos-js">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];})}
+  function state(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
+  function prof(){return state().profil}
+  function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('gsquad_state_v1',JSON.stringify(window.state));}catch(e){}}
+  function toast(t){try{if(typeof window.notify==='function')window.notify(t);else if(typeof window.nt==='function')window.nt(t);else alert(t);}catch(e){}}
+
+  // Logos recherchés en ligne puis implantés comme sources d'image.
+  window.GS_REAL_GYM_LOGOS={
+    basicfit:'https://corporate.basic-fit.com/_next/image?q=75&url=https%3A%2F%2Fimages.ctfassets.net%2Fn2vcrsstbkc9%2F5N6jpBXxO3wAI944LKn6Yb%2F124236def0e45aa538d2f8ce107a2a6e%2FBF_Toolkit_Logo-Orange.png%3Fw%3D260%26h%3D195%26q%3D90%26fit%3Dpad%26fm%3Dwebp&w=3840',
+    fitnesspark:'https://dl.svgcdn.com/png/arcticons/fitnesspark-800.png',
+    keepcool:'https://www.keepcool-corporate.fr/wp-content/uploads/2022/11/keepcool-logo-blanc-retina.png',
+    onair:'https://images.seeklogo.com/logo-png/48/1/on-air-fitness-logo-png_seeklogo-481117.png',
+    goldsgym:'https://commons.wikimedia.org/wiki/Special:FilePath/Gold%27s_Gym_Weight_Plate_Logo_Primary_150x150.png',
+    neoness:'https://www.google.com/s2/favicons?domain=neoness.fr&sz=128',
+    orangebleue:'https://www.google.com/s2/favicons?domain=lorangebleue.fr&sz=128',
+    magicform:'https://www.google.com/s2/favicons?domain=magic-form.fr&sz=128',
+    gigafit:'https://www.google.com/s2/favicons?domain=gigafit.fr&sz=128',
+    onefitness:'https://www.google.com/s2/favicons?domain=onefitnessclub.fr&sz=128',
+    cmg:'https://www.google.com/s2/favicons?domain=cmgsportsclub.com&sz=128',
+    foresthill:'https://www.google.com/s2/favicons?domain=forest-hill.fr&sz=128',
+    anytime:'https://www.google.com/s2/favicons?domain=anytimefitness.com&sz=128'
+  };
+  window.GS_GYMS=Object.assign({},window.GS_GYMS||{},{
+    basicfit:{name:'Basic-Fit',sub:'Machines, poulies, haltères',cls:'g-basicfit',txt:'BF',color:'#ff8a00'},
+    fitnesspark:{name:'Fitness Park',sub:'Plateau libre, machines',cls:'g-fitnesspark',txt:'FP',color:'#f5d80a'},
+    keepcool:{name:'Keep Cool',sub:'Coaching, cardio, machines',cls:'g-keepcool',txt:'KC',color:'#71c891'},
+    onair:{name:'On Air Fitness',sub:'Performance, machines, zone libre',cls:'g-onair',txt:'OA',color:'#c71f2d'},
+    goldsgym:{name:"Gold's Gym",sub:'Bodybuilding, machines, free weights',cls:'g-goldsgym',txt:'GG',color:'#f4c542'},
+    neoness:{name:'Neoness',sub:'Fitness urbain, cours, plateau',cls:'g-neoness',txt:'NE',color:'#8bc900'},
+    orangebleue:{name:"L'Orange Bleue",sub:'Coaching, machines, cours',cls:'g-orangebleue',txt:'OB',color:'#1e88e5'},
+    magicform:{name:'Magic Form',sub:'Muscu, cardio, cours',cls:'g-magicform',txt:'MF',color:'#ffd400'},
+    gigafit:{name:'Gigafit',sub:'Plateau muscu et cardio',cls:'g-gigafit',txt:'GF',color:'#ff8a00'},
+    onefitness:{name:'One Fitness Club',sub:'Salle complète et machines',cls:'g-onefitness',txt:'OF',color:'#dce3ee'},
+    cmg:{name:'CMG Sports Club',sub:'Club premium, cours, plateau',cls:'g-cmg',txt:'CMG',color:'#111'},
+    foresthill:{name:'Forest Hill',sub:'Club sport, tennis, fitness',cls:'g-foresthill',txt:'FH',color:'#0f7c3a'},
+    anytime:{name:'Anytime Fitness',sub:'Accès 24/7 selon club',cls:'g-anytime',txt:'AF',color:'#6d45c8'},
+    autre:{name:'Autre salle',sub:'Salle indépendante ou autre chaîne',cls:'g-autre',txt:'+',color:'#64707F'}
+  });
+  Object.keys(window.GS_GYMS).forEach(function(k){window.GS_GYMS[k].logo=window.GS_REAL_GYM_LOGOS[k]||window.GS_GYMS[k].logo||'';});
+  if(window.GYM_DATA){Object.keys(window.GS_GYMS).forEach(function(k){var g=window.GS_GYMS[k];window.GYM_DATA[k]=Object.assign({},window.GYM_DATA[k]||{}, {name:g.name,color:g.color,logo:g.logo,url:(window.GYM_DATA[k]&&window.GYM_DATA[k].url)||('https://www.google.com/maps/search/'+encodeURIComponent(g.name+' near me'))});});}
+
+  window.gsGymLogo=function(k,small){
+    var g=window.GS_GYMS[k]||window.GS_GYMS.autre||{name:k,txt:'GYM',cls:'g-autre'}, logo=g.logo||'';
+    if(logo){return '<span class="gs-brand-logo real-logo '+(small?'small ':'')+E(g.cls||'')+'" aria-label="'+E(g.name||k)+'"><img src="'+E(logo)+'" alt="'+E(g.name||k)+'" loading="lazy" onerror="this.closest(\'.gs-brand-logo\').outerHTML=\'<span class=&quot;gs-brand-logo '+E(g.cls||'g-autre')+(small?' small':'')+'&quot;><span>'+E(g.txt||'GYM')+'</span></span>\'"></span>';}
+    return '<span class="gs-brand-logo '+E(g.cls||'g-autre')+(small?' small':'')+'"><span>'+E(g.txt||'GYM')+'</span></span>';
+  };
+  window.gsGymTile=function(k,selectedAttr){var g=window.GS_GYMS[k]||window.GS_GYMS.autre;var selected=selectedAttr?selectedAttr(k):((prof().gyms||[]).indexOf(k)>=0);return '<button type="button" class="gs-gym-tile-v5 '+(selected?'sel':'')+'" data-gym-set="'+E(k)+'" onclick="gsToggleProfileGym(\''+E(k)+'\')">'+window.gsGymLogo(k,true)+'<b>'+E(g.name)+'</b><span>'+E(g.sub||'')+'</span></button>';};
+  window.gsToggleProfileGym=function(k){var p=prof(),a=p.gyms=p.gyms||[];var i=a.indexOf(k);if(i>=0)a.splice(i,1);else a.push(k);save();document.querySelectorAll('[data-gym-set="'+CSS.escape(k)+'"],[data-gym="'+CSS.escape(k)+'"]').forEach(function(el){el.classList.toggle('sel',a.indexOf(k)>=0);var ico=el.querySelector('.ob-gym-ico,.gs-menu-logo');if(ico)ico.innerHTML=window.gsGymLogo(k,true);});};
+
+  function applyLogos(scope){
+    scope=scope||document;
+    scope.querySelectorAll('[data-gym],[data-gym-set]').forEach(function(el){var k=el.getAttribute('data-gym')||el.getAttribute('data-gym-set');var ico=el.querySelector('.ob-gym-ico,.gs-menu-logo');if(ico)ico.innerHTML=window.gsGymLogo(k,true);});
+    scope.querySelectorAll('.gs-chip').forEach(function(ch){var txt=(ch.textContent||'').toLowerCase();Object.keys(window.GS_GYMS).forEach(function(k){var nm=(window.GS_GYMS[k].name||'').toLowerCase();if(nm&&txt.indexOf(nm.toLowerCase())>=0&&!ch.querySelector('.gs-brand-logo'))ch.insertAdjacentHTML('afterbegin',window.gsGymLogo(k,true));});});
+  }
+  window.gsApplyGymLogos=applyLogos;
+
+  function wrapPasswordInputs(scope){
+    scope=scope||document;
+    scope.querySelectorAll('input[type="password"]').forEach(function(inp){
+      if(inp.dataset.gsPreviewReady==='1')return;
+      inp.dataset.gsPreviewReady='1';
+      var wrap=document.createElement('div');wrap.className='gs-pwd-wrap';
+      inp.parentNode.insertBefore(wrap,inp);wrap.appendChild(inp);
+      var btn=document.createElement('button');btn.type='button';btn.className='gs-pwd-eye';btn.setAttribute('aria-label','Afficher le mot de passe');btn.textContent='👁';
+      btn.onclick=function(){var show=inp.type==='password';inp.type=show?'text':'password';btn.textContent=show?'🙈':'👁';};
+      wrap.appendChild(btn);
+    });
+  }
+  window.gsWrapPasswordInputs=wrapPasswordInputs;
+
+  var SPORTS={basket:'Basket',foot:'Football',footus:'Foot US',lutte:'Lutte',boxe:'Boxe',mma:'MMA',jjb:'JJB',judo:'Judo',rugby:'Rugby',tennis:'Tennis',padel:'Padel',hand:'Handball',volley:'Volley',natation:'Natation',velo:'Vélo',danse:'Danse'};
+  window.gsToggleSportSettings=function(k){var p=prof(),a=p.sports=p.sports||[];var i=a.indexOf(k);if(i>=0)a.splice(i,1);else a.push(k);save();document.querySelectorAll('[data-settings-sport="'+CSS.escape(k)+'"]').forEach(function(b){b.classList.toggle('sel',a.indexOf(k)>=0);});};
+  function sportsGrid(){var p=prof(),a=p.sports||[];return '<div class="gs-settings-sport-grid">'+Object.keys(SPORTS).map(function(k){return '<button type="button" class="gs-settings-sport '+(a.indexOf(k)>=0?'sel':'')+'" data-settings-sport="'+E(k)+'" onclick="gsToggleSportSettings(\''+E(k)+'\')">'+E(SPORTS[k])+'</button>';}).join('')+'</div>';}
+
+  window.gsSaveSettingsV5=function(){
+    var p=prof();
+    [['edit-name-v5','name'],['edit-username-v5','username'],['edit-email-v5','email'],['edit-taille-v5','taille'],['edit-poids-v5','poids'],['edit-age-v5','age'],['edit-frequency-v5','frequency'],['edit-level-v5','level'],['edit-objectif-v5','objectif']].forEach(function(pair){var el=$(pair[0]);if(el)p[pair[1]]=String(el.value||'').trim();});
+    if(p.username)p.username=p.username.replace(/[^a-zA-Z0-9_]/g,'').replace(/^@/,'').toLowerCase();
+    save();toast('Réglages sauvegardés');try{if(typeof window.openProfil==='function')setTimeout(window.openProfil,120);}catch(e){}
+  };
+
+  var previousSettings=window.openProfilSettings;
+  window.openProfilSettings=function(){
+    try{var old=$('profile-settings-v1');if(old)old.remove();}catch(e){}
+    var p=prof(), gyms=['basicfit','fitnesspark','keepcool','onair','goldsgym','neoness','orangebleue','magicform','gigafit','onefitness','cmg','foresthill','anytime','autre'];
+    var html='<div id="profile-settings-v1" style="position:fixed;inset:0;background:var(--bg);z-index:2200;overflow:auto">'
+      +'<div class="gs-settings-v5"><div class="gs-clean-head"><button class="gs-icon-btn" onclick="document.getElementById(\'profile-settings-v1\').remove()">←</button><div style="font-size:18px;font-weight:1000;letter-spacing:-.03em">Réglages</div><button class="gs-icon-btn" onclick="gsSaveSettingsV5()">✓</button></div>'
+      +'<div class="gs-settings-section"><div class="gs-settings-title">Compte</div><div class="gs-settings-sub">Identité visible, username et email.</div><div class="gs-settings-field"><label>Nom</label><input id="edit-name-v5" value="'+E(p.name||'')+'" placeholder="Nom affiché"></div><div class="gs-settings-field"><label>@username</label><input id="edit-username-v5" value="'+E(p.username||'')+'" placeholder="username"></div><div class="gs-settings-field"><label>Email</label><input id="edit-email-v5" type="email" value="'+E(p.email||(window._supaUser&&window._supaUser.email)||'')+'" placeholder="email@exemple.com"></div><button class="gs-settings-btn primary" onclick="gsSaveSettingsV5()">Sauvegarder le compte</button></div>'
+      +'<div class="gs-settings-section"><div class="gs-settings-title">Mot de passe</div><div class="gs-settings-sub">Modifier le mot de passe du compte connecté. Les champs ont un aperçu 👁.</div><div class="gs-settings-field"><label>Mot de passe actuel</label><input id="gs-current-password" type="password" placeholder="Mot de passe actuel" autocomplete="current-password"></div><div class="gs-settings-grid"><div class="gs-settings-field"><label>Nouveau</label><input id="gs-new-password" type="password" placeholder="Nouveau mot de passe" autocomplete="new-password"></div><div class="gs-settings-field"><label>Confirmation</label><input id="gs-confirm-password" type="password" placeholder="Confirmer" autocomplete="new-password"></div></div><button id="gs-save-password-btn" class="gs-settings-btn primary" onclick="gsUpdatePasswordSettings()">Changer le mot de passe</button></div>'
+      +'<div class="gs-settings-section"><div class="gs-settings-title">Corps & objectif</div><div class="gs-settings-sub">Taille, poids, niveau et rythme d’entraînement.</div><div class="gs-settings-grid"><div class="gs-settings-field"><label>Taille</label><input id="edit-taille-v5" type="number" value="'+E(p.taille||'')+'" placeholder="cm"></div><div class="gs-settings-field"><label>Poids</label><input id="edit-poids-v5" type="number" value="'+E(p.poids||'')+'" placeholder="kg"></div><div class="gs-settings-field"><label>Âge</label><input id="edit-age-v5" type="number" value="'+E(p.age||'')+'" placeholder="âge"></div><div class="gs-settings-field"><label>Séances / semaine</label><input id="edit-frequency-v5" type="number" value="'+E(p.frequency||'')+'" placeholder="4"></div></div><div class="gs-settings-grid"><div class="gs-settings-field"><label>Objectif</label><select id="edit-objectif-v5"><option value="perte">Perte</option><option value="maintien">Maintien</option><option value="prise">Prise</option></select></div><div class="gs-settings-field"><label>Niveau</label><select id="edit-level-v5"><option value="debutant">Débutant</option><option value="intermediaire">Intermédiaire</option><option value="avance">Avancé</option></select></div></div><button class="gs-settings-btn primary" onclick="gsSaveSettingsV5()">Sauvegarder sport</button></div>'
+      +'<div class="gs-settings-section"><div class="gs-settings-title">Salles de sport</div><div class="gs-settings-sub">Vrais logos affichés dans l’inscription, le profil et le menu.</div><div class="gs-gym-grid-v5">'+gyms.map(function(k){return window.gsGymTile(k);}).join('')+'</div></div>'
+      +'<div class="gs-settings-section"><div class="gs-settings-title">Sports hors salle</div><div class="gs-settings-sub">Pour ton profil, ton feed et tes programmes.</div>'+sportsGrid()+'</div>'
+      +'<div class="gs-settings-section"><div class="gs-settings-title">Inscription guidée</div><div class="gs-settings-sub">Reprendre les 11 étapes non obligatoires depuis le début.</div><button class="gs-settings-btn" onclick="document.getElementById(\'profile-settings-v1\').remove();openOnboardingWizard(0)">Compléter inscription</button></div>'
+      +'<div class="gs-settings-section"><div class="gs-settings-title">Session</div><div class="gs-settings-sub">Déconnexion visible ici aussi.</div><button class="gs-settings-btn danger" onclick="gsLogout&&gsLogout()">Se déconnecter</button></div>'
+      +'</div></div>';
+    document.body.insertAdjacentHTML('beforeend',html);
+    var obj=$('edit-objectif-v5');if(obj)obj.value=p.objectif||'maintien';var lvl=$('edit-level-v5');if(lvl)lvl.value=p.level||p.niveau||'intermediaire';
+    setTimeout(function(){wrapPasswordInputs($('profile-settings-v1'));applyLogos($('profile-settings-v1'));},0);
+  };
+
+  // Ajout de la preview mot de passe dans l’inscription guidée + auth normale.
+  var oldRender=window.renderOnboardingWizard;
+  if(typeof oldRender==='function'){
+    window.renderOnboardingWizard=function(){var r=oldRender.apply(this,arguments);setTimeout(function(){wrapPasswordInputs($('gs-onboard-v4')||document);applyLogos($('gs-onboard-v4')||document);},0);return r;};
+  }
+  var oldAuthView=window.authShowView;
+  if(typeof oldAuthView==='function'){
+    window.authShowView=function(){var r=oldAuthView.apply(this,arguments);setTimeout(function(){wrapPasswordInputs($('auth-screen')||document);},0);return r;};
+  }
+  function refreshAll(){wrapPasswordInputs(document);applyLogos(document);}
+  document.addEventListener('DOMContentLoaded',function(){refreshAll();try{new MutationObserver(function(){refreshAll();}).observe(document.body,{childList:true,subtree:true});}catch(e){}});
+  setTimeout(refreshAll,250);setTimeout(refreshAll,1000);setTimeout(refreshAll,2200);
+})();
+</script>
+
 </body>
 </html>
