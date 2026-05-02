@@ -10059,5 +10059,221 @@ document.addEventListener('DOMContentLoaded',function(){
 })();
 </script>
 
+
+<!-- G-SQUAD FINAL PATCH - auth state, first tab, logos, badges, session start, onboarding program -->
+<style id="gs-final-user-fixes-css">
+/* Séance : le bouton ne flotte plus */
+#p-seance .sess-start-dock,
+.session-clean .sess-start-dock{
+  position:static!important;
+  left:auto!important;right:auto!important;bottom:auto!important;z-index:auto!important;
+  padding:0!important;margin:12px 0 0!important;background:transparent!important;
+  display:block!important;
+}
+#p-seance .sess-start-dock .sess-start-mini-copy{display:none!important}
+#p-seance .sess-start-dock button{
+  height:auto!important;min-height:46px!important;width:100%!important;border-radius:18px!important;
+  box-shadow:none!important;font-size:14px!important;padding:13px 16px!important;
+}
+#p-seance .session-clean{padding-bottom:calc(env(safe-area-inset-bottom,12px) + 112px)!important}
+
+/* Logos salles */
+.gs-brand-logo.real-logo{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:14px;background:#fff;border:1px solid rgba(255,255,255,.10);overflow:hidden;flex:0 0 auto;box-shadow:0 8px 22px rgba(0,0,0,.20)}
+.gs-brand-logo.real-logo.small{width:28px;height:28px;border-radius:10px}
+.gs-brand-logo.real-logo img{width:100%;height:100%;object-fit:contain;padding:4px}
+.gs-chip .gs-brand-logo,.gs-pro-chip .gs-brand-logo{margin-right:6px}
+.gs-chip>i:first-child,.gs-pro-chip>i:first-child{display:none!important}
+.gs-gym-logo-chip{display:inline-flex!important;align-items:center!important;gap:7px!important}
+
+/* Logos YouTube/TikTok */
+.gs-media-logo{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.gs-media-logo svg{width:18px;height:18px;display:block}
+.sess-pill.yt,.gs-bib-actions a.yt,.gs-exos-actions a.yt{color:#ff4d4d!important;border-color:rgba(255,77,77,.28)!important;background:rgba(255,77,77,.08)!important}
+.sess-pill.tt,.gs-bib-actions button.tt,.gs-exos-actions button.tt{color:#fff!important;border-color:rgba(255,255,255,.16)!important;background:linear-gradient(135deg,rgba(0,242,234,.20),rgba(255,0,80,.16))!important}
+
+/* Badges plus visibles, style “ancien” mais premium */
+.gs-badge-hype-grid,.gs-badge-row{display:flex!important;gap:10px!important;overflow-x:auto!important;padding:4px 0 10px!important;scrollbar-width:none!important}
+.gs-badge-hype-grid::-webkit-scrollbar,.gs-badge-row::-webkit-scrollbar{display:none}
+.gs-badge-hype{position:relative;overflow:hidden;display:grid;grid-template-columns:50px 1fr;gap:12px;align-items:center;min-width:190px;border-radius:22px;border:1px solid color-mix(in srgb,var(--badge-color) 50%,rgba(255,255,255,.10));background:radial-gradient(circle at 18% 8%,color-mix(in srgb,var(--badge-color) 30%,transparent),transparent 34%),linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.028));padding:13px;color:var(--txt);box-shadow:0 14px 38px rgba(0,0,0,.22)}
+.gs-badge-hype.locked{opacity:.52;filter:saturate(.45)}
+.gs-badge-ico{width:50px;height:50px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:26px;background:color-mix(in srgb,var(--badge-color) 20%,rgba(255,255,255,.06));border:1px solid color-mix(in srgb,var(--badge-color) 55%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.16)}
+.gs-badge-copy{min-width:0}.gs-badge-copy b{display:block;font-size:14px;font-weight:1000;letter-spacing:-.035em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gs-badge-copy span{display:block;margin-top:4px;font-size:11px;color:var(--txt2);font-weight:850}.gs-badge-copy small{display:inline-flex;margin-top:7px;border-radius:999px;padding:5px 8px;background:color-mix(in srgb,var(--badge-color) 16%,transparent);color:var(--badge-color);font-size:9px;font-weight:1000;letter-spacing:.08em;text-transform:uppercase}.gs-badge-bar{position:absolute;left:13px;right:13px;bottom:8px;height:4px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}.gs-badge-bar i{display:block;height:100%;border-radius:99px;background:var(--badge-color)}
+.gs-badges-showcase .gs-badges-grid{display:flex!important;gap:10px!important;overflow-x:auto!important;scrollbar-width:none!important}.gs-badges-showcase .gs-badges-grid::-webkit-scrollbar{display:none}
+.gs-badge-ov .gs-badge-list{display:grid!important;gap:10px!important}.gs-badge-ov .gs-badge-list .gs-badge-hype{min-width:0;width:100%}
+
+/* Inscription : proposition programme plus friendly */
+.gs-ob11-program-friendly{display:grid;gap:12px}
+.gs-ob11-program-hero{position:relative;overflow:hidden;background:linear-gradient(145deg,rgba(245,243,238,.98),rgba(221,232,246,.96));color:#071018;border-radius:28px;padding:20px;border:1px solid rgba(255,255,255,.14);box-shadow:0 22px 60px rgba(0,0,0,.28)}
+.gs-ob11-program-hero:after{content:'';position:absolute;right:-50px;top:-60px;width:150px;height:150px;border-radius:50%;background:rgba(143,185,255,.40);filter:blur(8px)}
+.gs-ob11-program-hero span{position:relative;z-index:1;display:block;font-size:11px;font-weight:1000;text-transform:uppercase;letter-spacing:.13em;color:#526174;margin-bottom:8px}.gs-ob11-program-hero b{position:relative;z-index:1;display:block;font-size:28px;line-height:1;font-weight:1000;letter-spacing:-.065em}.gs-ob11-program-hero p{position:relative;z-index:1;margin:10px 0 0;color:#4E5A69;font-size:13px;line-height:1.45;font-weight:750}
+.gs-ob11-program-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.gs-ob11-program-metric{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:12px 9px}.gs-ob11-program-metric b{display:block;font-size:18px;font-weight:1000;color:var(--txt);letter-spacing:-.04em}.gs-ob11-program-metric span{display:block;margin-top:5px;color:var(--mut);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.07em}.gs-ob11-program-days{display:grid;gap:8px}.gs-ob11-program-day{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:17px;padding:11px}.gs-ob11-program-day b{font-size:10px;color:var(--acc);font-weight:1000;letter-spacing:.08em}.gs-ob11-program-day span{font-size:13px;color:var(--txt);font-weight:950;line-height:1.25}.gs-ob11-imc-found{margin-top:12px;background:rgba(143,185,255,.10);border:1px solid rgba(143,185,255,.20);border-radius:20px;padding:14px;color:var(--txt)}.gs-ob11-imc-found b{display:block;font-size:17px;font-weight:1000;letter-spacing:-.03em}.gs-ob11-imc-found span{display:block;margin-top:4px;color:var(--txt2);font-size:12px;line-height:1.4;font-weight:750}
+</style>
+<script id="gs-final-user-fixes-js">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
+  function P(){return S().profil||{}}
+  function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('ath7',JSON.stringify(window.state||{}))}catch(e){}}
+  function visible(el){return !!el && getComputedStyle(el).display!=='none' && el.style.display!=='none'}
+
+  async function isLoggedIn(){
+    try{
+      if(window._supa && window._supa.auth){
+        var res=await window._supa.auth.getSession();
+        var u=res&&res.data&&res.data.session&&res.data.session.user;
+        if(u){window._supaUser=u;S().guestMode=false;sessionStorage.removeItem('gs_guest_session');save();return true;}
+      }
+    }catch(e){}
+    return !!window._supaUser && !S().guestMode;
+  }
+  async function fixGuestState(){
+    var logged=await isLoggedIn();
+    var banner=$('guest-banner');
+    if(logged){
+      if(banner)banner.remove();
+      document.body.classList.remove('gs-guest-confirmed');
+      S().guestMode=false;save();
+    }else if(sessionStorage.getItem('gs_guest_session')==='1' && S().guestMode){
+      document.body.classList.add('gs-guest-confirmed');
+    }else{
+      if(banner)banner.remove();
+      document.body.classList.remove('gs-guest-confirmed');
+    }
+  }
+  function openSeanceFirst(){
+    var auth=$('auth-screen'), ob=$('onboard'), ob11=$('gs-onboard-v11');
+    if(visible(auth)||visible(ob)||visible(ob11))return;
+    try{ if(typeof window.goTab==='function') window.goTab('seance',$('nb-seance')); }
+    catch(e){
+      document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('act')});
+      var p=$('p-seance'); if(p)p.classList.add('act');
+      var nb=$('nb-seance'); if(nb){document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('act')});nb.classList.add('act');}
+    }
+  }
+
+  var oldBoot=window.bootApp;
+  window.bootApp=function(){
+    var r;if(typeof oldBoot==='function')r=oldBoot.apply(this,arguments);
+    setTimeout(function(){fixGuestState();openSeanceFirst();},60);
+    setTimeout(function(){fixGuestState();openSeanceFirst();},500);
+    return r;
+  };
+  var oldBootSafe=window.bootSafe;
+  if(typeof oldBootSafe==='function'){
+    window.bootSafe=function(){var r=oldBootSafe.apply(this,arguments);setTimeout(function(){fixGuestState();openSeanceFirst();},100);return r;};
+  }
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(fixGuestState,180);setTimeout(openSeanceFirst,900);setTimeout(fixGuestState,1800)});
+  if(window._supa&&window._supa.auth){try{window._supa.auth.onAuthStateChange(function(ev,session){if(session&&session.user){window._supaUser=session.user;S().guestMode=false;sessionStorage.removeItem('gs_guest_session');save();setTimeout(fixGuestState,50);}})}catch(e){}}
+
+  function dataLogo(k){
+    try{ if(window.GYM_DATA&&window.GYM_DATA[k]&&/^data:image/.test(window.GYM_DATA[k].logo||''))return window.GYM_DATA[k].logo; }catch(e){}
+    try{ if(window.GS_REAL_GYM_LOGOS&&window.GS_REAL_GYM_LOGOS[k])return window.GS_REAL_GYM_LOGOS[k]; }catch(e){}
+    try{ if(window.GS_GYMS&&window.GS_GYMS[k]&&window.GS_GYMS[k].logo)return window.GS_GYMS[k].logo; }catch(e){}
+    return '';
+  }
+  var gymNames={basicfit:'Basic-Fit',fitnesspark:'Fitness Park',keepcool:'Keep Cool',onair:'On Air',goldsgym:"Gold's Gym",neoness:'Neoness',orangebleue:"L’Orange Bleue",magicform:'Magic Form',gigafit:'Gigafit',onefitness:'One Fitness Club',cmg:'CMG Sports Club',foresthill:'Forest Hill',anytime:'Anytime Fitness'};
+  var gymText={basicfit:'BF',fitnesspark:'FP',keepcool:'KC',onair:'OA',goldsgym:'GG'};
+  window.gsGymLogo=function(k,small){
+    var src=dataLogo(k),name=(window.GS_GYMS&&window.GS_GYMS[k]&&window.GS_GYMS[k].name)||gymNames[k]||k||'Salle';
+    if(src)return '<span class="gs-brand-logo real-logo '+(small?'small ':'')+'g-'+E(k)+'"><img src="'+E(src)+'" alt="'+E(name)+'" loading="lazy" onerror="this.parentNode.innerHTML=\'<span>'+E(gymText[k]||'GYM')+'</span>\'"></span>';
+    return '<span class="gs-brand-logo '+(small?'small ':'')+'g-'+E(k)+'"><span>'+E(gymText[k]||'GYM')+'</span></span>';
+  };
+  function decorateGymChips(scope){
+    scope=scope||document;
+    Object.keys(gymNames).forEach(function(k){
+      var name=gymNames[k].toLowerCase();
+      scope.querySelectorAll('.gs-chip,.gs-pro-chip,.gs-ob-option,.ob-g,.gs-gym-tile-v5').forEach(function(el){
+        if(el.dataset.logoDone==='1')return;
+        var txt=(el.textContent||'').toLowerCase();
+        if(txt.indexOf(name)>-1){
+          var i=el.querySelector('i'); if(i)i.remove();
+          el.insertAdjacentHTML('afterbegin',window.gsGymLogo(k,true));
+          el.classList.add('gs-gym-logo-chip');
+          el.dataset.logoDone='1';
+        }
+      });
+    });
+  }
+  var oldOpenProfil=window.openProfil;
+  window.openProfil=function(){var r=oldOpenProfil?oldOpenProfil.apply(this,arguments):undefined;setTimeout(function(){decorateGymChips(document);renderBadgeSurfaces();},80);setTimeout(function(){decorateGymChips(document);renderBadgeSurfaces();},700);return r};
+  var oldOpenSettings=window.openProfilSettings;
+  if(typeof oldOpenSettings==='function'){window.openProfilSettings=function(){var r=oldOpenSettings.apply(this,arguments);setTimeout(function(){decorateGymChips(document)},80);return r;};}
+  var oldOpenFriend=window.openFriendProfile;
+  if(typeof oldOpenFriend==='function'){window.openFriendProfile=function(){var r=oldOpenFriend.apply(this,arguments);setTimeout(function(){decorateGymChips(document);renderBadgeSurfaces();},120);setTimeout(function(){decorateGymChips(document);renderBadgeSurfaces();},800);return r;};}
+
+  function ytLogo(){return '<span class="gs-media-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="4" fill="#FF0033"/><path d="M10 9.2v5.6L15.2 12z" fill="#fff"/></svg></span>'}
+  function ttLogo(){return '<span class="gs-media-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 3c.4 2.6 1.9 4.1 4.5 4.4v3.2c-1.7.1-3.1-.4-4.4-1.3v5.6c0 3.4-2.4 5.8-5.7 5.8-3 0-5.4-2.1-5.4-5.1 0-3.3 2.7-5.5 6.2-5.1v3.4c-1.6-.4-2.8.3-2.8 1.6 0 1.1.9 1.9 2 1.9 1.3 0 2.1-.9 2.1-2.5V3h3.5z" fill="#fff"/><path d="M15.5 4.8c.6.9 1.5 1.5 2.8 1.7" stroke="#00F2EA" stroke-width="1.6"/><path d="M9.2 11.8c-2.2 0-4.1 1.4-4.1 3.8" stroke="#FF0050" stroke-width="1.6"/></svg></span>'}
+  function decorateMediaLinks(scope){
+    scope=scope||document;
+    scope.querySelectorAll('#exyt,a[href*="youtube"],a[href*="youtu.be"]').forEach(function(a){if(a.dataset.mediaLogo==='1')return;a.classList.add('yt');a.innerHTML=ytLogo()+'<span>YouTube</span>';a.dataset.mediaLogo='1'});
+    scope.querySelectorAll('#extt,button[onclick*="TikTok"],button[onclick*="tiktok"],a[href*="tiktok"]').forEach(function(a){if(a.dataset.mediaLogo==='1')return;a.classList.add('tt');a.innerHTML=ttLogo()+'<span>TikTok</span>';a.dataset.mediaLogo='1'});
+  }
+  function fixSessionDock(){
+    document.querySelectorAll('.sess-start-dock').forEach(function(d){
+      var copy=d.querySelector('.sess-start-mini-copy'); if(copy)copy.remove();
+      var btn=d.querySelector('#start-sess-btn,button');
+      if(btn){btn.textContent=btn.classList.contains('is-live')?'Séance en cours':'Commencer la séance';}
+    });
+    decorateMediaLinks(document);
+  }
+  var oldRenderSeance=window.renderSeance;
+  window.renderSeance=function(){var r=oldRenderSeance?oldRenderSeance.apply(this,arguments):undefined;setTimeout(fixSessionDock,0);setTimeout(fixSessionDock,250);return r;};
+  setTimeout(fixSessionDock,500);
+
+  function tierColor(t){return (window.TIER_COLORS&&window.TIER_COLORS[t])||({bronze:'#cd7f32',argent:'#c0c6d0',or:'#f0c84b',platine:'#8ff1ff',obsidienne:'#9b59ff',mythique:'#e8ff47'}[t]||'var(--acc)')}
+  function valFor(type){if(type==='xp')return parseInt(S().xp||0,10)||0;if(type==='str')return typeof window.getRealStreak==='function'?window.getRealStreak():0;return typeof window.getTotalSess==='function'?window.getTotalSess():0}
+  function listFor(type){return type==='xp'?window.BADGES_XP:(type==='str'?window.BADGES_STR:window.BADGES_SESS)}
+  function typeLabel(type){return type==='xp'?'XP':(type==='str'?'Streak':'Séances')}
+  function curBadge(list,val){var cur=null;(list||[]).forEach(function(b){if(val>=b.min)cur=b});return cur}
+  function nextBadge(list,val){for(var i=0,l=list||[];i<l.length;i++)if(val<l[i].min)return l[i];return null}
+  function badgeCard(type,b,val){
+    if(!b)return'';var unlocked=val>=b.min,col=tierColor(b.tier),progress=unlocked?100:Math.max(0,Math.min(100,Math.round(val/Math.max(1,b.min)*100)));
+    return '<button class="gs-badge-hype '+(unlocked?'':'locked')+'" onclick="openBadges(\''+type+'\')" style="--badge-color:'+E(col)+'"><span class="gs-badge-ico">'+(b.ico||'◆')+'</span><span class="gs-badge-copy"><b>'+E(b.name||'Badge')+'</b><span>'+E(b.desc||typeLabel(type))+'</span><small>'+E(b.rarity||b.tier||'Badge')+'</small></span><span class="gs-badge-bar"><i style="width:'+progress+'%"></i></span></button>';
+  }
+  function badgeShowcase(){return ['sess','str','xp'].map(function(t){var v=valFor(t),b=curBadge(listFor(t),v)||nextBadge(listFor(t),v);return badgeCard(t,b,v)}).join('')}
+  function renderBadgeSurfaces(){
+    document.querySelectorAll('#gs-home-badges .gs-badges-grid,#gs-profile-badges-box .gs-badges-grid,#gs-profile-badges-showcase .gs-badges-grid').forEach(function(el){el.classList.add('gs-badge-hype-grid');el.innerHTML=badgeShowcase()});
+    var row=document.querySelector('#friend-ov.open .gs-badge-row,.friend-ov.open .gs-badge-row');
+    if(row){row.innerHTML=badgeShowcase();row.classList.add('gs-badge-hype-grid')}
+  }
+  window.gsBadgeCard=badgeCard;
+  window.openBadges=function(type){
+    type=type==='streak'?'str':(type||'xp');var list=listFor(type)||[],v=valFor(type),old=$('badge-ov');if(old)old.remove();
+    function tab(t){return '<button class="gs-badge-tab '+(t===type?'on':'')+'" onclick="openBadges(\''+t+'\')">'+typeLabel(t)+'</button>'}
+    var html='<div id="badge-ov" class="gs-badge-ov"><div class="gs-badge-modal"><div class="gs-badge-top"><div><span>G-SQUAD</span><b>Badges</b></div><button onclick="document.getElementById(\'badge-ov\').remove()">×</button></div><div class="gs-badge-tabs">'+tab('sess')+tab('str')+tab('xp')+'</div><div class="gs-badge-list">'+list.map(function(b){return badgeCard(type,b,v)}).join('')+'</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html);
+  };
+  var oldRenderAccueil=window.renderAccueil;
+  if(typeof oldRenderAccueil==='function'){window.renderAccueil=function(){var r=oldRenderAccueil.apply(this,arguments);setTimeout(function(){renderBadgeSurfaces();decorateGymChips(document);},80);return r;};}
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){renderBadgeSurfaces();decorateGymChips(document);decorateMediaLinks(document)},900)});
+
+  function miniWeek(plan){
+    var week=(plan&&plan.week)||[];
+    return week.slice(0,7).map(function(d,i){var active=(d.exercises||[]).filter(function(x){return !/repos|mobilité|marche active|étirements/i.test((x.n||'')+' '+(x.s||''))}).length;return '<div class="gs-ob11-program-day"><b>'+E((d.name||['LUN','MAR','MER','JEU','VEN','SAM','DIM'][i]).slice(0,3))+'</b><span>'+E(d.type||'Repos')+(active?'<small style="display:block;color:var(--mut);font-size:11px;margin-top:3px">'+active+' exercices clés</small>':'<small style="display:block;color:var(--mut);font-size:11px;margin-top:3px">Récupération</small>')+'</span></div>'}).join('');
+  }
+  function polishOb11(){
+    var ov=$('gs-onboard-v11'); if(!ov||!window.OB11)return;
+    var step=window.OB11.step||0, ids=['email','password','username','name','height','weight','bmi','goal','nutrition','program','start'];
+    if(ids[step]==='bmi'&&!ov.querySelector('.gs-ob11-imc-found')){
+      var card=ov.querySelector('.gs-sp-card');
+      if(card)card.insertAdjacentHTML('afterend','<div class="gs-ob11-imc-found"><b>On a trouvé le programme parfait pour toi.</b><span>Continue avec ton objectif et tes jours de sport. L’app adaptera le plan sur 3 mois.</span></div>');
+    }
+    if(ids[step]==='program'&&!ov.querySelector('.gs-ob11-program-friendly')){
+      var p=P(), plan=(typeof window.gsBuildThreeMonthProgram==='function'?window.gsBuildThreeMonthProgram(p):(S().threeMonthProgram||{}));
+      var sub=ov.querySelector('.gs-ob11-sub'); if(sub)sub.textContent='On a trouvé le programme parfait pour toi. Simple, lisible, sur 3 mois.';
+      var title=ov.querySelector('.gs-ob11-title'); if(title)title.textContent='Programme trouvé';
+      var actions=ov.querySelector('.gs-ob11-actions');
+      var oldBlocks=[];var node=sub?sub.nextElementSibling:null;while(node&&node!==actions){oldBlocks.push(node);node=node.nextElementSibling;}oldBlocks.forEach(function(n){n.remove()});
+      var body='<div class="gs-ob11-program-friendly"><div class="gs-ob11-program-hero"><span>Plan personnalisé</span><b>'+E(plan.name||'Cycle 3 mois')+'</b><p>'+E((plan.frequency||p.frequency||3)+' séances par semaine pendant 12 semaines. Objectif: '+(plan.priority||p.objectif||'progresser régulièrement')+'.')+'</p></div><div class="gs-ob11-program-metrics"><div class="gs-ob11-program-metric"><b>'+E(plan.frequency||p.frequency||3)+'</b><span>séances/sem</span></div><div class="gs-ob11-program-metric"><b>12</b><span>semaines</span></div><div class="gs-ob11-program-metric"><b>'+E(plan.split||'Full body')+'</b><span>structure</span></div></div><div class="gs-ob11-program-days">'+miniWeek(plan)+'</div><button type="button" class="gs-btn" style="width:100%" onclick="ob11SaveProgram&&ob11SaveProgram()">Sauvegarder ce plan</button></div>';
+      if(actions)actions.insertAdjacentHTML('beforebegin',body);
+    }
+  }
+  var oldRenderOb11=window.renderOb11;
+  if(typeof oldRenderOb11==='function'){window.renderOb11=function(){var r=oldRenderOb11.apply(this,arguments);setTimeout(polishOb11,0);return r;};}
+  document.addEventListener('click',function(){setTimeout(polishOb11,80)},true);
+})();
+</script>
+
 </body>
 </html>
