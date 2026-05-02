@@ -10685,9 +10685,9 @@ document.addEventListener('DOMContentLoaded',function(){
   function ensureStarterBadges(){
     window.TIER_COLORS=window.TIER_COLORS||{};window.TIER_COLORS.starter=window.TIER_COLORS.starter||'#8FB9FF';
     function add(list,item){if(!Array.isArray(list))return;if(!list.some(function(b){return b&&b.min===0}))list.unshift(item)}
-    add(window.BADGES_SESS,{min:0,tier:'starter',ico:'G',name:'ROOKIE',desc:'Bienvenue dans G-SQUAD. Ton premier badge est débloqué.',rarity:'Starter'});
-    add(window.BADGES_XP,{min:0,tier:'starter',ico:'XP',name:'LEVEL 0',desc:'Tu es entré dans le système XP. Prochain objectif: 100 XP.',rarity:'Starter'});
-    add(window.BADGES_STR,{min:0,tier:'starter',ico:'S',name:'DAY ONE',desc:'Premier jour. Construis ta série.',rarity:'Starter'});
+    add(window.BADGES_SESS,{min:0,tier:'starter',ico:'OR',name:'ORIGIN PASS',desc:'Profil activé. Ta première ligne est déjà dans l’histoire.',rarity:'Débloqué'});
+    add(window.BADGES_XP,{min:0,tier:'starter',ico:'IG',name:'IGNITION',desc:'Système XP lancé. Prochain objectif: passer les 100 XP.',rarity:'Départ'});
+    add(window.BADGES_STR,{min:0,tier:'starter',ico:'D1',name:'DAY ONE',desc:'Jour 1 validé. Maintenant, construis ta série.',rarity:'Départ'});
   }
   ensureStarterBadges();
 
@@ -11224,6 +11224,456 @@ document.addEventListener('DOMContentLoaded',function(){
 
   // Lance quelques corrections après chargement.
   setTimeout(function(){try{if(typeof renderSeance==='function')renderSeance();addActivities();if(typeof renderBib==='function')renderBib();cleanModifierSeriesButtons(document)}catch(e){}},700);
+})();
+</script>
+
+
+<style id="gs-light-theme-patch">
+/* Thème clair G-SQUAD : même identité, fond blanc, texte bleu marine */
+body.gs-theme-light{
+  --bg:#F7FAFE!important;
+  --sur:#FFFFFF!important;
+  --card:#FFFFFF!important;
+  --card2:#F1F5FB!important;
+  --brd:#D8E2EE!important;
+  --acc:#4979C3!important;
+  --acc-dim:rgba(73,121,195,.12)!important;
+  --acc-glow:rgba(73,121,195,.22)!important;
+  --grn:#2E9F6E!important;
+  --red:#D6455D!important;
+  --blu:#4979C3!important;
+  --txt:#081A2E!important;
+  --txt2:#526377!important;
+  --mut:#7C8CA1!important;
+  --fnt:#EDF3FA!important;
+  background:radial-gradient(circle at 50% -12%,#EAF2FF 0%,#F7FAFE 42%,#FFFFFF 100%)!important;
+  color:var(--txt)!important;
+}
+body.gs-theme-light #app-header,
+body.gs-theme-light .nav,
+body.gs-theme-light .sess-bar,
+body.gs-theme-light .flhead,
+body.gs-theme-light .fl-head-v2,
+body.gs-theme-light .social-head,
+body.gs-theme-light .more-sh{
+  background:rgba(255,255,255,.92)!important;
+  border-color:rgba(8,26,46,.10)!important;
+  box-shadow:0 12px 36px rgba(8,26,46,.08)!important;
+}
+body.gs-theme-light #header-logo{color:var(--txt)!important}
+body.gs-theme-light .content,
+body.gs-theme-light .panel,
+body.gs-theme-light .gs-page,
+body.gs-theme-light .flov,
+body.gs-theme-light .profil-ov,
+body.gs-theme-light .friend-ov,
+body.gs-theme-light .auth-screen,
+body.gs-theme-light .onboard{background:transparent!important;color:var(--txt)!important}
+body.gs-theme-light .card,
+body.gs-theme-light .card-v2,
+body.gs-theme-light .gs-card,
+body.gs-theme-light .gs-soft-card,
+body.gs-theme-light .gs-settings-section,
+body.gs-theme-light .ncard,
+body.gs-theme-light .jcard,
+body.gs-theme-light .exo-card,
+body.gs-theme-light .prog-card,
+body.gs-theme-light .rest-card,
+body.gs-theme-light .priority-card,
+body.gs-theme-light .feed-card,
+body.gs-theme-light .ucard,
+body.gs-theme-light .meal,
+body.gs-theme-light .si,
+body.gs-theme-light .lb-row,
+body.gs-theme-light .gs-rank-card,
+body.gs-theme-light .gs-leader-hero,
+body.gs-theme-light .gs-notif-item,
+body.gs-theme-light .gs-modal-sheet,
+body.gs-theme-light .gs-gym-tile-v5,
+body.gs-theme-light .gs-settings-sport,
+body.gs-theme-light .gs-security-box,
+body.gs-theme-light .gs-menu-btn,
+body.gs-theme-light .mgbtn{
+  background:rgba(255,255,255,.88)!important;
+  border-color:rgba(8,26,46,.10)!important;
+  color:var(--txt)!important;
+  box-shadow:0 12px 34px rgba(8,26,46,.07)!important;
+}
+body.gs-theme-light .gs-hero{
+  background:linear-gradient(145deg,#FFFFFF,#EEF5FF)!important;
+  border-color:rgba(8,26,46,.10)!important;
+  box-shadow:0 18px 46px rgba(8,26,46,.09)!important;
+}
+body.gs-theme-light .focus-card{
+  background:linear-gradient(180deg,#081A2E,#16385F)!important;
+  color:#FFFFFF!important;
+}
+body.gs-theme-light .focus-card .focus-index,
+body.gs-theme-light .focus-card .focus-sets{color:rgba(255,255,255,.72)!important}
+body.gs-theme-light .focus-actions a,
+body.gs-theme-light .focus-actions button{background:rgba(255,255,255,.14)!important;color:#FFFFFF!important;border-color:rgba(255,255,255,.18)!important}
+body.gs-theme-light input,
+body.gs-theme-light select,
+body.gs-theme-light textarea,
+body.gs-theme-light .auth-inp,
+body.gs-theme-light .ob-inp,
+body.gs-theme-light .ninp,
+body.gs-theme-light .mlinp,
+body.gs-theme-light .tinp,
+body.gs-theme-light .social-inp,
+body.gs-theme-light .gs-settings-field input,
+body.gs-theme-light .gs-settings-field select{
+  background:#FFFFFF!important;
+  border-color:rgba(8,26,46,.14)!important;
+  color:var(--txt)!important;
+}
+body.gs-theme-light input::placeholder,
+body.gs-theme-light textarea::placeholder{color:#8A99AA!important}
+body.gs-theme-light .bigbtn,
+body.gs-theme-light .auth-btn,
+body.gs-theme-light .ob-btn,
+body.gs-theme-light .donebtn.rdy,
+body.gs-theme-light .sess-stop,
+body.gs-theme-light .mlsave,
+body.gs-theme-light .gs-btn:not(.secondary):not(.ghost),
+body.gs-theme-light .gs-settings-btn.primary{
+  background:var(--txt)!important;
+  color:#FFFFFF!important;
+  border-color:var(--txt)!important;
+}
+body.gs-theme-light .gs-btn.secondary,
+body.gs-theme-light .gs-btn.ghost,
+body.gs-theme-light .actbtn,
+body.gs-theme-light .nbtn,
+body.gs-theme-light .tb,
+body.gs-theme-light .gs-settings-btn,
+body.gs-theme-light .react-btn,
+body.gs-theme-light .exos-filt,
+body.gs-theme-light .jvt,
+body.gs-theme-light .priority-chip,
+body.gs-theme-light .gs-pill{
+  background:rgba(8,26,46,.045)!important;
+  border-color:rgba(8,26,46,.10)!important;
+  color:var(--txt2)!important;
+}
+body.gs-theme-light .nb.act,
+body.gs-theme-light .exos-filt.act,
+body.gs-theme-light .jvt.act,
+body.gs-theme-light .priority-chip.sel,
+body.gs-theme-light .gs-dot.cur,
+body.gs-theme-light .gs-gym-tile-v5.sel,
+body.gs-theme-light .gs-settings-sport.sel,
+body.gs-theme-light .gs-appearance-choice.sel{
+  background:rgba(73,121,195,.12)!important;
+  color:var(--txt)!important;
+  border-color:rgba(73,121,195,.34)!important;
+}
+body.gs-theme-light .nb-plus-ico{background:var(--txt)!important;color:#FFFFFF!important;box-shadow:0 16px 36px rgba(8,26,46,.18)!important}
+body.gs-theme-light .nb-plus-ico svg{stroke:#FFFFFF!important}
+body.gs-theme-light .gs-icon-btn,
+body.gs-theme-light .gs-profile-icon,
+body.gs-theme-light #app-header button{
+  background:rgba(8,26,46,.05)!important;
+  border-color:rgba(8,26,46,.10)!important;
+  color:var(--txt)!important;
+}
+body.gs-theme-light .bptrack,
+body.gs-theme-light .ntrack,
+body.gs-theme-light .mbar,
+body.gs-theme-light .gs-progress{background:rgba(8,26,46,.09)!important}
+body.gs-theme-light .bpfill,
+body.gs-theme-light .nfill,
+body.gs-theme-light .gs-progress>i{background:linear-gradient(90deg,#4979C3,#7DA4DE)!important}
+body.gs-theme-light .notif{background:var(--txt)!important;color:#FFFFFF!important}
+body.gs-theme-light .more-ov.open,
+body.gs-theme-light .gs-search-v2,
+body.gs-theme-light .gs-notif-v2{background:rgba(8,26,46,.28)!important;backdrop-filter:blur(8px)!important}
+body.gs-theme-light .gs-leader-v2,
+body.gs-theme-light .gs-profile-clean,
+body.gs-theme-light .gs-settings-v5{background:var(--bg)!important;color:var(--txt)!important}
+body.gs-theme-light .gs-brand-logo.real-logo{border-color:rgba(8,26,46,.10)!important;box-shadow:0 6px 18px rgba(8,26,46,.08)!important}
+.gs-appearance-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.gs-appearance-choice{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);border-radius:20px;color:var(--txt);padding:14px;text-align:left;font-weight:1000;font-size:14px;font-family:inherit}
+.gs-appearance-choice span{display:block;margin-top:4px;color:var(--txt2);font-size:12px;font-weight:700;line-height:1.3}
+body.gs-theme-light .gs-appearance-choice{background:#FFFFFF;border-color:rgba(8,26,46,.10);box-shadow:0 10px 26px rgba(8,26,46,.06)}
+</style>
+<script id="gs-light-theme-patch-js">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function getTheme(){
+    try{return localStorage.getItem('gsquad_theme_mode') || ((window.state&&state.profil&&state.profil.themeMode) || 'dark')}catch(e){return 'dark'}
+  }
+  function persistTheme(mode){
+    try{localStorage.setItem('gsquad_theme_mode',mode)}catch(e){}
+    try{if(window.state&&state.profil){state.profil.themeMode=mode;if(typeof sv==='function')sv();}}catch(e){}
+  }
+  window.gsApplyThemeMode=function(mode){
+    mode=mode==='light'?'light':'dark';
+    document.body.classList.toggle('gs-theme-light',mode==='light');
+    document.body.classList.toggle('gs-theme-dark',mode!=='light');
+    var meta=document.querySelector('meta[name="theme-color"]');
+    if(meta)meta.setAttribute('content',mode==='light'?'#F7FAFE':'#070A0E');
+    document.querySelectorAll('[data-gs-theme-mode]').forEach(function(btn){btn.classList.toggle('sel',btn.getAttribute('data-gs-theme-mode')===mode)});
+  };
+  window.gsSetThemeMode=function(mode){
+    persistTheme(mode);
+    window.gsApplyThemeMode(mode);
+    if(typeof notify==='function')notify(mode==='light'?'Thème clair activé':'Thème sombre activé');
+  };
+  function injectAppearanceSettings(){
+    var ov=$('profile-settings-v1');
+    if(!ov || $('gs-appearance-settings'))return;
+    var wrap=ov.querySelector('.gs-settings-v5') || ov.firstElementChild || ov;
+    var session=[].slice.call(ov.querySelectorAll('.gs-settings-section')).find(function(sec){return /Session/i.test(sec.textContent||'')});
+    var cur=getTheme();
+    var html='<div class="gs-settings-section" id="gs-appearance-settings">'
+      +'<div class="gs-settings-title">Apparence</div>'
+      +'<div class="gs-settings-sub">Choisis entre le mode sombre actuel et un thème clair avec fond blanc et texte bleu marine.</div>'
+      +'<div class="gs-appearance-grid">'
+      +'<button type="button" class="gs-appearance-choice '+(cur!=='light'?'sel':'')+'" data-gs-theme-mode="dark" onclick="gsSetThemeMode(\'dark\')">Sombre<span>Identité actuelle G-SQUAD.</span></button>'
+      +'<button type="button" class="gs-appearance-choice '+(cur==='light'?'sel':'')+'" data-gs-theme-mode="light" onclick="gsSetThemeMode(\'light\')">Clair<span>Fond blanc, textes bleu marine.</span></button>'
+      +'</div></div>';
+    if(session)session.insertAdjacentHTML('beforebegin',html);else wrap.insertAdjacentHTML('beforeend',html);
+    window.gsApplyThemeMode(cur);
+  }
+  var oldOpen=window.openProfilSettings;
+  window.openProfilSettings=function(){
+    var r=oldOpen?oldOpen.apply(this,arguments):undefined;
+    setTimeout(injectAppearanceSettings,0);
+    return r;
+  };
+  function init(){window.gsApplyThemeMode(getTheme());injectAppearanceSettings()}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+  setTimeout(init,500);
+})();
+</script>
+
+
+
+<style id="gs-route-program-final-patch-css">
+/* Patch ciblé: Running/Randonnée, itinéraires, programme, menu + */
+.route-v1-card{background:rgba(18,24,33,.88)!important;border-color:rgba(143,185,255,.12)!important}
+.route-v1-btn.orange{background:linear-gradient(135deg,#0A1726,#8FB9FF)!important;color:#F7FAFE!important;box-shadow:0 14px 34px rgba(10,23,38,.24)!important}
+.route-v1-map-preview svg path{stroke:var(--acc)!important}
+.route-v1-hist-card{display:flex;align-items:center;justify-content:space-between;gap:12px;border-left:3px solid var(--acc)!important;cursor:pointer}
+.route-v1-hist-card:active{transform:scale(.99)}
+.gs-route-delete{width:34px;height:34px;border-radius:999px;border:1px solid rgba(255,107,122,.25);background:rgba(255,107,122,.10);color:var(--red);font-size:18px;font-weight:900;flex:0 0 auto}
+.gs-route-dest{margin-top:12px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:12px}
+.gs-route-dest label{display:block;font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.10em;font-weight:950;margin-bottom:7px}
+.gs-route-dest input{width:100%;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.055);color:var(--txt);border-radius:15px;padding:13px 14px;font-family:inherit;font-size:14px;outline:none}
+.gs-route-mini{font-size:11px;color:var(--mut);line-height:1.45;margin-top:7px;font-weight:700}
+.gs-route-detail-ov{position:fixed;inset:0;z-index:3300;background:rgba(0,0,0,.82);display:flex;align-items:flex-end}
+.gs-route-detail{width:100%;max-height:92vh;overflow:auto;background:var(--bg);border-top:1px solid rgba(255,255,255,.10);border-radius:30px 30px 0 0;padding:16px;padding-bottom:calc(env(safe-area-inset-bottom,20px) + 16px)}
+.gs-route-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}.gs-route-detail-head b{display:block;font-size:24px;color:var(--txt);font-weight:1000;letter-spacing:-.055em}.gs-route-detail-head span{display:block;color:var(--mut);font-size:12px;font-weight:800;margin-top:3px}.gs-route-detail-close{width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.055);color:var(--txt);font-size:24px}.gs-route-detail-map{height:48vh;min-height:300px;border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:#0b1117;margin-bottom:12px}.gs-route-detail-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}.gs-route-detail-stat{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:12px 8px;text-align:center}.gs-route-detail-stat b{display:block;color:var(--txt);font-size:20px;font-weight:1000}.gs-route-detail-stat span{display:block;color:var(--mut);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;margin-top:5px}.gs-program-picker-ov{position:fixed;inset:0;z-index:3400;background:rgba(0,0,0,.82);display:flex;align-items:flex-end}.gs-program-picker{width:100%;max-height:90vh;overflow:auto;background:var(--bg);border-top:1px solid rgba(255,255,255,.10);border-radius:30px 30px 0 0;padding:16px;padding-bottom:calc(env(safe-area-inset-bottom,20px) + 16px)}.gs-program-picker input{width:100%;padding:14px 15px;border-radius:18px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.055);color:var(--txt);font-size:15px;font-family:inherit;outline:none}.gs-program-picker-list{display:grid;gap:8px;margin-top:12px}.gs-program-picker-card{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.045);border-radius:18px;padding:13px;color:var(--txt);font-family:inherit}.gs-program-picker-card b{display:block;font-size:14px;font-weight:1000}.gs-program-picker-card span{display:block;font-size:11px;color:var(--mut);margin-top:3px;font-weight:800}.gs-program-change-btn{border:1px solid rgba(143,185,255,.28)!important;background:rgba(143,185,255,.10)!important;color:var(--acc)!important}.gs-quick-menu-vfinal{display:grid;gap:10px}.gs-quick-menu-vfinal .gs-menu-btn{width:100%}
+body.gs-theme-light .gs-route-detail,body.gs-theme-light .gs-program-picker{background:#F7FAFE!important}body.gs-theme-light .route-v1-card,body.gs-theme-light .route-v1-stat,body.gs-theme-light .gs-route-dest,body.gs-theme-light .gs-route-detail-stat,body.gs-theme-light .gs-program-picker-card{background:#FFFFFF!important;border-color:rgba(8,26,46,.10)!important}body.gs-theme-light .gs-route-dest input,body.gs-theme-light .gs-program-picker input{background:#F4F7FB!important;border-color:rgba(8,26,46,.10)!important;color:#081A2E!important}
+</style>
+<script id="gs-route-program-final-patch-js">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function S(){window.state=window.state||{};return window.state}
+  function P(){var s=S();s.profil=s.profil||{};return s.profil}
+  function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('ath7',JSON.stringify(S()))}catch(e){}}
+  function msg(t){try{if(typeof window.notify==='function')window.notify(t);else if(typeof window.nt==='function')window.nt(t);else console.log(t)}catch(e){}}
+  function E(v){try{return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}catch(e){return ''}}
+  function escJs(v){return String(v==null?'':v).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' ')}
+  function isIOS(){return /iPhone|iPad|iPod/i.test(navigator.userAgent||'')}
+  function routeDest(){return (($('route-destination')||{}).value||window._gpsDestinationText||'').trim()}
+  function navUrl(dest){dest=dest||routeDest();if(!dest)return '';return isIOS()?'https://maps.apple.com/?daddr='+encodeURIComponent(dest):'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(dest)}
+  window.gsOpenRouteNavigation=function(dest){dest=(dest||routeDest()||'').trim();if(!dest){msg('Ajoute une destination.');return false;}window.open(navUrl(dest),'_blank','noopener');return false;};
+  window.gsRouteSetDestination=function(){window._gpsDestinationText=routeDest();if(window._gpsDestinationText)msg('Destination enregistrée');};
+
+  window.gsRequestRouteWakeLock=async function(){
+    try{if('wakeLock' in navigator){window._gsRouteWakeLock=await navigator.wakeLock.request('screen');}}
+    catch(e){/* Wake Lock non disponible, pas bloquant */}
+  };
+  window.gsReleaseRouteWakeLock=function(){try{if(window._gsRouteWakeLock){window._gsRouteWakeLock.release();window._gsRouteWakeLock=null;}}catch(e){}};
+  document.addEventListener('visibilitychange',function(){try{if(document.visibilityState==='visible' && window._gpsStart && !window._gpsPaused)window.gsRequestRouteWakeLock();}catch(e){}});
+
+  window.gsRenderRouteClean=function(){
+    var body=document.querySelector('#fl-marche .flbody'); if(!body)return;
+    body.innerHTML='<div class="route-v1-hero">'
+      +'<div id="route-v1-setup" class="route-v1-card"><div class="route-v1-lock">GPS</div><div class="route-v1-title">Running ou randonnée</div><div class="route-v1-sub">Active la localisation pour calculer la distance, la durée, l’allure et retrouver ton tracé après l’activité.</div><div class="route-v1-map-preview"><svg viewBox="0 0 300 160" fill="none"><path d="M15 120 C55 80 72 112 105 84 S170 42 208 70 S248 120 286 45" stroke="var(--acc)" stroke-width="9" stroke-linecap="round"/><circle cx="15" cy="120" r="8" fill="var(--txt)"/><circle cx="286" cy="45" r="8" fill="var(--acc)"/></svg></div><div class="route-v1-row"><button type="button" id="route-chip-running" class="route-v1-chip act" onclick="chooseRouteType(\'Running\')">Running</button><button type="button" id="route-chip-rando" class="route-v1-chip" onclick="chooseRouteType(\'Randonnée\')">🥾 Randonnée</button></div><div class="gs-route-dest"><label>Destination optionnelle</label><input id="route-destination" placeholder="Ex : Tour Eiffel, Paris" value="'+E(window._gpsDestinationText||'')+'" oninput="window._gpsDestinationText=this.value.trim()"><div class="gs-route-mini">Tu peux lancer le GPS dans G-SQUAD et ouvrir l’itinéraire dans Plans/Google Maps.</div><button type="button" class="route-v1-btn dark" style="margin-top:10px" onclick="return gsOpenRouteNavigation()">Ouvrir l’itinéraire</button></div><div class="route-v1-toggle" onclick="toggleRoutePrivacy()"><div><b style="color:var(--txt);font-size:13px">Masquer départ et arrivée</b><div class="route-v1-privacy-note">Activé par défaut si tu partages ton activité.</div></div><div id="route-v1-privacy-switch" class="route-v1-switch"></div></div><button class="route-v1-btn orange" style="margin-top:14px" onclick="startRouteGPS()">Démarrer le GPS</button><button class="route-v1-btn dark" style="margin-top:8px" onclick="openRouteManual()">Saisie manuelle</button><div class="route-v1-alert">Le tracé est sauvegardé à la fin. Sur iPhone, une PWA ne garantit pas un suivi fiable écran verrouillé: garde l’app au premier plan quand c’est important.</div></div>'
+      +'<div id="route-v1-live" class="route-v1-card"><div class="route-v1-live-map"><button class="route-v1-close-map" onclick="confirmCancelRoute()">×</button><div id="route-v1-map" style="height:100%;width:100%"></div></div><div id="route-v1-status" class="route-v1-status">GPS en attente</div><div class="route-v1-stats" id="route-v1-stats"><div class="route-v1-stat"><b>0.00</b><span>km</span></div><div class="route-v1-stat"><b>00:00</b><span>durée</span></div><div class="route-v1-stat"><b>--</b><span>min/km</span></div></div><div class="route-v1-accuracy" id="route-v1-accuracy">Autorisation GPS nécessaire</div><div class="route-v1-row" style="margin-top:12px"><button id="route-v1-pause-btn" class="route-v1-btn dark" onclick="toggleRoutePause()">Pause</button><button class="route-v1-btn red" onclick="finishRouteGPS()">Terminer</button></div></div>'
+      +'<div id="route-v1-manual" class="route-v1-manual route-v1-card"><div class="route-v1-title" style="font-size:22px">Saisie manuelle</div><div class="lfield"><label>Type</label><select id="m-parc" style="width:100%;padding:12px;border-radius:13px;border:1px solid var(--brd);background:var(--card);color:var(--txt);font-size:14px;font-family:DM Sans,sans-serif;-webkit-appearance:none"><option>Running</option><option>Randonnée</option></select></div><div style="display:flex;gap:8px"><div class="lfield" style="flex:1;margin-bottom:0"><label>Distance km</label><input type="number" id="m-km" placeholder="8.5" inputmode="decimal" step="0.1"></div><div class="lfield" style="flex:1;margin-bottom:0"><label>Durée min</label><input type="number" id="m-dur" placeholder="65" inputmode="numeric"></div></div><button class="route-v1-btn" style="margin-top:12px" onclick="saveMarche()">Enregistrer</button></div>'
+      +'<div class="route-v1-card"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px"><div><div style="font-size:17px;font-weight:950;color:var(--txt)">Historique</div><div style="font-size:12px;color:var(--mut);margin-top:3px">Tes dernières activités. Appuie sur une activité pour revoir le tracé.</div></div><button class="gs-btn ghost" onclick="openRouteManual()" style="padding:10px 12px">+ Manuel</button></div><div id="marche-hist" class="route-v1-hist"></div></div></div>';
+    try{chooseRouteType((window._gpsType==='Randonnée')?'Randonnée':'Running',true)}catch(e){}
+    try{updateRoutePrivacyUI()}catch(e){}
+    try{renderMarcheHist()}catch(e){}
+  };
+
+  var oldStart=window.startRouteGPS;
+  window.startRouteGPS=function(){window._gpsDestinationText=routeDest();try{window.gsRequestRouteWakeLock()}catch(e){};return oldStart?oldStart.apply(this,arguments):undefined;};
+
+  window.toggleRoutePause=function(){
+    if(!window._gpsWatchId&&!window._gpsPaused){msg('Aucune activité en cours');return;}
+    if(window._gpsPaused){
+      window._gpsPaused=false; window._gpsStart=Date.now();
+      if(navigator.geolocation){window._gpsWatchId=navigator.geolocation.watchPosition(function(pos){handleRoutePosition(pos);},function(err){msg('GPS: '+((err&&err.message)||'erreur'));},{enableHighAccuracy:true,maximumAge:0,timeout:15000});}
+      try{window.gsRequestRouteWakeLock()}catch(e){}
+      if(typeof setRouteStatus==='function')setRouteStatus('GPS actif');
+    }else{
+      var elapsed=(typeof routeElapsedMs==='function')?routeElapsedMs():0;
+      window._gpsElapsedBeforePause=elapsed;
+      window._gpsPaused=true;
+      if(window._gpsWatchId&&navigator.geolocation)navigator.geolocation.clearWatch(window._gpsWatchId);
+      window._gpsWatchId=null;
+      try{window.gsReleaseRouteWakeLock()}catch(e){}
+      if(typeof setRouteStatus==='function')setRouteStatus('En pause');
+    }
+    if(typeof updateRouteLiveDisplay==='function')updateRouteLiveDisplay();
+  };
+
+  var oldHandle=window.handleRoutePosition;
+  window.handleRoutePosition=function(pos){var r=oldHandle?oldHandle.apply(this,arguments):undefined;try{if(window._gpsStart){sessionStorage.setItem('gs_route_draft',JSON.stringify({type:window._gpsType,distance:window._gpsDistance,points:window._gpsPoints,start:window._gpsStart,elapsed:window._gpsElapsedBeforePause,destination:window._gpsDestinationText||'',paused:!!window._gpsPaused,ts:Date.now()}));}}catch(e){}return r;};
+
+  var oldFinish=window.finishRouteGPS;
+  window.finishRouteGPS=function(){var dest=routeDest();var before=(S().marches||[]).length;var r=oldFinish?oldFinish.apply(this,arguments):undefined;try{var s=S();if(s.marches&&s.marches.length>before-1&&s.marches[0]){s.marches[0].destination=dest||s.marches[0].destination||'';save();}sessionStorage.removeItem('gs_route_draft');window.gsReleaseRouteWakeLock();renderMarcheHist();}catch(e){}return r;};
+  var oldCancel=window.cancelRouteGPS;
+  window.cancelRouteGPS=function(){try{sessionStorage.removeItem('gs_route_draft');window.gsReleaseRouteWakeLock()}catch(e){}return oldCancel?oldCancel.apply(this,arguments):undefined;};
+
+  window.gsDeleteMarche=function(index){var s=S(); if(!s.marches||!s.marches[index])return;if(!confirm('Supprimer cette activité de l’historique ?'))return;s.marches.splice(index,1);save();try{renderMarcheHist()}catch(e){}msg('Activité supprimée');};
+  window.renderMarcheHist=function(){
+    var el=$('marche-hist');if(!el)return;var s=S();var m=(s.marches||[]).slice(0,30);
+    if(!m.length){el.innerHTML='<div style="text-align:center;color:var(--mut);padding:18px;font-size:13px">Aucune activité enregistrée.</div>';return;}
+    el.innerHTML=m.map(function(x,i){var dur=x.dur?Math.floor(x.dur/60)+'h'+String(x.dur%60).padStart(2,'0'):'--';if(x.dur&&x.dur<60)dur=x.dur+' min';var source=x.source==='gps'?'GPS':'manuel';var type=x.type||x.parc||'Activité';var hasRoute=(x.route&&x.route.length>1);return '<div class="route-v1-hist-card" onclick="gsOpenRouteDetail('+i+')"><div style="min-width:0"><div class="route-v1-hist-title">'+E(type)+' · '+E(x.km||0)+' km</div><div class="route-v1-hist-meta">'+E(x.date||'')+' · '+E(dur)+' · '+E(x.pace||'--')+' min/km · '+E(x.calories||0)+' kcal · '+source+(x.destination?' · destination: '+E(x.destination):'')+'</div><div class="gs-route-mini">'+(hasRoute?'Tracé disponible':'Pas de tracé GPS enregistré')+'</div></div><button class="gs-route-delete" onclick="event.stopPropagation();gsDeleteMarche('+i+')">×</button></div>'}).join('');
+  };
+  window.gsOpenRouteDetail=function(index){
+    var x=(S().marches||[])[index]; if(!x)return; var old=$('gs-route-detail-ov');if(old)old.remove();
+    var dur=x.dur?Math.floor(x.dur/60)+'h'+String(x.dur%60).padStart(2,'0'):'--';if(x.dur&&x.dur<60)dur=x.dur+' min';
+    var html='<div id="gs-route-detail-ov" class="gs-route-detail-ov" onclick="if(event.target===this)this.remove()"><div class="gs-route-detail"><div class="gs-route-detail-head"><div><b>'+E(x.type||x.parc||'Activité')+'</b><span>'+E(x.date||'')+(x.destination?' · '+E(x.destination):'')+'</span></div><button class="gs-route-detail-close" onclick="document.getElementById(\'gs-route-detail-ov\').remove()">×</button></div><div class="gs-route-detail-map" id="gs-route-detail-map"></div><div class="gs-route-detail-stats"><div class="gs-route-detail-stat"><b>'+E(x.km||0)+'</b><span>km</span></div><div class="gs-route-detail-stat"><b>'+E(dur)+'</b><span>durée</span></div><div class="gs-route-detail-stat"><b>'+E(x.pace||'--')+'</b><span>min/km</span></div></div><div class="route-v1-row">'+(x.destination?'<button class="route-v1-btn dark" onclick="return gsOpenRouteNavigation(\''+escJs(x.destination)+'\')">Ouvrir l’itinéraire</button>':'')+'<button class="route-v1-btn red" onclick="gsDeleteMarche('+index+');var ov=document.getElementById(\'gs-route-detail-ov\');if(ov)ov.remove()">Supprimer</button></div></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html);
+    setTimeout(function(){var mapEl=$('gs-route-detail-map');if(!mapEl)return;if(!window.L||!x.route||x.route.length<2){mapEl.innerHTML='<div class="route-v1-map-fallback">Aucun tracé GPS disponible pour cette activité.</div>';return;}try{var pts=x.route.map(function(p){return [p.lat,p.lng]});var map=L.map('gs-route-detail-map',{zoomControl:false,attributionControl:true}).setView(pts[0],15);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);L.polyline(pts,{color:'#8FB9FF',weight:6,opacity:.95,lineCap:'round',lineJoin:'round'}).addTo(map);L.circleMarker(pts[0],{radius:7,color:'#071018',weight:2,fillColor:'#73D6A2',fillOpacity:1}).addTo(map);L.circleMarker(pts[pts.length-1],{radius:7,color:'#071018',weight:2,fillColor:'#8FB9FF',fillOpacity:1}).addTo(map);map.fitBounds(L.latLngBounds(pts),{padding:[34,34],maxZoom:17});setTimeout(function(){map.invalidateSize()},100)}catch(e){mapEl.innerHTML='<div class="route-v1-map-fallback">Impossible d’afficher le tracé.</div>';console.warn(e)}},60);
+  };
+
+  var prevOpenFL=window.openFL;
+  window.openFL=function(name){var r=prevOpenFL?prevOpenFL.apply(this,arguments):undefined;if(name==='marche')setTimeout(window.gsRenderRouteClean,120);return r;};
+
+  // Menu + sans nutrition.
+  window.openQuickAction=function(){
+    var ex=$('quick-action-ov');if(ex)ex.remove();
+    var icon=function(t){return '<span style="width:38px;height:38px;border-radius:14px;background:rgba(143,185,255,.12);border:1px solid rgba(143,185,255,.18);display:flex;align-items:center;justify-content:center;color:var(--acc);font-weight:1000">'+t+'</span>'};
+    var html='<div id="quick-action-ov" style="position:fixed;inset:0;background:rgba(0,0,0,.58);backdrop-filter:blur(7px);z-index:1500;display:flex;flex-direction:column;justify-content:flex-end" onclick="if(event.target===this)this.remove()"><div style="padding:14px;padding-bottom:calc(env(safe-area-inset-bottom,20px) + 14px);background:var(--sur);border-top:1px solid var(--brd);border-radius:28px 28px 0 0"><div class="gs-card-title" style="margin-bottom:10px">Ajouter</div><div class="gs-quick-menu-vfinal">'
+    +'<button class="gs-menu-btn" onclick="document.getElementById(\'quick-action-ov\').remove();goTab(\'seance\',document.getElementById(\'nb-seance\'))">'+icon('SE')+'<span><span class="gs-menu-title">Séance</span><span class="gs-menu-sub">Lancer ou reprendre</span></span></button>'
+    +'<button class="gs-menu-btn" onclick="document.getElementById(\'quick-action-ov\').remove();openFL(\'marche\')">'+icon('GPS')+'<span><span class="gs-menu-title">Running / randonnée</span><span class="gs-menu-sub">GPS, distance, tracé</span></span></button>'
+    +'<button class="gs-menu-btn" onclick="document.getElementById(\'quick-action-ov\').remove();openFL(\'exos\')">'+icon('EX')+'<span><span class="gs-menu-title">Exercices</span><span class="gs-menu-sub">Bibliothèque et programme</span></span></button>'
+    +'<button class="gs-menu-btn" onclick="document.getElementById(\'quick-action-ov\').remove();openFL(\'programme\')">'+icon('PR')+'<span><span class="gs-menu-title">Programme</span><span class="gs-menu-sub">Voir le plan</span></span></button>'
+    +'<button class="gs-menu-btn" onclick="document.getElementById(\'quick-action-ov\').remove();openMomentUpload&&openMomentUpload(\'photo\')">'+icon('📷')+'<span><span class="gs-menu-title">Photo</span><span class="gs-menu-sub">Moment ou progression</span></span></button>'
+    +'<button class="gs-menu-btn" onclick="document.getElementById(\'quick-action-ov\').remove();openMomentUpload&&openMomentUpload(\'before_after\')">'+icon('AV')+'<span><span class="gs-menu-title">Avant / après</span><span class="gs-menu-sub">Deux photos comparées</span></span></button>'
+    +'</div><button onclick="document.getElementById(\'quick-action-ov\').remove()" style="width:100%;margin-top:12px;padding:13px;border-radius:14px;border:0;background:transparent;color:var(--mut);font-weight:900">Annuler</button></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html);
+  };
+
+  // Modifier un exercice de programme via bibliothèque.
+  function days(){return (window.DAYS||[])}
+  function persistDay(di){try{var d=days()[di];S().customDays=S().customDays||{};S().customDays[di]=(d.exercises||[]).map(function(x){return {n:x.n,s:x.s,note:x.note||'',yt:x.yt||'',tt:x.tt||'',t:x.t||'',activity:!!x.activity,xp:x.xp||0,m:x.m||''};});save();}catch(e){}}
+  window.gsOpenProgramExercisePicker=function(di,ei){window._gsProgramPick={di:di,ei:ei,q:''};var old=$('gs-program-picker-ov');if(old)old.remove();var html='<div id="gs-program-picker-ov" class="gs-program-picker-ov" onclick="if(event.target===this)this.remove()"><div class="gs-program-picker" onclick="event.stopPropagation()"><div class="gs-route-detail-head"><div><b>Choisir un exercice</b><span>Depuis la bibliothèque, sans retaper le nom.</span></div><button class="gs-route-detail-close" onclick="document.getElementById(\'gs-program-picker-ov\').remove()">×</button></div><input id="gs-program-picker-input" placeholder="Recherche: DC, RDL, SDT, presse…" oninput="window._gsProgramPick.q=this.value;gsRenderProgramExercisePicker()"><div id="gs-program-picker-list" class="gs-program-picker-list"></div></div></div>';document.body.insertAdjacentHTML('beforeend',html);setTimeout(function(){var i=$('gs-program-picker-input');if(i)i.focus();gsRenderProgramExercisePicker()},30)};
+  window.gsRenderProgramExercisePicker=function(){var box=$('gs-program-picker-list');if(!box)return;var pick=window._gsProgramPick||{};var q=String(pick.q||'').trim();var list=(window.EXOS_DB||[]).filter(function(e){if(!q)return true;if(typeof window.gsExerciseMatchesSearch==='function')return window.gsExerciseMatchesSearch(e,q);var hay=(e.n+' '+(e.m||'')+' '+(e.t||'')).toLowerCase();return hay.indexOf(q.toLowerCase())>-1;}).slice(0,80);if(!list.length){box.innerHTML='<div style="text-align:center;color:var(--mut);padding:22px">Aucun exercice trouvé.</div>';return;}box.innerHTML=list.map(function(e){return '<button class="gs-program-picker-card" onclick="gsSelectProgramExercise(\''+escJs(e.n)+'\')"><span><b>'+E(e.n)+'</b><span>'+E(e.t||'Exercice')+' · '+E(e.m||'Muscles ciblés')+(e.xp?' · +'+E(e.xp)+' XP':'')+'</span></span><span style="color:var(--acc);font-weight:1000">Choisir</span></button>'}).join('')};
+  window.gsSelectProgramExercise=function(name){var pick=window._gsProgramPick||{},d=days()[pick.di];if(!d||!d.exercises||!d.exercises[pick.ei])return;var ex=(window.EXOS_DB||[]).find(function(x){return x.n===name})||{n:name};var old=d.exercises[pick.ei];d.exercises[pick.ei]={n:ex.n,s:old.s||ex.s||'3 x 10-12 reps',note:ex.note||old.note||'',yt:ex.yt||old.yt||'',tt:ex.tt||ex.tk||old.tt||'',t:ex.t||old.t||'',m:ex.m||old.m||'',xp:ex.xp||old.xp||0,activity:!!ex.activity};persistDay(pick.di);var ov=$('gs-program-picker-ov');if(ov)ov.remove();try{if(typeof window.editDay==='function')window.editDay(pick.di);if(typeof window.renderProgBody==='function')window.renderProgBody();if(window.cDay===pick.di&&typeof window.renderSeance==='function')window.renderSeance();}catch(e){}msg('Exercice modifié');};
+  window.gsPatchProgramExerciseButtons=function(){var ov=$('edit-ov');if(!ov)return;var diMatch=(ov.innerHTML.match(/gsToggleEditDrag\((\d+)\)/)||[])[1];var di=diMatch!=null?parseInt(diMatch,10):(window.exosDayIdx||window.cDay||0);ov.querySelectorAll('.gs-drag-item').forEach(function(row){var i=parseInt(row.getAttribute('data-i'),10);var actions=row.querySelector('.gs-drag-actions');if(!actions||actions.querySelector('.gs-program-change-btn'))return;actions.insertAdjacentHTML('afterbegin','<button class="gs-mini-btn gs-program-change-btn" onclick="event.stopPropagation();gsOpenProgramExercisePicker('+di+','+i+')">Modifier exercice</button>');});};
+  var oldEdit=window.editDay;window.editDay=function(di){var r=oldEdit?oldEdit.apply(this,arguments):undefined;setTimeout(window.gsPatchProgramExerciseButtons,80);setTimeout(window.gsPatchProgramExerciseButtons,250);return r;};
+  var oldToggle=window.gsToggleEditDrag;window.gsToggleEditDrag=function(di){var r=oldToggle?oldToggle.apply(this,arguments):undefined;setTimeout(window.gsPatchProgramExerciseButtons,80);return r;};
+
+  // Init si l'overlay est déjà ouvert.
+  setTimeout(function(){try{if(document.querySelector('#fl-marche.open'))window.gsRenderRouteClean();window.gsPatchProgramExerciseButtons();}catch(e){}},600);
+})();
+</script>
+
+
+<!-- PATCH ciblé 2026-05-02 - route fiable, badge starter premium -->
+<style id="gs-route-badges-final-tune-css">
+.gs-route-wake-row{display:flex;gap:8px;margin-top:10px;align-items:center}.gs-route-wake-row button{flex:1;border-radius:999px;border:1px solid rgba(143,185,255,.25);background:rgba(143,185,255,.10);color:var(--acc);font-weight:1000;padding:11px 12px;font-family:inherit}.gs-route-limit-note{font-size:11px;color:var(--mut);font-weight:750;line-height:1.45;margin-top:8px}.gs-badge-hype[data-starter="1"]{background:radial-gradient(circle at 20% 0%,rgba(143,185,255,.38),transparent 34%),linear-gradient(145deg,rgba(245,243,238,.12),rgba(143,185,255,.045))!important;border-color:rgba(143,185,255,.34)!important;opacity:1!important;filter:none!important}.gs-badge-hype[data-starter="1"] .gs-badge-ico{font-size:18px!important;color:#071018;background:linear-gradient(145deg,#F5F3EE,#8FB9FF)!important;border-color:rgba(255,255,255,.48)!important}.gs-badge-hype[data-starter="1"] .gs-badge-copy small{background:rgba(143,185,255,.16)!important;color:#8FB9FF!important}
+</style>
+<script id="gs-route-badges-final-tune-js">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function S(){window.state=window.state||{};return window.state}
+  function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('ath7',JSON.stringify(S()))}catch(e){}}
+  function msg(t){try{if(typeof window.notify==='function')window.notify(t);else console.log(t)}catch(e){}}
+  function routeDraft(){try{return JSON.parse(localStorage.getItem('gs_active_route_draft')||'null')}catch(e){return null}}
+  function saveRouteDraft(){
+    try{
+      if(!window._gpsStart)return;
+      localStorage.setItem('gs_active_route_draft',JSON.stringify({
+        type:window._gpsType||'Running',distance:window._gpsDistance||0,points:window._gpsPoints||[],start:window._gpsStart,
+        elapsed:window._gpsElapsedBeforePause||0,destination:window._gpsDestinationText||'',paused:!!window._gpsPaused,ts:Date.now(),privacy:!!window._gpsPrivacyMask
+      }));
+    }catch(e){}
+  }
+  function clearRouteDraft(){try{localStorage.removeItem('gs_active_route_draft');sessionStorage.removeItem('gs_route_draft')}catch(e){}}
+  function addWakeControls(){
+    var live=$('route-v1-live'); if(!live||$('gs-route-wake-controls'))return;
+    var acc=$('route-v1-accuracy'); if(!acc)return;
+    acc.insertAdjacentHTML('afterend','<div id="gs-route-wake-controls" class="gs-route-wake-row"><button type="button" onclick="gsRequestRouteWakeLock().then(function(){notify(\'Écran gardé actif\')}).catch(function(){notify(\'Mode écran actif indisponible\')})">Garder l’écran actif</button><button type="button" onclick="gsReleaseRouteWakeLock();notify(\'Mode écran actif désactivé\')">Désactiver</button></div><div class="gs-route-limit-note">Pour un tracé précis, garde G-SQUAD ouvert. Si iOS coupe le GPS en arrière-plan, l’activité reste récupérable jusqu’au dernier point enregistré.</div>');
+  }
+  function injectRecovery(){
+    var setup=$('route-v1-setup'); if(!setup||$('gs-route-recovery'))return;
+    var d=routeDraft(); if(!d||!d.points||!d.points.length)return;
+    var km=(Number(d.distance)||0).toFixed(2), when=d.ts?new Date(d.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
+    setup.insertAdjacentHTML('afterbegin','<div id="gs-route-recovery" class="route-v1-alert" style="margin-bottom:12px"><b style="display:block;color:var(--txt);margin-bottom:4px">Activité interrompue détectée</b>'+km+' km enregistrés jusqu’à '+when+'.<div class="route-v1-row" style="margin-top:10px"><button class="route-v1-btn dark" onclick="gsSaveRecoveredRoute()">Sauvegarder</button><button class="route-v1-btn red" onclick="gsDiscardRecoveredRoute()">Supprimer</button></div></div>');
+  }
+  window.gsSaveRecoveredRoute=function(){
+    var d=routeDraft(); if(!d||!d.points||!d.points.length){msg('Aucune activité à récupérer');return;}
+    var elapsed=Math.max(60000, (d.elapsed||0) + Math.max(0,(Date.now()-(d.start||Date.now()))));
+    var dur=Math.max(1,Math.round(elapsed/60000));
+    var km=+(Number(d.distance)||0).toFixed(2);
+    var bw=parseFloat((S().profil||{}).poids||(S().profil||{}).weight)||75;
+    var factor=d.type==='Running'?1:.75;
+    var entry={date:new Date().toLocaleDateString('fr-FR'),type:d.type||'Running',parc:d.type||'Running',km:km,dur:dur,pace:km?((dur/km).toFixed(1)):'--',calories:Math.round(km*bw*factor),privacyMask:!!d.privacy,source:'gps-récupéré',pointsCount:d.points.length,route:(d.points||[]).map(function(p){return {lat:+p.lat,lng:+p.lng,t:p.t}}),destination:d.destination||''};
+    S().marches=S().marches||[];S().marches.unshift(entry);save();clearRouteDraft();try{renderMarcheHist()}catch(e){}var r=$('gs-route-recovery');if(r)r.remove();msg('Activité récupérée');
+  };
+  window.gsDiscardRecoveredRoute=function(){if(confirm('Supprimer cette activité interrompue ?')){clearRouteDraft();var r=$('gs-route-recovery');if(r)r.remove();msg('Activité supprimée')}};
+
+  var prevRender=window.gsRenderRouteClean;
+  window.gsRenderRouteClean=function(){var r=prevRender?prevRender.apply(this,arguments):undefined;setTimeout(function(){addWakeControls();injectRecovery();},80);return r;};
+
+  var prevStart=window.startRouteGPS;
+  window.startRouteGPS=function(){try{window._gpsDestinationText=(($('route-destination')||{}).value||window._gpsDestinationText||'').trim();window.gsRequestRouteWakeLock&&window.gsRequestRouteWakeLock();clearRouteDraft();}catch(e){}return prevStart?prevStart.apply(this,arguments):undefined;};
+
+  var prevHandle=window.handleRoutePosition;
+  window.handleRoutePosition=function(pos){var r=prevHandle?prevHandle.apply(this,arguments):undefined;saveRouteDraft();return r;};
+
+  // Correction définitive pause/reprise: ne remet plus le chrono à zéro.
+  window.toggleRoutePause=function(){
+    if(!window._gpsWatchId&&!window._gpsPaused){msg('Aucune activité en cours');return;}
+    if(window._gpsPaused){
+      window._gpsPaused=false;window._gpsStart=Date.now();
+      if(navigator.geolocation){window._gpsWatchId=navigator.geolocation.watchPosition(function(pos){handleRoutePosition(pos);},function(err){msg('GPS: '+((err&&err.message)||'erreur'));},{enableHighAccuracy:true,maximumAge:0,timeout:15000});}
+      try{window.gsRequestRouteWakeLock&&window.gsRequestRouteWakeLock()}catch(e){}
+      if(typeof setRouteStatus==='function')setRouteStatus('GPS actif');
+    }else{
+      var elapsed=(typeof routeElapsedMs==='function')?routeElapsedMs():0;
+      window._gpsElapsedBeforePause=elapsed;window._gpsPaused=true;
+      if(window._gpsWatchId&&navigator.geolocation)navigator.geolocation.clearWatch(window._gpsWatchId);
+      window._gpsWatchId=null;
+      try{window.gsReleaseRouteWakeLock&&window.gsReleaseRouteWakeLock()}catch(e){}
+      if(typeof setRouteStatus==='function')setRouteStatus('En pause');
+    }
+    saveRouteDraft();
+    if(typeof updateRouteLiveDisplay==='function')updateRouteLiveDisplay();
+  };
+  var prevFinish=window.finishRouteGPS;
+  window.finishRouteGPS=function(){var r=prevFinish?prevFinish.apply(this,arguments):undefined;clearRouteDraft();try{window.gsReleaseRouteWakeLock&&window.gsReleaseRouteWakeLock()}catch(e){}return r;};
+  var prevCancel=window.cancelRouteGPS;
+  window.cancelRouteGPS=function(){var r=prevCancel?prevCancel.apply(this,arguments):undefined;clearRouteDraft();try{window.gsReleaseRouteWakeLock&&window.gsReleaseRouteWakeLock()}catch(e){}return r;};
+
+  // Starter badges premium.
+  function upsertStarter(list,item){
+    if(!Array.isArray(list))return;
+    var idx=list.findIndex(function(b){return b&&b.min===0});
+    if(idx>=0)list[idx]=Object.assign({},list[idx],item);else list.unshift(item);
+  }
+  function tuneBadges(){
+    window.TIER_COLORS=window.TIER_COLORS||{};window.TIER_COLORS.starter='#8FB9FF';
+    upsertStarter(window.BADGES_SESS,{min:0,tier:'starter',ico:'OR',name:'ORIGIN PASS',desc:'Profil activé. Ta première ligne est déjà dans l’histoire.',rarity:'Débloqué'});
+    upsertStarter(window.BADGES_XP,{min:0,tier:'starter',ico:'IG',name:'IGNITION',desc:'Système XP lancé. Prochain objectif: passer les 100 XP.',rarity:'Départ'});
+    upsertStarter(window.BADGES_STR,{min:0,tier:'starter',ico:'D1',name:'DAY ONE',desc:'Jour 1 validé. Maintenant, construis ta série.',rarity:'Départ'});
+    try{if(typeof window.renderBadgeSurfaces==='function')window.renderBadgeSurfaces()}catch(e){}
+  }
+  var prevCard=window.gsBadgeCard;
+  if(prevCard){window.gsBadgeCard=function(type,b,val){var html=prevCard.apply(this,arguments);if(b&&b.min===0){html=html.replace('class="gs-badge-hype ', 'data-starter="1" class="gs-badge-hype ');}return html;};}
+  tuneBadges();
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){tuneBadges();try{if(document.querySelector('#fl-marche.open'))window.gsRenderRouteClean()}catch(e){}},600)});
+  setTimeout(tuneBadges,1200);
 })();
 </script>
 
