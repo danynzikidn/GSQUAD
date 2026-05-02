@@ -11677,5 +11677,198 @@ body.gs-theme-light .gs-route-detail,body.gs-theme-light .gs-program-picker{back
 })();
 </script>
 
+
+
+<!-- PATCH FINAL ciblé - pause GPS, carte plein écran, badges, recherche/notifications -->
+<style id="gs-final-request-fix-css">
+.gs-header-action{position:relative!important;width:36px!important;height:36px!important;border-radius:999px!important;border:1px solid rgba(255,255,255,.08)!important;background:rgba(255,255,255,.045)!important;color:var(--txt)!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:0!important;flex:0 0 auto!important}
+.gs-header-action svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}.gs-header-notif-badge{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:#ff3b30;color:white;font-size:11px;font-weight:1000;display:none;align-items:center;justify-content:center;border:2px solid var(--sur);line-height:1}.gs-header-notif-badge.on{display:flex}.gs-route-full-btn{position:absolute;left:14px;top:14px;z-index:999;width:44px;height:44px;border-radius:999px;border:0;background:rgba(0,0,0,.58);color:white;display:flex;align-items:center;justify-content:center}.gs-route-full-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}.route-v1-live-map.gs-route-map-fullscreen{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;min-height:100dvh!important;max-height:none!important;margin:0!important;border-radius:0!important;border:0!important;z-index:5200!important;background:#071018!important}.route-v1-live-map.gs-route-map-fullscreen #route-v1-map{height:100dvh!important}.route-v1-live-map.gs-route-map-fullscreen .route-v1-close-map{right:14px!important;top:calc(env(safe-area-inset-top,0px) + 14px)!important}.route-v1-live-map.gs-route-map-fullscreen .gs-route-full-btn{left:14px!important;top:calc(env(safe-area-inset-top,0px) + 14px)!important}.gs-badge-ico.gs-badge-mark{font-size:0!important;background:linear-gradient(145deg,color-mix(in srgb,var(--badge-color) 42%,#ffffff),color-mix(in srgb,var(--badge-color) 18%,#071018))!important;border:1px solid color-mix(in srgb,var(--badge-color) 60%,rgba(255,255,255,.20))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 10px 25px color-mix(in srgb,var(--badge-color) 24%,transparent)!important}.gs-badge-ico.gs-badge-mark svg{width:29px;height:29px;stroke:#071018;fill:none;stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round}.gs-badge-ico.gs-badge-mark .fill{fill:#071018;stroke:none}.gs-menu-logo svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}.gs-search-v3{position:fixed;inset:0;z-index:3600;background:rgba(0,0,0,.68);display:flex;flex-direction:column}.gs-search-v3 .gs-search-bar{display:flex;gap:10px;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;background:var(--sur);border-bottom:1px solid var(--brd)}.gs-search-v3 input{flex:1;min-width:0;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.055);color:var(--txt);border-radius:16px;padding:13px 14px;font-size:15px;font-family:inherit;outline:none}.gs-search-v3 button{width:38px;height:38px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);color:var(--txt);font-size:22px;display:flex;align-items:center;justify-content:center}.gs-search-v3 .gs-search-results{background:var(--bg);max-height:62vh;overflow:auto;padding:12px 14px}.gs-notif-v3{position:fixed;inset:0;z-index:3550;background:rgba(0,0,0,.72);display:flex;align-items:flex-end}.gs-notif-v3 .gs-notif-sheet3{width:100%;max-height:82vh;overflow:auto;background:var(--bg);border-top:1px solid rgba(255,255,255,.10);border-radius:30px 30px 0 0;padding:18px;padding-bottom:calc(env(safe-area-inset-bottom,20px) + 18px)}.gs-notif-row3{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:13px;margin-top:10px}.gs-notif-dot3{width:42px;height:42px;border-radius:16px;background:rgba(143,185,255,.14);color:var(--acc);display:flex;align-items:center;justify-content:center;flex:0 0 auto}.gs-notif-dot3 svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2.2}.gs-notif-copy3{flex:1;min-width:0}.gs-notif-copy3 b{display:block;color:var(--txt);font-size:14px}.gs-notif-copy3 span{display:block;color:var(--mut);font-size:12px;margin-top:3px;line-height:1.35}.gs-notif-actions3{display:flex;gap:6px}.gs-notif-actions3 button{border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.05);color:var(--txt);border-radius:999px;padding:8px 11px;font-weight:900}.gs-notif-actions3 button.primary{background:var(--txt);color:#071018;border-color:var(--txt)}body.gs-theme-light .gs-header-action{background:#fff!important;border-color:rgba(8,26,46,.10)!important;color:#081A2E!important}body.gs-theme-light .gs-header-notif-badge{border-color:#fff}body.gs-theme-light .gs-search-v3 input,body.gs-theme-light .gs-notif-row3{background:#fff!important;border-color:rgba(8,26,46,.10)!important}body.gs-theme-light .gs-search-v3 .gs-search-bar{background:#fff!important}
+</style>
+<script id="gs-final-request-fix-js">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function S(){window.state=window.state||{};return window.state}
+  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function toast(t){try{if(typeof window.notify==='function')window.notify(t);else console.log(t)}catch(e){}}
+  function icon(name){
+    var d={search:'<circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.2-4.2"></path>',bell:'<path d="M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path>',journal:'<path d="M6 4h10a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2V4Z"></path><path d="M9 8h6M9 12h5M9 16h4"></path>',expand:'<path d="M8 3H3v5"></path><path d="M3 3l7 7"></path><path d="M16 3h5v5"></path><path d="M21 3l-7 7"></path><path d="M8 21H3v-5"></path><path d="M3 21l7-7"></path><path d="M16 21h5v-5"></path><path d="M21 21l-7-7"></path>',collapse:'<path d="M10 3v7H3"></path><path d="M3 10l7-7"></path><path d="M14 3v7h7"></path><path d="M21 10l-7-7"></path><path d="M10 21v-7H3"></path><path d="M3 14l7 7"></path><path d="M14 21v-7h7"></path><path d="M21 14l-7 7"></path>',shield:'<path d="M12 3l7 3v5c0 5-3.4 8.4-7 10-3.6-1.6-7-5-7-10V6l7-3Z"></path><path d="M9 12l2 2 4-5"></path>',bolt:'<path d="M13 2L5 14h6l-1 8 8-12h-6l1-8Z"></path>',flame:'<path d="M12 22c4 0 7-2.8 7-6.7 0-3.5-2.2-5.6-4.1-7.6-.8 2.2-2 3.4-3.6 4.4.5-3.1-.8-5.4-3-7.1C8.4 9.1 5 11.7 5 15.3 5 19.2 8 22 12 22Z"></path>',medal:'<path d="M8 3h8l-2 6h-4L8 3Z"></path><circle cx="12" cy="15" r="5"></circle><path d="M10.5 15l1 1 2-2"></path>'};
+    return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(d[name]||d.shield)+'</svg>'
+  }
+  function notificationCount(){var s=S();var n=0;if(Array.isArray(s.incomingRequests))n+=s.incomingRequests.length;if(Array.isArray(s.notifications))n+=s.notifications.filter(function(x){return !x.status||x.status==='unread'}).length;if(Array.isArray(s.notifs))n+=s.notifs.length;return n}
+  function updateBellBadge(){var b=$('gs-header-notif-count');if(!b)return;var n=notificationCount();b.textContent=String(Math.min(n,99));b.className='gs-header-notif-badge'+(n>0?' on':'')}
+  function ensureHeaderActions(){
+    var h=$('app-header');if(!h)return;
+    var buttons=h.querySelectorAll('button');
+    var search=$('gs-header-search');
+    if(!search){search=buttons[buttons.length-1];if(!search)return;search.id='gs-header-search';search.classList.add('gs-header-action');search.innerHTML=icon('search');search.setAttribute('aria-label','Recherche')}
+    search.onclick=function(ev){ev.preventDefault();ev.stopPropagation();window.openSearchModal();return false};
+    var bell=$('gs-header-notif');
+    if(!bell){bell=document.createElement('button');bell.id='gs-header-notif';bell.type='button';bell.className='gs-header-action';bell.setAttribute('aria-label','Notifications');bell.innerHTML=icon('bell')+'<span id="gs-header-notif-count" class="gs-header-notif-badge"></span>';search.parentNode.insertBefore(bell,search)}
+    bell.onclick=function(ev){ev.preventDefault();ev.stopPropagation();window.openNotifications();return false};
+    updateBellBadge();
+  }
+
+  window.closeSearchModal=function(){var el=$('search-modal');if(el)el.remove()};
+  window.openSearchModal=function(){
+    var old=$('search-modal');if(old)old.remove();var html='<div id="search-modal" class="gs-search-v3" onclick="if(event.target===this)closeSearchModal()"><div class="gs-search-bar" onclick="event.stopPropagation()">'+icon('search')+'<input id="search-modal-inp" placeholder="@username, prénom ou email" autocomplete="off"><button type="button" onclick="event.stopPropagation();closeSearchModal()">×</button></div><div id="search-modal-results" class="gs-search-results" onclick="event.stopPropagation()"><div class="gs-notif-row3"><div class="gs-notif-dot3">'+icon('search')+'</div><div class="gs-notif-copy3"><b>Recherche utilisateur</b><span>Tape au moins 2 caractères pour trouver un profil.</span></div></div></div><div style="flex:1" onclick="closeSearchModal()"></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html);var inp=$('search-modal-inp');if(inp){inp.oninput=function(){var v=this.value;clearTimeout(window._gsSearchFinalT);window._gsSearchFinalT=setTimeout(function(){var target='search-modal-results';if(typeof window.renderUserResults==='function')window.renderUserResults(target,v,true);else if(typeof window.searchUsersModal==='function')window.searchUsersModal(v)},180)};setTimeout(function(){try{inp.focus()}catch(e){}},40)}
+  };
+  window.closeNotifications=function(){var el=$('gs-notif-modal')||$('gs-notif-ov');if(el)el.remove()};
+  window.openNotifications=function(){
+    var s=S();var incoming=Array.isArray(s.incomingRequests)?s.incomingRequests:[];var items=(Array.isArray(s.notifications)?s.notifications:(Array.isArray(s.notifs)?s.notifs:[])).slice(0,20);var html='<div id="gs-notif-modal" class="gs-notif-v3" onclick="if(event.target===this)closeNotifications()"><div class="gs-notif-sheet3"><div style="width:44px;height:5px;background:rgba(255,255,255,.12);border-radius:99px;margin:0 auto 18px"></div><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px"><div><div style="font-size:12px;color:var(--mut);font-weight:1000;letter-spacing:.12em;text-transform:uppercase">G-SQUAD</div><div style="font-size:28px;font-weight:1000;letter-spacing:-.06em;color:var(--txt)">Notifications</div></div><button class="gs-header-action" onclick="event.stopPropagation();closeNotifications()">×</button></div>';
+    if(incoming.length){html+='<div style="font-size:12px;color:var(--mut);font-weight:1000;margin:12px 0 4px">Demandes reçues</div>'+incoming.map(function(r){var name=E(r.from_name||'Utilisateur');return '<div class="gs-notif-row3"><div class="gs-notif-dot3">'+icon('bell')+'</div><div class="gs-notif-copy3"><b>'+name+'</b><span>'+(r.from_username?'@'+E(r.from_username)+' · ':'')+'veut rejoindre ta Squad.</span></div><div class="gs-notif-actions3"><button class="primary" onclick="acceptFriend&&acceptFriend(\''+E(r.id)+'\',\''+name.replace(/&#39;/g,"\\'")+'\');closeNotifications();setTimeout(openNotifications,100)">OK</button><button onclick="rejectFriend&&rejectFriend(\''+E(r.id)+'\');this.closest(\'.gs-notif-row3\').remove();setTimeout(function(){try{loadFriendRequests&&loadFriendRequests();updateGsNotificationBadge&&updateGsNotificationBadge()}catch(e){}},100)">Refuser</button></div></div>'}).join('')}
+    if(items.length){html+='<div style="font-size:12px;color:var(--mut);font-weight:1000;margin:16px 0 4px">Activité</div>'+items.map(function(n){return '<div class="gs-notif-row3"><div class="gs-notif-dot3">'+icon('bell')+'</div><div class="gs-notif-copy3"><b>'+E(n.title||n.type||'Notification')+'</b><span>'+E(n.body||n.message||'')+'</span></div></div>'}).join('')}
+    if(!incoming.length&&!items.length){html+='<div class="gs-notif-row3"><div class="gs-notif-dot3">'+icon('bell')+'</div><div class="gs-notif-copy3"><b>Aucune notification</b><span>Les demandes d’amis, réactions et encouragements apparaîtront ici.</span></div></div>'}
+    html+='</div></div>';document.body.insertAdjacentHTML('beforeend',html);try{s.notifications=(s.notifications||[]).map(function(n){n.status=n.status||'read';return n});if(typeof window.sv==='function')window.sv()}catch(e){}setTimeout(updateBellBadge,120)
+  };
+  window.updateGsNotificationBadge=updateBellBadge;
+
+  // Pause/reprise fiable: chrono accumulé indépendant des anciens patches.
+  var oldStart=window.startRouteGPS;
+  window.startRouteGPS=function(){var r=oldStart?oldStart.apply(this,arguments):undefined;window._gsRouteClock={runningSince:Date.now(),elapsed:0,paused:false};setTimeout(function(){ensureRouteMapControls();if(typeof updateRouteLiveDisplay==='function')updateRouteLiveDisplay()},100);return r};
+  window.routeElapsedMs=function(){var c=window._gsRouteClock;if(c){return c.elapsed + (!c.paused&&c.runningSince?(Date.now()-c.runningSince):0)}if(!window._gpsStart)return 0;if(window._gpsPaused)return window._gpsElapsedBeforePause||0;return (window._gpsElapsedBeforePause||0)+(Date.now()-window._gpsStart)};
+  window.toggleRoutePause=function(){
+    var c=window._gsRouteClock||(window._gsRouteClock={runningSince:window._gpsStart||Date.now(),elapsed:window._gpsElapsedBeforePause||0,paused:!!window._gpsPaused});
+    if(!window._gpsWatchId&&!window._gpsPaused&&!c.runningSince){toast('Aucune activité en cours');return}
+    if(c.paused||window._gpsPaused){
+      c.paused=false;c.runningSince=Date.now();window._gpsPaused=false;window._gpsStart=Date.now();window._gpsElapsedBeforePause=c.elapsed;
+      if(navigator.geolocation&&!window._gpsWatchId){window._gpsWatchId=navigator.geolocation.watchPosition(function(pos){if(typeof handleRoutePosition==='function')handleRoutePosition(pos)},function(err){toast('GPS: '+((err&&err.message)||'erreur'))},{enableHighAccuracy:true,maximumAge:0,timeout:15000})}
+      if(typeof setRouteStatus==='function')setRouteStatus('GPS actif');
+    }else{
+      c.elapsed += Math.max(0,Date.now()-(c.runningSince||Date.now()));c.runningSince=null;c.paused=true;window._gpsPaused=true;window._gpsElapsedBeforePause=c.elapsed;
+      if(window._gpsWatchId&&navigator.geolocation)navigator.geolocation.clearWatch(window._gpsWatchId);window._gpsWatchId=null;
+      if(typeof setRouteStatus==='function')setRouteStatus('En pause');
+    }
+    try{if(typeof updateRouteLiveDisplay==='function')updateRouteLiveDisplay()}catch(e){}
+  };
+  var oldFinish=window.finishRouteGPS;window.finishRouteGPS=function(){var r=oldFinish?oldFinish.apply(this,arguments):undefined;window._gsRouteClock=null;return r};
+  var oldCancel=window.cancelRouteGPS;window.cancelRouteGPS=function(){var r=oldCancel?oldCancel.apply(this,arguments):undefined;window._gsRouteClock=null;return r};
+
+  function ensureRouteMapControls(){var map=document.querySelector('.route-v1-live-map');if(!map||map.querySelector('.gs-route-full-btn'))return;var btn=document.createElement('button');btn.type='button';btn.className='gs-route-full-btn';btn.innerHTML=icon('expand');btn.onclick=function(ev){ev.stopPropagation();gsToggleRouteMapFullscreen()};map.insertBefore(btn,map.firstChild)}
+  window.gsToggleRouteMapFullscreen=function(){var map=document.querySelector('.route-v1-live-map');if(!map)return;var on=!map.classList.contains('gs-route-map-fullscreen');map.classList.toggle('gs-route-map-fullscreen',on);var b=map.querySelector('.gs-route-full-btn');if(b)b.innerHTML=icon(on?'collapse':'expand');setTimeout(function(){try{if(window._gpsMap&&window._gpsMap.invalidateSize)window._gpsMap.invalidateSize();if(typeof updateRouteMap==='function')updateRouteMap()}catch(e){}},120)};
+  var oldRenderRoute=window.gsRenderRouteClean;window.gsRenderRouteClean=function(){var r=oldRenderRoute?oldRenderRoute.apply(this,arguments):undefined;setTimeout(ensureRouteMapControls,120);return r};
+
+  function badgeSymbol(type,b){var n=((b&&b.name)||'').toLowerCase();if(type==='str'||n.indexOf('day')>-1||n.indexOf('streak')>-1)return icon('flame');if(type==='xp'||n.indexOf('xp')>-1||n.indexOf('ignition')>-1)return icon('bolt');if(type==='sess'||n.indexOf('origin')>-1)return icon('shield');return icon('medal')}
+  function listFor(type){return type==='xp'?window.BADGES_XP:(type==='str'?window.BADGES_STR:window.BADGES_SESS)}
+  function valFor(type){var s=S();try{if(type==='sess'&&typeof window.getTotalSess==='function')return window.getTotalSess();if(type==='str'&&typeof window.getRealStreak==='function')return window.getRealStreak()}catch(e){}return type==='xp'?(s.xp||0):(type==='str'?0:(s.sessions||0))}
+  window.gsBadgeCard=function(type,b,val){b=b||{};val=Number(val||valFor(type)||0);var min=Number(b.min||0),unlocked=val>=min;var list=listFor(type)||[],next=list.find(function(x){return Number(x.min||0)>val})||b;var denom=Math.max(1,Number(next.min||min||1));var progress=Math.max(0,Math.min(100,Math.round((val/denom)*100)));var col=(window.TIER_COLORS&&window.TIER_COLORS[b.tier])||'var(--acc)';return '<button class="gs-badge-hype '+(unlocked?'':'locked')+'" '+(min===0?'data-starter="1"':'')+' onclick="openBadges&&openBadges(\''+type+'\')" style="--badge-color:'+E(col)+'"><span class="gs-badge-ico gs-badge-mark">'+badgeSymbol(type,b)+'</span><span class="gs-badge-copy"><b>'+E(b.name||'Badge')+'</b><span>'+E(b.desc||'Progression G-SQUAD')+'</span><small>'+E(b.rarity||b.tier||'Insigne')+'</small></span><span class="gs-badge-bar"><i style="width:'+progress+'%"></i></span></button>'};
+  function refreshBadges(){try{if(typeof window.renderBadgeSurfaces==='function')window.renderBadgeSurfaces()}catch(e){}}
+
+  function ensureJournalInHamburger(){var sh=$('more-sh');if(!sh||sh.querySelector('[data-gs-journal-btn]'))return;var grids=sh.querySelectorAll('.gs-menu-grid');var grid=grids[0];if(!grid)return;var btn=document.createElement('button');btn.className='gs-menu-btn';btn.setAttribute('data-gs-journal-btn','1');btn.setAttribute('onclick',"closeHamburger();goTab('journal',document.getElementById('nb-journal'))");btn.innerHTML='<span class="gs-menu-logo">'+icon('journal')+'</span><span><span class="gs-menu-title">Journal de bord</span><span class="gs-menu-sub">Historique, séances et activités</span></span>';grid.appendChild(btn)}
+  var oldHam=window.openHamburger;window.openHamburger=function(){var r=oldHam?oldHam.apply(this,arguments):undefined;setTimeout(ensureJournalInHamburger,80);setTimeout(ensureHeaderActions,120);return r};
+
+  function boot(){ensureHeaderActions();ensureRouteMapControls();refreshBadges();updateBellBadge()}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+  setTimeout(boot,250);setTimeout(boot,850);setTimeout(boot,1600);
+  setInterval(function(){try{ensureHeaderActions();updateBellBadge()}catch(e){}},2000);
+})();
+</script>
+
+
+
+<!-- PATCH ciblé - 2026-05-02 - pause GPS, carte plein écran, header recherche/notifs, badges, BMR inscription -->
+<style id="gs-targeted-fix-20260502-css">
+/* Header propre: loupe et cloche séparées */
+#app-header .gs-header-action-v4{position:relative!important;width:38px!important;height:38px!important;border-radius:999px!important;border:1px solid rgba(255,255,255,.09)!important;background:rgba(255,255,255,.045)!important;color:var(--txt)!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:0!important;flex:0 0 auto!important;margin-left:8px!important;opacity:1!important}
+#app-header .gs-header-action-v4 svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2.15;stroke-linecap:round;stroke-linejoin:round}.gs-apple-badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#ff3b30;color:#fff;font-size:11px;font-weight:1000;display:none;align-items:center;justify-content:center;border:2px solid var(--sur);line-height:1}.gs-apple-badge.on{display:flex}
+body.gs-theme-light #app-header .gs-header-action-v4{background:#fff!important;border-color:rgba(8,26,46,.10)!important;color:#081A2E!important}body.gs-theme-light .gs-apple-badge{border-color:#fff!important}
+
+/* Carte GPS plein écran visible */
+.gs-route-full-btn-v2{position:absolute;left:14px;top:14px;z-index:1300;height:42px;min-width:42px;border-radius:999px;border:0;background:rgba(7,16,24,.76);color:white;display:flex;align-items:center;justify-content:center;gap:7px;padding:0 13px;font-size:12px;font-weight:1000;letter-spacing:-.01em;box-shadow:0 10px 24px rgba(0,0,0,.24)}
+.gs-route-full-btn-v2 svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round}.route-v1-live-map.gs-route-map-fullscreen-v2,.gs-route-detail-map.gs-route-map-fullscreen-v2{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;min-height:100dvh!important;max-height:none!important;margin:0!important;border-radius:0!important;border:0!important;z-index:7000!important;background:#071018!important}.route-v1-live-map.gs-route-map-fullscreen-v2 #route-v1-map,.gs-route-detail-map.gs-route-map-fullscreen-v2 #gs-route-detail-map-inner{height:100dvh!important}.route-v1-live-map.gs-route-map-fullscreen-v2 .gs-route-full-btn-v2,.gs-route-detail-map.gs-route-map-fullscreen-v2 .gs-route-full-btn-v2{top:calc(env(safe-area-inset-top,0px) + 14px)!important;left:14px!important}.route-v1-live-map.gs-route-map-fullscreen-v2 .route-v1-close-map{top:calc(env(safe-area-inset-top,0px) + 14px)!important;right:14px!important}
+body.gs-theme-light .gs-route-full-btn-v2{background:rgba(8,26,46,.84)!important;color:white!important}
+
+/* Insignes premium sans lettres moches */
+.gs-badge-hype .gs-badge-mark-v4,.gs-badge-mark-v4{width:58px!important;height:58px!important;border-radius:20px!important;display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 auto!important;background:radial-gradient(circle at 30% 15%,rgba(255,255,255,.55),transparent 28%),linear-gradient(145deg,var(--badge-color,#8FB9FF),#0B1724)!important;border:1px solid color-mix(in srgb,var(--badge-color,#8FB9FF) 70%,white)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 14px 30px color-mix(in srgb,var(--badge-color,#8FB9FF) 24%,transparent)!important}
+.gs-badge-mark-v4 svg{width:34px!important;height:34px!important;stroke:#fff!important;fill:none!important;stroke-width:2.25!important;stroke-linecap:round!important;stroke-linejoin:round!important;filter:drop-shadow(0 3px 6px rgba(0,0,0,.25))}.gs-badge-hype[data-starter="1"] .gs-badge-mark-v4{background:radial-gradient(circle at 30% 15%,rgba(255,255,255,.7),transparent 30%),linear-gradient(145deg,#F5F3EE,#8FB9FF 55%,#152A46)!important}.gs-badge-hype[data-starter="1"] .gs-badge-mark-v4 svg{stroke:#071018!important}.gs-badge-hype .gs-badge-ico:not(.gs-badge-mark-v4){display:none!important}.gs-menu-logo .gs-pro-icon,.gs-header-action-v4 .gs-pro-icon,.gs-notif-dot3 .gs-pro-icon{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:2.15;stroke-linecap:round;stroke-linejoin:round}
+
+/* Inscription mot de passe */
+.gs-ob11-pass-confirm{margin-top:10px}.gs-ob11-rulebox{margin-top:10px;font-size:12px;color:var(--mut);font-weight:800;line-height:1.45}.gs-ob11-rulebox b{color:var(--txt)}
+</style>
+<script id="gs-targeted-fix-20260502-js">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function S(){window.state=window.state||{};return window.state}
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function toast(t){try{if(typeof window.notify==='function')window.notify(t);else console.log(t)}catch(e){}}
+  function svg(name){var p={
+    search:'<circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.2-4.2"></path>',
+    bell:'<path d="M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path>',
+    journal:'<path d="M6 4h10a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2V4Z"></path><path d="M9 8h6M9 12h5M9 16h4"></path>',
+    expand:'<path d="M8 3H3v5"></path><path d="M3 3l7 7"></path><path d="M16 3h5v5"></path><path d="M21 3l-7 7"></path><path d="M8 21H3v-5"></path><path d="M3 21l7-7"></path><path d="M16 21h5v-5"></path><path d="M21 21l-7-7"></path>',
+    collapse:'<path d="M10 3v7H3"></path><path d="M3 10l7-7"></path><path d="M14 3v7h7"></path><path d="M21 10l-7-7"></path><path d="M10 21v-7H3"></path><path d="M3 14l7 7"></path><path d="M14 21v-7h7"></path><path d="M21 14l-7 7"></path>',
+    shield:'<path d="M12 3l7 3v5c0 5-3.4 8.4-7 10-3.6-1.6-7-5-7-10V6l7-3Z"></path><path d="M9 12l2 2 4-5"></path>',
+    bolt:'<path d="M13 2L5 14h6l-1 8 8-12h-6l1-8Z"></path>',
+    flame:'<path d="M12 22c4 0 7-2.8 7-6.7 0-3.5-2.2-5.6-4.1-7.6-.8 2.2-2 3.4-3.6 4.4.5-3.1-.8-5.4-3-7.1C8.4 9.1 5 11.7 5 15.3 5 19.2 8 22 12 22Z"></path>',
+    medal:'<path d="M8 3h8l-2 6h-4L8 3Z"></path><circle cx="12" cy="15" r="5"></circle><path d="M10.5 15l1 1 2-2"></path>',
+    trophy:'<path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"></path><path d="M7 6H4a3 3 0 0 0 3 3M17 6h3a3 3 0 0 1-3 3M12 13v5M9 21h6"></path>'
+  }[name]||p.shield;return '<svg class="gs-pro-icon" viewBox="0 0 24 24" aria-hidden="true">'+p+'</svg>'}
+
+  // 1) Header: reconstruction propre pour éviter que la loupe ouvre les notifications.
+  function notifCount(){var st=S(),n=0;if(Array.isArray(st.incomingRequests))n+=st.incomingRequests.length;if(Array.isArray(st.notifications))n+=st.notifications.filter(function(x){return !x.status||x.status==='unread'}).length;if(Array.isArray(st.notifs))n+=st.notifs.length;return n}
+  function refreshBell(){var b=$('gs-header-bell-count-v4');if(!b)return;var n=notifCount();b.textContent=String(Math.min(n,99));b.className='gs-apple-badge'+(n>0?' on':'')}
+  function rebuildHeaderActions(){var h=$('app-header');if(!h)return;var logo=$('header-logo');var logoWrap=logo?logo.parentElement:null;if(!logoWrap)return;
+    Array.prototype.slice.call(h.querySelectorAll('#gs-header-search-v4,#gs-header-bell-v4,#gs-header-search,#gs-header-notif')).forEach(function(n){try{n.remove()}catch(e){}});
+    var oldButtons=Array.prototype.slice.call(h.children).filter(function(ch,i){return ch.tagName==='BUTTON' && i>0});oldButtons.forEach(function(b){try{b.remove()}catch(e){}});
+    var bell=document.createElement('button');bell.type='button';bell.id='gs-header-bell-v4';bell.className='gs-header-action-v4';bell.setAttribute('aria-label','Notifications');bell.innerHTML=svg('bell')+'<span id="gs-header-bell-count-v4" class="gs-apple-badge"></span>';bell.onclick=function(ev){ev.preventDefault();ev.stopPropagation();if(typeof window.openNotifications==='function')window.openNotifications();else if(typeof window.openNotifCenter==='function')window.openNotifCenter();return false};
+    var search=document.createElement('button');search.type='button';search.id='gs-header-search-v4';search.className='gs-header-action-v4';search.setAttribute('aria-label','Recherche');search.innerHTML=svg('search');search.onclick=function(ev){ev.preventDefault();ev.stopPropagation();if(typeof window.openSearchModal==='function')window.openSearchModal();else if(typeof window.openSocialSearch==='function')window.openSocialSearch();return false};
+    h.appendChild(bell);h.appendChild(search);refreshBell();
+  }
+  window.updateGsNotificationBadge=function(){refreshBell()};
+
+  // 2) Pause GPS robuste: chrono accumulé qui ne repart pas à zéro.
+  function activeClock(){window._routeClockV4=window._routeClockV4||{elapsed:0,startedAt:null,paused:true};return window._routeClockV4}
+  var oldStart=window.startRouteGPS;
+  function startClockFresh(){window._routeClockV4={elapsed:0,startedAt:Date.now(),paused:false}}
+  window.startRouteGPS=function(){var r=oldStart?oldStart.apply(this,arguments):undefined;setTimeout(function(){if(window._gpsStart||window._gpsWatchId){startClockFresh();syncLegacyClock();ensureFullscreenButtons();safeUpdateRoute()}},0);return r};
+  function getElapsed(){var c=activeClock();return Math.max(0,c.elapsed+(!c.paused&&c.startedAt?(Date.now()-c.startedAt):0))}
+  function syncLegacyClock(){var e=getElapsed();window._gpsElapsedBeforePause=e;if(!window._gpsPaused)window._gpsStart=Date.now()}
+  window.routeElapsedMs=routeElapsedMs=function(){return getElapsed()};
+  window.toggleRoutePause=toggleRoutePause=function(){var c=activeClock();var running=!!window._gpsWatchId||(!c.paused&&!!c.startedAt);if(!running&& !window._gpsPaused){toast('Aucune activité en cours');return}
+    if(!c.paused || window._gpsWatchId){c.elapsed=getElapsed();c.startedAt=null;c.paused=true;window._gpsPaused=true;window._gpsElapsedBeforePause=c.elapsed;if(window._gpsWatchId&&navigator.geolocation){try{navigator.geolocation.clearWatch(window._gpsWatchId)}catch(e){}}window._gpsWatchId=null;if(typeof window.setRouteStatus==='function')window.setRouteStatus('En pause');}
+    else{c.startedAt=Date.now();c.paused=false;window._gpsPaused=false;window._gpsElapsedBeforePause=c.elapsed;window._gpsStart=Date.now();if(navigator.geolocation&&!window._gpsWatchId){window._gpsWatchId=navigator.geolocation.watchPosition(function(pos){if(typeof window.handleRoutePosition==='function')window.handleRoutePosition(pos)},function(err){toast('GPS: '+((err&&err.message)||'erreur'))},{enableHighAccuracy:true,maximumAge:0,timeout:15000});}if(typeof window.setRouteStatus==='function')window.setRouteStatus('GPS actif');}
+    syncLegacyClock();safeUpdateRoute();return false};
+  var oldFinish=window.finishRouteGPS;window.finishRouteGPS=function(){syncLegacyClock();var r=oldFinish?oldFinish.apply(this,arguments):undefined;window._routeClockV4={elapsed:0,startedAt:null,paused:true};return r};
+  var oldCancel=window.cancelRouteGPS;window.cancelRouteGPS=function(){var r=oldCancel?oldCancel.apply(this,arguments):undefined;window._routeClockV4={elapsed:0,startedAt:null,paused:true};return r};
+  function safeUpdateRoute(){try{if(typeof window.updateRouteLiveDisplay==='function')window.updateRouteLiveDisplay();var btn=$('route-v1-pause-btn');if(btn)btn.textContent=activeClock().paused?'Reprendre':'Pause'}catch(e){}}
+  setInterval(function(){if(window._routeClockV4&&!window._routeClockV4.paused)safeUpdateRoute()},1000);
+
+  // 3) Carte plein écran live + historique.
+  function ensureFullscreenButtons(){
+    var live=document.querySelector('.route-v1-live-map');
+    if(live&&!live.querySelector('.gs-route-full-btn-v2')){var b=document.createElement('button');b.type='button';b.className='gs-route-full-btn-v2';b.innerHTML=svg('expand')+'<span>Plein écran</span>';b.onclick=function(ev){ev.preventDefault();ev.stopPropagation();toggleMapFull(live,b)};live.insertBefore(b,live.firstChild)}
+    var detail=document.querySelector('.gs-route-detail-map');
+    if(detail&&!detail.querySelector('.gs-route-full-btn-v2')){var d=document.createElement('button');d.type='button';d.className='gs-route-full-btn-v2';d.innerHTML=svg('expand')+'<span>Plein écran</span>';d.onclick=function(ev){ev.preventDefault();ev.stopPropagation();toggleMapFull(detail,d)};detail.insertBefore(d,detail.firstChild)}
+  }
+  function toggleMapFull(el,btn){var on=!el.classList.contains('gs-route-map-fullscreen-v2');el.classList.toggle('gs-route-map-fullscreen-v2',on);if(btn)btn.innerHTML=svg(on?'collapse':'expand')+'<span>'+(on?'Réduire':'Plein écran')+'</span>';setTimeout(function(){try{if(window._gpsMap&&window._gpsMap.invalidateSize)window._gpsMap.invalidateSize();if(typeof window.updateRouteMap==='function')window.updateRouteMap();Array.prototype.slice.call(document.querySelectorAll('.leaflet-container')).forEach(function(c){if(c._leaflet_map&&c._leaflet_map.invalidateSize)c._leaflet_map.invalidateSize()})}catch(e){}},180)}
+  var oldUpd=window.updateRouteLiveDisplay;window.updateRouteLiveDisplay=function(){var r=oldUpd?oldUpd.apply(this,arguments):undefined;ensureFullscreenButtons();return r};
+  var oldOpenDetail=window.gsOpenRouteDetail;if(oldOpenDetail){window.gsOpenRouteDetail=function(){var r=oldOpenDetail.apply(this,arguments);setTimeout(ensureFullscreenButtons,120);setTimeout(ensureFullscreenButtons,420);return r}}
+  setInterval(ensureFullscreenButtons,1600);
+
+  // 4) Badges: rendu avec vraies formes d'insignes au lieu de lettres.
+  function listFor(type){return type==='xp'?window.BADGES_XP:(type==='str'?window.BADGES_STR:window.BADGES_SESS)}
+  function valFor(type){try{if(type==='sess'&&typeof window.getTotalSess==='function')return window.getTotalSess();if(type==='str'&&typeof window.getRealStreak==='function')return window.getRealStreak()}catch(e){}return type==='xp'?(S().xp||0):(type==='str'?0:(S().sessions||0))}
+  function mark(type,b){var n=String((b&&b.name)||'').toLowerCase();var kind=type==='xp'||n.indexOf('xp')>-1||n.indexOf('ignition')>-1?'bolt':type==='str'||n.indexOf('day')>-1||n.indexOf('streak')>-1?'flame':n.indexOf('origin')>-1?'shield':'trophy';return '<span class="gs-badge-mark-v4">'+svg(kind)+'</span>'}
+  window.gsBadgeCard=function(type,b,val){b=b||{};val=Number(val||valFor(type)||0);var min=Number(b.min||0),unlocked=val>=min;var arr=listFor(type)||[],next=arr.find(function(x){return Number(x.min||0)>val})||b;var denom=Math.max(1,Number(next.min||min||1));var progress=Math.max(0,Math.min(100,Math.round((val/denom)*100)));var col=(window.TIER_COLORS&&window.TIER_COLORS[b.tier])||'#8FB9FF';return '<button class="gs-badge-hype '+(unlocked?'':'locked')+'" '+(min===0?'data-starter="1"':'')+' onclick="openBadges&&openBadges(\''+esc(type)+'\')" style="--badge-color:'+esc(col)+'">'+mark(type,b)+'<span class="gs-badge-copy"><b>'+esc(b.name||'Badge')+'</b><span>'+esc(b.desc||'Progression G-SQUAD')+'</span><small>'+esc(b.rarity||b.tier||'Insigne')+'</small></span><span class="gs-badge-bar"><i style="width:'+progress+'%"></i></span></button>'};
+  function refreshBadges(){try{if(typeof window.renderBadgeSurfaces==='function')window.renderBadgeSurfaces()}catch(e){}}
+
+  // Journal dans hamburger avec insigne.
+  function patchJournalMenu(){Array.prototype.slice.call(document.querySelectorAll('.gs-menu-btn')).forEach(function(btn){var txt=(btn.textContent||'').toLowerCase();if(txt.indexOf('journal de bord')>-1||txt.trim()==='journal'){var logo=btn.querySelector('.gs-menu-logo');if(logo)logo.innerHTML=svg('journal')}})}
+  var oldHam=window.openHamburger;if(oldHam){window.openHamburger=function(){var r=oldHam.apply(this,arguments);setTimeout(function(){patchJournalMenu();rebuildHeaderActions()},80);setTimeout(patchJournalMenu,350);return r}}
+
+  // 5) Inscription: confirmation MDP + règles et BMR vérifié Mifflin-St Jeor.
+  function passwordOk(p){return /[A-ZÀ-ÖØ-Þ]/.test(p||'') && /[^A-Za-z0-9]/.test(p||'') && String(p||'').length>=6}
+  function patchPasswordStep(){if(!window.OB11||window.OB11.step!==1)return;var input=$('ob11-password-input');if(!input)return;if(!$('ob11-password-confirm')){input.insertAdjacentHTML('afterend','<input id="ob11-password-confirm" class="gs-ob11-input gs-ob11-pass-confirm" type="password" autocomplete="new-password" placeholder="Confirmer le mot de passe"><div class="gs-ob11-rulebox"><b>Règle:</b> au moins 1 majuscule et 1 caractère spécial.</div>')}var btn=document.querySelector('.gs-ob11-eye');if(btn){btn.onclick=function(){var p=$('ob11-password-input'),c=$('ob11-password-confirm');var next=(p&&p.type==='password')?'text':'password';if(p)p.type=next;if(c)c.type=next;btn.textContent=next==='text'?'Cacher':'Voir'}}}
+  var oldRenderOb=window.renderOb11;if(oldRenderOb){window.renderOb11=function(){var r=oldRenderOb.apply(this,arguments);setTimeout(patchPasswordStep,0);setTimeout(patchPasswordStep,120);return r}}
+  var oldNext=window.ob11Next;if(oldNext){window.ob11Next=function(){if(window.OB11&&window.OB11.step===1){var p=($('ob11-password-input')||{}).value||'',c=($('ob11-password-confirm')||{}).value||'';if(p||c){if(!passwordOk(p)){toast('Mot de passe: majuscule et caractère spécial obligatoires.');return}if(p!==c){toast('Les deux mots de passe ne correspondent pas.');return}window.OB11.password=p}}return oldNext.apply(this,arguments)}}
+  function nutritionCheck(){try{var p=(S().profil||{});var w=parseFloat(p.poids||p.weight)||75,h=parseFloat(p.taille||p.height)||175,a=parseInt(p.age)||25,g=String(p.gender||p.sexe||'homme').toLowerCase();var bmr=Math.round(10*w+6.25*h-5*a+(g.indexOf('femme')>-1?-161:5));var freq=parseInt(p.frequency||p.frequence||3)||3;var factor=freq<=1?1.2:freq<=3?1.375:freq<=5?1.55:1.725;return {bmr:bmr,tdee:Math.round(bmr*factor),factor:factor}}catch(e){return null}}
+  window.gsVerifyOnboardingBMR=function(){var n=nutritionCheck();if(n)toast('BMR vérifié: '+n.bmr+' kcal, TDEE '+n.tdee+' kcal');return n};
+
+  function boot(){rebuildHeaderActions();refreshBell();ensureFullscreenButtons();refreshBadges();patchJournalMenu();patchPasswordStep()}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+  setTimeout(boot,200);setTimeout(boot,800);setTimeout(boot,1800);setInterval(function(){refreshBell();},2000);
+})();
+</script>
+
 </body>
 </html>
