@@ -10383,5 +10383,306 @@ document.addEventListener('DOMContentLoaded',function(){
 })();
 </script>
 
+
+<!-- G-SQUAD PATCH — Programme 3 mois + Guide complet app -->
+<style id="gs-3mo-program-guide-css">
+  .gs-3mo-card{background:linear-gradient(145deg,rgba(24,33,44,.96),rgba(12,17,23,.96));border:1px solid rgba(255,255,255,.08);border-radius:26px;padding:16px;margin:0 0 16px;box-shadow:0 16px 44px rgba(0,0,0,.18)}
+  .gs-3mo-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}.gs-3mo-kicker{font-size:10px;font-weight:1000;letter-spacing:.13em;text-transform:uppercase;color:var(--acc);margin-bottom:5px}.gs-3mo-title{font-size:22px;font-weight:1000;letter-spacing:-.05em;line-height:1.06;color:var(--txt)}.gs-3mo-sub{font-size:12px;line-height:1.45;color:var(--txt2);font-weight:700;margin-top:5px}.gs-3mo-pill{display:inline-flex;align-items:center;justify-content:center;min-width:58px;border-radius:999px;border:1px solid rgba(143,185,255,.26);background:rgba(143,185,255,.12);color:var(--acc);font-size:12px;font-weight:1000;padding:8px 10px;white-space:nowrap}.gs-3mo-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.gs-3mo-metric{border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.04);border-radius:17px;padding:12px 10px}.gs-3mo-metric b{display:block;color:var(--txt);font-size:20px;line-height:1;font-weight:1000;letter-spacing:-.04em}.gs-3mo-metric span{display:block;margin-top:6px;color:var(--mut);font-size:10px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gs-3mo-phases{display:grid;gap:8px;margin-top:10px}.gs-3mo-phase{border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.035);border-radius:18px;padding:12px}.gs-3mo-phase b{display:block;color:var(--txt);font-size:14px;font-weight:1000;letter-spacing:-.02em}.gs-3mo-phase small{display:block;color:var(--txt2);font-size:11px;line-height:1.4;margin-top:4px;font-weight:700}.gs-3mo-week{display:grid;gap:8px;margin-top:12px}.gs-3mo-day{display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:start;border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.035);padding:11px}.gs-3mo-day b{font-size:11px;font-weight:1000;letter-spacing:.08em;color:var(--acc);text-transform:uppercase}.gs-3mo-day span{display:block;color:var(--txt);font-size:13px;font-weight:950;line-height:1.25}.gs-3mo-day small{display:block;color:var(--mut);font-size:11px;line-height:1.35;margin-top:3px}.gs-3mo-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:14px}.gs-3mo-actions button{border-radius:17px;border:1px solid rgba(255,255,255,.08);padding:13px 12px;font-size:13px;font-weight:1000;background:rgba(255,255,255,.05);color:var(--txt)}.gs-3mo-actions button.primary{background:var(--txt);color:#071018;border-color:var(--txt)}
+  .gs-guide-ov{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:3200;display:flex;align-items:flex-end}.gs-guide-panel{width:100%;max-height:92vh;overflow:auto;background:radial-gradient(circle at 50% -10%,#162033 0%,#070A0E 48%,#05070A 100%);border-top:1px solid rgba(255,255,255,.10);border-radius:30px 30px 0 0;padding:18px;padding-bottom:calc(env(safe-area-inset-bottom,20px) + 18px)}.gs-guide-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.gs-guide-head span{display:block;color:var(--acc);font-size:11px;font-weight:1000;letter-spacing:.14em;text-transform:uppercase}.gs-guide-head b{display:block;color:var(--txt);font-size:30px;font-weight:1000;letter-spacing:-.065em;line-height:1}.gs-guide-close{width:42px;height:42px;border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.055);color:var(--txt);font-size:24px;font-weight:800}.gs-guide-nav{display:flex;gap:8px;overflow:auto;padding-bottom:10px;margin-bottom:8px;scrollbar-width:none}.gs-guide-nav::-webkit-scrollbar{display:none}.gs-guide-chip{flex:0 0 auto;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);color:var(--txt2);border-radius:999px;padding:10px 13px;font-size:12px;font-weight:950;white-space:nowrap}.gs-guide-card{background:rgba(18,24,33,.86);border:1px solid rgba(255,255,255,.075);border-radius:24px;padding:16px;margin:10px 0}.gs-guide-card h3{display:flex;align-items:center;gap:10px;color:var(--txt);font-size:18px;font-weight:1000;letter-spacing:-.035em;margin:0 0 8px}.gs-guide-mark{width:34px;height:34px;border-radius:13px;border:1px solid rgba(143,185,255,.24);background:rgba(143,185,255,.12);color:var(--acc);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:1000;letter-spacing:-.04em;flex:0 0 auto}.gs-guide-card p{color:var(--txt2);font-size:13px;line-height:1.55;font-weight:700;margin:0 0 10px}.gs-guide-list{display:grid;gap:7px}.gs-guide-list div{display:grid;grid-template-columns:8px 1fr;gap:9px;align-items:start;color:var(--txt);font-size:13px;line-height:1.42;font-weight:750}.gs-guide-list div:before{content:'';width:6px;height:6px;border-radius:999px;background:var(--acc);margin-top:6px}.gs-guide-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.gs-guide-actions button{border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.055);color:var(--txt);font-size:12px;font-weight:950;padding:10px 12px}.gs-guide-actions button.primary{background:var(--txt);color:#071018;border-color:var(--txt)}
+  @media(max-width:380px){.gs-3mo-metrics{grid-template-columns:1fr 1fr}.gs-3mo-day{grid-template-columns:62px 1fr}.gs-guide-head b{font-size:26px}}
+</style>
+<script id="gs-3mo-program-guide-js">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
+  function P(){return S().profil}
+  function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('ath7',JSON.stringify(window.state||{}))}catch(e){}}
+  function toast(m){try{if(typeof window.notify==='function')window.notify(m);else console.log('[G-SQUAD]',m)}catch(e){}}
+  function num(v){return parseFloat(String(v||'').replace(',','.'))||0}
+  function clamp(n,min,max){n=parseInt(n,10);if(!n)return min;return Math.max(min,Math.min(max,n))}
+  var STEP_IDS=['email','password','username','name','height','weight','bmi','goal','nutrition','program','start'];
+  var DAY_LABELS=['LUNDI','MARDI','MERCREDI','JEUDI','VENDREDI','SAMEDI','DIMANCHE'];
+
+  function bmiInfo(profile){
+    var h=num(profile.taille||profile.height),w=num(profile.poids||profile.weight);
+    if(!h||!w)return {value:null,label:'Non renseigné',zone:'unknown',note:'Taille ou poids manquant : proposition standard, modifiable dans Profil.'};
+    var b=Math.round((w/Math.pow(h/100,2))*10)/10;
+    if(b<18.5)return {value:b,label:'Sous-poids',zone:'low',note:'Priorité construction musculaire, récupération et calories suffisantes.'};
+    if(b<25)return {value:b,label:'Zone normale',zone:'normal',note:'Le choix objectif + séances détermine surtout le plan.'};
+    if(b<30)return {value:b,label:'Surpoids',zone:'high',note:'Recomposition/perte progressive avec force régulière et cardio bas impact.'};
+    return {value:b,label:'IMC élevé',zone:'very_high',note:'Progression graduelle, machines stables et articulation protégées.'};
+  }
+
+  function macro3(profile){
+    var w=num(profile.poids||profile.weight)||75,h=num(profile.taille||profile.height)||175,age=parseInt(profile.age||25,10)||25;
+    var freq=clamp(profile.frequency||profile.frequence||4,2,6),obj=profile.objectif||'maintien',b=bmiInfo(profile);
+    var bmr=Math.round(10*w+6.25*h-5*age+5);
+    var maintenance=Math.round((bmr*(1.31+Math.min(freq,6)*0.055))/10)*10;
+    var target=maintenance;
+    if(obj==='perte')target-=b.zone==='low'?0:(b.zone==='normal'?250:350);
+    if(obj==='prise')target+=(b.zone==='high'||b.zone==='very_high')?0:250;
+    target=Math.max(1450,Math.round(target/10)*10);
+    return {kcal:target,maintenance:maintenance,prot:Math.round(w*(obj==='perte'?2.1:obj==='prise'?2.0:1.8)),carbs:Math.round((target*.43)/4),fat:Math.round((target*.27)/9)};
+  }
+
+  function adjustObjective(obj,b){
+    var effective=obj||'maintien',warnings=[];
+    if(b.zone==='low'&&obj==='perte'){effective='maintien';warnings.push('Perte ajustée : avec cet IMC, l’app propose maintien/recomposition plutôt qu’un déficit agressif.');}
+    if((b.zone==='high'||b.zone==='very_high')&&obj==='prise'){effective='maintien';warnings.push('Prise ajustée : avec cet IMC, priorité recomposition avant surplus calorique.');}
+    return {effective:effective,warnings:warnings};
+  }
+  function splitFor(freq,b){
+    if(b.zone==='very_high')return freq>=4?'Upper / Lower progressif':'Full body progressif';
+    if(freq<=2)return 'Full body A/B';
+    if(freq===3)return 'Full body A/B/C';
+    if(freq===4)return 'Upper / Lower';
+    if(freq===5)return 'PPL + Upper/Lower';
+    return 'PPL x2';
+  }
+  function phasesFor(effective,b){
+    if(effective==='perte')return [
+      {name:'Mois 1 · Base & régularité',weeks:'Semaines 1-4',text:'Installer la routine, apprendre les mouvements, garder de la force et ajouter une dépense contrôlée.'},
+      {name:'Mois 2 · Progression & dépense',weeks:'Semaines 5-8',text:'Augmenter légèrement les charges ou les reps, mieux gérer les temps de repos et garder le cardio bas impact.'},
+      {name:'Mois 3 · Consolidation',weeks:'Semaines 9-12',text:'Maintenir le muscle, éviter la fatigue excessive et comparer les perfs avec le mois 1.'}
+    ];
+    if(effective==='prise')return [
+      {name:'Mois 1 · Volume propre',weeks:'Semaines 1-4',text:'Construire les bases, trouver les charges de travail et garder une technique stable.'},
+      {name:'Mois 2 · Surcharge progressive',weeks:'Semaines 5-8',text:'Ajouter reps ou charge chaque semaine sur les exercices principaux.'},
+      {name:'Mois 3 · Intensification',weeks:'Semaines 9-12',text:'Priorité aux polyarticulaires, séries plus solides et récupération mieux suivie.'}
+    ];
+    return [
+      {name:'Mois 1 · Technique & routine',weeks:'Semaines 1-4',text:'Créer une base régulière sans surcharge cognitive.'},
+      {name:'Mois 2 · Progression contrôlée',weeks:'Semaines 5-8',text:'Progresser sur les charges, les reps et la qualité d’exécution.'},
+      {name:'Mois 3 · Test & ajustement',weeks:'Semaines 9-12',text:'Faire le bilan, garder ce qui marche et préparer le prochain cycle.'}
+    ];
+  }
+  function ex(n,s,note){return {n:n,s:s,note:note||'',yt:'https://www.youtube.com/results?search_query='+encodeURIComponent(n+' technique musculation'),tt:'https://www.tiktok.com/search?q='+encodeURIComponent(n+' musculation')}}
+  function d(name,type,dur,arr){return {name:name,type:type,dur:dur,exercises:arr}}
+  function rest(name,type){return d(name,type||'Récupération active','30-45 min',[ex('Marche active','30-45 min','Récupération, respiration facile.'),ex('Mobilité hanches épaules','10 min','Amplitude sans douleur.'),ex('Étirements doux','8-12 min','Relâcher, pas performer.')])}
+  function weekFor(plan){
+    var high=plan.bmi.zone==='high'||plan.bmi.zone==='very_high',prise=plan.effectiveObjective==='prise',perte=plan.effectiveObjective==='perte';
+    var fullA=d('LUNDI','Full Body A',prise?'70 min':'60 min',[ex(high?'Chest Press machine':'Développé couché barre',prise?'4 x 6-10 reps':'3 x 8-10 reps','Pectoraux, triceps, progression propre.'),ex('Tirage vertical','3 x 8-12 reps','Grand dorsal.'),ex(high?'Presse à cuisses':'Squat barre','3-4 x 8-10 reps','Base jambes.'),ex('Leg Curl assis machine','3 x 10-12 reps','Ischios.'),ex('Gainage planche','3 x 30-45 s','Tronc.')]);
+    var fullB=d('MERCREDI','Full Body B',prise?'70 min':'60 min',[ex(high?'Row machine':'Rowing barre','3-4 x 8-12 reps','Dos épaisseur.'),ex('Shoulder Press machine','3 x 8-10 reps','Épaules.'),ex('Soulevé de terre roumain','3 x 8-10 reps','Ischios + fessiers.'),ex('Fentes marchées haltères','3 x 10 / jambe','Jambes et stabilité.'),ex('Crunch câble','3 x 12-15 reps','Abdos.')]);
+    var fullC=d('VENDREDI','Full Body C',perte?'55 min':'65 min',[ex(high?'Presse à cuisses':'Hack Squat machine','3 x 10-12 reps','Quadriceps + fessiers.'),ex('Tractions assistées machine','3 x 6-10 reps','Dos + biceps.'),ex('Développé incliné haltères','3 x 8-12 reps','Haut des pectoraux.'),ex('Hip Thrust machine ou barre','3 x 10-12 reps','Fessiers.'),ex(perte?'Tapis incliné':'Élévations latérales',perte?'12-20 min':'3 x 12-15 reps','Finisher adapté.')]);
+    var upperA=d('LUNDI','Upper A',prise?'75 min':'65 min',[ex('Développé couché barre','4 x 6-8 reps'),ex('Tirage vertical','4 x 8-10 reps'),ex('Développé incliné haltères','3 x 8-10 reps'),ex('Row machine','3 x 10-12 reps'),ex('Élévations latérales','3 x 12-15 reps'),ex('Extension triceps à la poulie','3 x 10-12 reps')]);
+    var lowerA=d('MARDI','Lower A',prise?'75 min':'65 min',[ex(high?'Presse à cuisses':'Squat barre','4 x 6-10 reps'),ex('Soulevé de terre roumain','3 x 8-10 reps'),ex('Leg Curl assis machine','3 x 10-12 reps'),ex('Abducteurs machine','3 x 12-15 reps'),ex('Mollets debout machine','3 x 12-20 reps'),ex('Gainage','3 x 40 s')]);
+    var upperB=d('JEUDI','Upper B','65-70 min',[ex('Shoulder Press machine','3 x 8-10 reps'),ex('Tractions assistées machine','4 x 6-10 reps'),ex('Chest Press convergente','3 x 8-12 reps'),ex('Low Row machine','3 x 10-12 reps'),ex('Face Pull','3 x 12-15 reps'),ex('Curl barre EZ','3 x 10-12 reps')]);
+    var lowerB=d('VENDREDI','Lower B',perte?'60 min':'70 min',[ex('Hip Thrust barre','4 x 8-12 reps'),ex('Hack Squat machine','3 x 8-12 reps'),ex('Leg Extension machine','3 x 12-15 reps'),ex('Leg Curl couché machine','3 x 10-12 reps'),ex('Abducteurs machine','3 x 15-20 reps'),ex(perte?'Tapis incliné':'Crunch câble',perte?'12-18 min':'3 x 12-15 reps')]);
+    var push=d('LUNDI','Push','70-75 min',[ex('Développé couché barre','4 x 6-8 reps'),ex('Développé incliné haltères','3 x 8-10 reps'),ex('Shoulder Press machine','3 x 8-10 reps'),ex('Élévations latérales','3 x 12-15 reps'),ex('Extension triceps à la poulie','3 x 10-12 reps')]);
+    var pull=d('MARDI','Pull','70 min',[ex('Tractions assistées machine','4 x 6-10 reps'),ex('Rowing barre','4 x 8-10 reps'),ex('Tirage vertical','3 x 10-12 reps'),ex('Face Pull','3 x 12-15 reps'),ex('Curl barre EZ','3 x 10-12 reps')]);
+    var legs=d('MERCREDI','Legs','75 min',[ex(high?'Presse à cuisses':'Squat barre','4 x 6-10 reps'),ex('Soulevé de terre roumain','3 x 8-10 reps'),ex('Leg Curl assis machine','3 x 10-12 reps'),ex('Hip Thrust barre','3 x 8-12 reps'),ex('Mollets debout machine','3 x 12-20 reps')]);
+    var arr=[];
+    if(plan.frequency<=2)arr=[fullA,rest('MARDI'),fullB,rest('JEUDI'),rest('VENDREDI'),rest('SAMEDI','Marche / mobilité'),d('DIMANCHE','Repos complet','Repos',[ex('Repos complet','Libre','Récupération complète.')])];
+    else if(plan.frequency===3)arr=[fullA,rest('MARDI'),fullB,rest('JEUDI'),fullC,rest('SAMEDI','Marche / mobilité'),d('DIMANCHE','Repos complet','Repos',[ex('Repos complet','Libre','Récupération complète.')])];
+    else if(plan.frequency===4)arr=[upperA,lowerA,rest('MERCREDI'),upperB,lowerB,rest('SAMEDI','Marche / mobilité'),d('DIMANCHE','Repos complet','Repos',[ex('Repos complet','Libre','Récupération complète.')])];
+    else if(plan.frequency===5)arr=[push,pull,legs,rest('JEUDI'),upperB,lowerB,d('DIMANCHE','Repos complet','Repos',[ex('Repos complet','Libre','Récupération complète.')])];
+    else arr=[push,pull,legs,upperA,lowerA,upperB,d('DIMANCHE','Repos complet','Repos',[ex('Repos complet','Libre','Récupération complète.')])];
+    for(var i=0;i<7;i++)arr[i].name=DAY_LABELS[i];
+    return arr;
+  }
+  function buildPlan(profile){
+    profile=profile||P();
+    var b=bmiInfo(profile),obj=profile.objectif||'maintien',freq=clamp(profile.frequency||profile.frequence||4,2,6),adj=adjustObjective(obj,b),split=splitFor(freq,b);
+    var name=(adj.effective==='perte'?'Cycle 3 mois · Perte de gras':adj.effective==='prise'?'Cycle 3 mois · Prise de muscle':'Cycle 3 mois · Recomposition');
+    if(b.zone==='very_high')name='Cycle 3 mois · Recomposition progressive';
+    if(b.zone==='low')name='Cycle 3 mois · Construction prioritaire';
+    var plan={name:name,objective:obj,effectiveObjective:adj.effective,bmi:b,frequency:freq,split:split,totalWeeks:12,totalSessions:freq*12,phases:phasesFor(adj.effective,b),warnings:adj.warnings,macros:macro3(profile)};
+    plan.week=weekFor(plan);
+    plan.priority=adj.effective==='perte'?'Garder la force pendant la perte':adj.effective==='prise'?'Construire muscle et force sans brûler la récup':'Progresser proprement et rester régulier';
+    return plan;
+  }
+  window.gsBuildThreeMonthProgram=buildPlan;
+  window.gsGetThreeMonthProgram=function(){return buildPlan(P())};
+
+  function applyPlan(){
+    var plan=buildPlan(P()), st=S();
+    st.threeMonthProgram=plan; st.smartProgram=plan; st.profil.programProposal=plan.name+' · '+plan.frequency+' séances/semaine'; st.profil.programRecommendation=plan;
+    if(Array.isArray(window.DAYS)){
+      plan.week.forEach(function(day,i){window.DAYS[i]=day});
+      st.customDays={};
+      plan.week.forEach(function(day,idx){st.customDays[idx]=(day.exercises||[]).map(function(x){return {n:x.n,s:x.s,note:x.note||'',yt:x.yt||'',tt:x.tt||'',activity:!!x.activity,t:x.t||''}})});
+    }
+    save();
+    try{if(typeof window.renderSeance==='function')window.renderSeance();if(typeof window.renderProgBody==='function')window.renderProgBody()}catch(e){}
+    toast('Plan 3 mois appliqué · '+plan.frequency+' séances/semaine');
+  }
+  window.gsApplyThreeMonthProgram=applyPlan;
+  window.gsApplySmartProgram=applyPlan;
+
+  function planCard(plan,withActions){
+    var week=plan.week.filter(function(x){return x.type!=='Repos complet' && x.type!=='Récupération active' && x.type!=='Marche / mobilité'}).slice(0,6);
+    var html='<div class="gs-3mo-card"><div class="gs-3mo-top"><div><div class="gs-3mo-kicker">Proposition programme · 3 mois</div><div class="gs-3mo-title">'+E(plan.name)+'</div><div class="gs-3mo-sub">Pré-défini selon IMC '+(plan.bmi.value||'—')+' ('+E(plan.bmi.label)+'), objectif '+E(plan.objective||'maintien')+' et '+plan.frequency+' jours de sport/semaine.</div></div><span class="gs-3mo-pill">'+plan.frequency+'×/sem</span></div>';
+    html+='<div class="gs-3mo-metrics"><div class="gs-3mo-metric"><b>'+plan.totalWeeks+'</b><span>Semaines</span></div><div class="gs-3mo-metric"><b>'+plan.totalSessions+'</b><span>Séances prévues</span></div><div class="gs-3mo-metric"><b>'+E(plan.split)+'</b><span>Structure</span></div></div>';
+    if(plan.warnings.length)html+='<div class="gs-sp-alert">'+plan.warnings.map(E).join('<br>')+'</div>';
+    html+='<div class="gs-3mo-phases">'+plan.phases.map(function(ph){return '<div class="gs-3mo-phase"><b>'+E(ph.name)+'</b><small>'+E(ph.weeks)+' · '+E(ph.text)+'</small></div>'}).join('')+'</div>';
+    html+='<div class="gs-3mo-week">'+week.map(function(day){return '<div class="gs-3mo-day"><b>'+E(day.name)+'</b><div><span>'+E(day.type)+'</span><small>'+E((day.exercises||[]).slice(0,4).map(function(x){return x.n}).join(' · '))+'</small></div></div>'}).join('')+'</div>';
+    if(withActions)html+='<div class="gs-3mo-actions"><button type="button" class="primary" onclick="gsApplyThreeMonthProgram()">Appliquer ce plan 3 mois</button><button type="button" onclick="ob11SaveProgram()">Sauvegarder sans appliquer</button></div>';
+    html+='</div>';
+    return html;
+  }
+  window.gsThreeMonthPlanCard=planCard;
+
+  window.OB11=window.OB11||{step:0,total:11,password:''}; window.OB11.total=11;
+  function closeOb11(){var el=$('gs-onboard-v11');if(el)el.remove();var ob=$('onboard');if(ob){ob.style.display='none';ob.innerHTML=''}}
+  function readCurrent(){var p=P(),s=STEP_IDS[(window.OB11&&window.OB11.step)||0],v=(($('ob11-main-input')||{}).value||'').trim();if(!v&&s==='password')v=(($('ob11-password-input')||{}).value||'').trim();if(v){if(s==='email')p.email=v;if(s==='password')window.OB11.password=v;if(s==='username')p.username=v.replace(/^@/,'').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();if(s==='name')p.name=v;if(s==='height')p.taille=v;if(s==='weight')p.poids=v}save()}
+  window.ob11TogglePassword=function(){var i=$('ob11-password-input');if(!i)return;i.type=i.type==='password'?'text':'password'};
+  window.ob11Pick=function(k,v){P()[k]=v;save();window.renderOb11()};
+  window.ob11SetFrequency=function(v){P().frequency=clamp(v,2,6);P().frequence=P().frequency;save();window.renderOb11()};
+  window.ob11SaveNutrition=function(){var m=macro3(P());var st=S();st.nutritionTarget={kcal:m.kcal,prot:m.prot,glucides:m.carbs,lipides:m.fat};P().kcal=m.kcal;P().protein=m.prot;P().prot=m.prot;P().carbs=m.carbs;P().fat=m.fat;save();toast('Base nutrition sauvegardée')};
+  window.ob11SaveProgram=function(){var plan=buildPlan(P());S().threeMonthProgram=plan;P().programProposal=plan.name+' · '+plan.frequency+' séances/semaine';P().programRecommendation=plan;save();toast('Plan 3 mois sauvegardé')};
+  async function maybeCreateAccount(){var p=P(),email=(p.email||'').trim(),pass=window.OB11.password||'';if(!email||!pass||!window._supa||window._supaUser)return true;try{var res=await window._supa.auth.signUp({email:email,password:pass});if(res.error){toast('Compte non créé : '+res.error.message+'. Tu continues en local.');return true}window._supaUser=res.data&&res.data.user?res.data.user:window._supaUser;try{if(window._supaUser){await window._supa.from('profiles').upsert({id:window._supaUser.id,email:email,username:p.username||null,display_name:p.name||null,data:p,updated_at:new Date().toISOString()})}}catch(e){}return true}catch(e){toast('Compte non créé. Tu continues en local.');return true}}
+  window.ob11Next=async function(){readCurrent();var idx=window.OB11.step||0;if(STEP_IDS[idx]==='nutrition')window.ob11SaveNutrition();if(STEP_IDS[idx]==='program')window.ob11SaveProgram();if(idx<10){window.OB11.step=idx+1;window.renderOb11();return}await maybeCreateAccount();S().onboarded=true;S().onboardingComplete=true;save();closeOb11();try{if(typeof window.bootApp==='function')window.bootApp()}catch(e){}toast('Bienvenue sur G-SQUAD')};
+  window.ob11Prev=function(){readCurrent();if((window.OB11.step||0)>0){window.OB11.step--;window.renderOb11()}};
+  window.ob11Skip=function(){S().onboarded=true;save();closeOb11();try{if(typeof window.bootApp==='function')window.bootApp()}catch(e){}toast('Tu peux compléter ça dans Profil')};
+  window.ob11SkipStep=function(){readCurrent();if((window.OB11.step||0)<10){window.OB11.step++;window.renderOb11()}else window.ob11Skip()};
+  function sym(name){var d={mail:'M14 18H6a2 2 0 0 1-2-2V8l6 4 6-4v8a2 2 0 0 1-2 2Z M4 8l6 4 6-4',lock:'M7 10V8a5 5 0 0 1 10 0v2 M6 10h12v10H6z',user:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M4 20a8 8 0 0 1 16 0',id:'M4 6h16v12H4z M8 10h4 M8 14h8',height:'M12 3v18 M8 7l4-4 4 4 M8 17l4 4 4-4',weight:'M7 8h10l2 12H5L7 8Z M9 8a3 3 0 0 1 6 0',bmi:'M4 18h16 M6 18V9 M12 18V5 M18 18v-7',goal:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z',nutrition:'M6 3v18 M10 3v18 M14 3c3 2 4 5 2 8v10',program:'M4 19V5 M4 19h16 M8 15l3-3 3 2 5-7',start:'M8 5v14l11-7Z'}[name]||'M4 12h16';return '<span class="gs-ob11-symbol"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg></span>'}
+  window.renderOb11=function(){
+    closeOb11(); var p=P(),idx=Math.max(0,Math.min(10,window.OB11.step||0)),s=STEP_IDS[idx],title='',sub='',body='',ico='id',b=bmiInfo(p),m=macro3(p),plan=buildPlan(p);
+    if(s==='email'){ico='mail';title='Email';sub='Étape 1/11. Optionnel, mais utile pour synchroniser ton compte.';body='<input id="ob11-main-input" class="gs-ob11-input" type="email" inputmode="email" autocomplete="email" placeholder="email@exemple.com" value="'+E(p.email||'')+'"><div class="gs-ob11-hint">Inscription non obligatoire : tu peux utiliser l’app en local.</div>'}
+    if(s==='password'){ico='lock';title='Mot de passe';sub='Étape 2/11. Aperçu possible avant validation.';body='<div class="gs-ob11-passwrap"><input id="ob11-password-input" class="gs-ob11-input" type="password" autocomplete="new-password" placeholder="Mot de passe" value="'+E(window.OB11.password||'')+'"><button type="button" class="gs-ob11-eye" onclick="ob11TogglePassword()">Voir</button></div><div class="gs-ob11-hint">Minimum 6 caractères. Non stocké localement.</div>'}
+    if(s==='username'){ico='user';title='Username';sub='Étape 3/11. Identifiant public pour la Squad.';body='<input id="ob11-main-input" class="gs-ob11-input" autocomplete="off" maxlength="20" placeholder="@username" value="'+E(p.username||'')+'" oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,\'\').toLowerCase()">'}
+    if(s==='name'){ico='id';title='Nom';sub='Étape 4/11. Nom affiché sur ton profil.';body='<input id="ob11-main-input" class="gs-ob11-input" placeholder="ex : Dany" maxlength="30" value="'+E(p.name||'')+'">'}
+    if(s==='height'){ico='height';title='Taille';sub='Étape 5/11. Sert à calculer ton IMC.';body='<input id="ob11-main-input" class="gs-ob11-input" type="number" inputmode="decimal" placeholder="Taille en cm" value="'+E(p.taille||'')+'">'}
+    if(s==='weight'){ico='weight';title='Poids';sub='Étape 6/11. Sert aux macros et aux recommandations.';body='<input id="ob11-main-input" class="gs-ob11-input" type="number" inputmode="decimal" step="0.1" placeholder="Poids en kg" value="'+E(p.poids||'')+'">'}
+    if(s==='bmi'){ico='bmi';title='IMC';sub='Étape 7/11. Repère utilisé pour éviter de proposer n’importe quoi.';body='<div class="gs-sp-card"><div class="gs-sp-kicker">Analyse profil</div><div class="gs-sp-title">'+(b.value?b.value:'—')+' · '+E(b.label)+'</div><div class="gs-sp-sub">'+E(b.note)+'</div><div class="gs-sp-grid"><div class="gs-sp-metric"><b>'+E(p.taille||'—')+'</b><span>Taille cm</span></div><div class="gs-sp-metric"><b>'+E(p.poids||'—')+'</b><span>Poids kg</span></div></div></div>'}
+    if(s==='goal'){ico='goal';title='Objectif + séances';sub='Étape 8/11. Le plan 3 mois sera calculé avec ces infos + ton IMC.';body='<div class="gs-ob11-grid"><button type="button" class="gs-ob11-choice '+(p.objectif==='perte'?'sel':'')+'" onclick="ob11Pick(\'objectif\',\'perte\')">Perte de gras<span>Sec, dépense contrôlée</span></button><button type="button" class="gs-ob11-choice '+(p.objectif==='maintien'?'sel':'')+'" onclick="ob11Pick(\'objectif\',\'maintien\')">Maintien / recomposition<span>Progresser proprement</span></button><button type="button" class="gs-ob11-choice '+(p.objectif==='prise'?'sel':'')+'" onclick="ob11Pick(\'objectif\',\'prise\')">Prise de muscle<span>Volume, force, récupération</span></button></div><div class="gs-sp-card"><div class="gs-sp-kicker">Jours de sport par semaine</div><div class="gs-ob11-grid"><button type="button" class="gs-ob11-choice '+((p.frequency||p.frequence)==2?'sel':'')+'" onclick="ob11SetFrequency(2)">2 / semaine<span>Minimal efficace</span></button><button type="button" class="gs-ob11-choice '+((p.frequency||p.frequence||4)==3?'sel':'')+'" onclick="ob11SetFrequency(3)">3 / semaine<span>Full body solide</span></button><button type="button" class="gs-ob11-choice '+((p.frequency||p.frequence||4)==4?'sel':'')+'" onclick="ob11SetFrequency(4)">4 / semaine<span>Upper / Lower</span></button><button type="button" class="gs-ob11-choice '+((p.frequency||p.frequence)==5?'sel':'')+'" onclick="ob11SetFrequency(5)">5+ / semaine<span>Plus structuré</span></button></div></div>'}
+    if(s==='nutrition'){ico='nutrition';title='Calculateur nutrition';sub='Étape 9/11. Calculé avec poids, taille, objectif et fréquence.';body='<div class="gs-sp-card"><div class="gs-sp-kicker">Base nutrition</div><div class="gs-sp-title">'+m.kcal+' kcal / jour</div><div class="gs-sp-sub">Maintenance estimée : '+m.maintenance+' kcal. Base modifiable dans Nutrition.</div><div class="gs-sp-grid"><div class="gs-sp-metric"><b>'+m.prot+' g</b><span>Protéines</span></div><div class="gs-sp-metric"><b>'+m.carbs+' g</b><span>Glucides</span></div><div class="gs-sp-metric"><b>'+m.fat+' g</b><span>Lipides</span></div><div class="gs-sp-metric"><b>'+E(p.objectif||'maintien')+'</b><span>Objectif</span></div></div><div class="gs-sp-actions"><button type="button" class="primary" onclick="ob11SaveNutrition()">Sauvegarder cette base</button></div></div>'}
+    if(s==='program'){ico='program';title='Proposition programme';sub='Étape 10/11. Un plan prédéfini sur 3 mois selon ton objectif et tes jours de sport.';body=planCard(plan,true)}
+    if(s==='start'){ico='start';title='START';sub='Étape 11/11. Tout reste modifiable dans Profil.';body='<div class="gs-sp-card"><div class="gs-sp-kicker">Résumé</div><div class="gs-sp-title">'+E(plan.name)+'</div><div class="gs-sp-sub">'+plan.frequency+' séances/semaine pendant 12 semaines · '+plan.totalSessions+' séances prévues.</div><div class="gs-sp-grid"><div class="gs-sp-metric"><b>'+m.kcal+'</b><span>kcal</span></div><div class="gs-sp-metric"><b>'+E(plan.split)+'</b><span>Structure</span></div></div></div>'}
+    var bars=STEP_IDS.map(function(_,i){return '<i class="'+(i<=idx?'on':'')+'"></i>'}).join('');
+    var html='<div class="gs-onboard-v11 gs-ob11-noemoji" id="gs-onboard-v11"><div class="gs-ob11-box"><div class="gs-ob11-logo">G-SQUAD</div><div class="gs-ob11-stepcount">Étape '+(idx+1)+' / 11</div><div class="gs-ob11-progress">'+bars+'</div>'+sym(ico)+'<h1 class="gs-ob11-title">'+title+'</h1><div class="gs-ob11-sub">'+sub+'</div>'+body+'<div class="gs-ob11-actions"><button type="button" onclick="ob11Prev()" '+(idx===0?'disabled':'')+'>Retour</button><button type="button" class="primary" onclick="ob11Next()">'+(s==='start'?'START':'Continuer')+'</button></div><button type="button" class="gs-ob11-skip" onclick="ob11SkipStep()">Passer cette étape — retrouvable dans Profil</button></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html);var input=$('ob11-main-input')||$('ob11-password-input');if(input)setTimeout(function(){try{input.focus()}catch(e){}},60)
+  };
+  window.renderOnboardingWizard=function(step){window.OB11=window.OB11||{step:0,total:11,password:''};if(typeof step==='number')window.OB11.step=Math.max(0,Math.min(10,step));window.renderOb11()};
+  window.openOnboardingWizard=function(step){window.OB11=window.OB11||{step:0,total:11,password:''};window.OB11.step=typeof step==='number'?Math.max(0,Math.min(10,step)):0;window.renderOb11()};
+
+  var prevRenderProg=window.renderProgBody;
+  window.renderProgBody=function(){
+    if(typeof prevRenderProg==='function')prevRenderProg.apply(this,arguments);
+    var el=$('fl-prog-body');if(!el)return;
+    var old=el.querySelector('.gs-3mo-program-card');if(old)old.remove();
+    var plan=S().threeMonthProgram||buildPlan(P());
+    var html='<div class="gs-3mo-program-card">'+planCard(plan,false)+'<div class="gs-3mo-actions" style="margin-top:-4px;margin-bottom:14px"><button class="primary" onclick="gsApplyThreeMonthProgram()">Appliquer le plan 3 mois</button><button onclick="openOnboardingWizard(7)">Modifier objectif / jours</button></div></div>';
+    el.insertAdjacentHTML('afterbegin',html);
+  };
+
+  function guideCard(id,mark,title,text,items,buttons){
+    return '<section class="gs-guide-card" id="'+id+'"><h3><span class="gs-guide-mark">'+mark+'</span>'+E(title)+'</h3><p>'+E(text)+'</p><div class="gs-guide-list">'+items.map(function(x){return '<div>'+E(x)+'</div>'}).join('')+'</div>'+(buttons?'<div class="gs-guide-actions">'+buttons+'</div>':'')+'</section>';
+  }
+  window.openGuide=function(){
+    try{if(typeof window.closeHamburger==='function')window.closeHamburger()}catch(e){}
+    var old=$('guide-ov');if(old)old.remove();
+    var nav=['Démarrage','Accueil','Séance','Programme','Bibliothèque','Nutrition','Journal','Classement','Squad','Profil','Réglages'];
+    var buttons={seance:'<button class="primary" onclick="document.getElementById(\'guide-ov\').remove();goTab(\'seance\',document.getElementById(\'nb-seance\'))">Ouvrir Séance</button>',programme:'<button class="primary" onclick="document.getElementById(\'guide-ov\').remove();openFL(\'programme\')">Ouvrir Programme</button>',profil:'<button class="primary" onclick="document.getElementById(\'guide-ov\').remove();openProfil()">Ouvrir Profil</button>'};
+    var html='<div class="gs-guide-ov" id="guide-ov" onclick="if(event.target===this)this.remove()"><div class="gs-guide-panel"><div class="gs-guide-head"><div><span>G-SQUAD</span><b>Guide complet</b></div><button class="gs-guide-close" onclick="document.getElementById(\'guide-ov\').remove()">×</button></div><div class="gs-guide-nav">'+nav.map(function(n,i){return '<button class="gs-guide-chip" onclick="document.getElementById(\'guide-sec-'+i+'\').scrollIntoView({behavior:\'smooth\',block:\'start\'})">'+E(n)+'</button>'}).join('')+'</div>';
+    html+=guideCard('guide-sec-0','ST','Démarrage','L’app fonctionne même sans compte. L’inscription guidée sert à personnaliser ton suivi et reste retrouvable depuis le profil.',['Email et mot de passe sont optionnels si tu veux rester en local.','Les 11 étapes enregistrent ton username, tes infos physiques, ton objectif, ta nutrition et ton plan 3 mois.','Tout ce que tu passes peut être complété plus tard dans Profil.'],'<button onclick="openOnboardingWizard(0)">Reprendre les 11 étapes</button>');
+    html+=guideCard('guide-sec-1','AC','Accueil','L’accueil sert à aller vite : priorité séance, progression, badges, XP et raccourcis.',['Tu vois les actions importantes sans chercher.','Les badges et XP donnent une lecture rapide de ta régularité.','Les raccourcis peuvent t’envoyer vers séance, nutrition, programme ou journal.']);
+    html+=guideCard('guide-sec-2','SE','Séance','La séance est ton écran d’action : exercice en cours, timer, log de set, validation et XP.',['Logger un set valide automatiquement l’exercice.','Un exercice validé est assombri pour que tu voies ce qui est déjà fait.','Les liens YouTube et TikTok servent à revoir l’exécution.','Les sports comme basket ou foot peuvent être ajoutés comme activité sportive.'],buttons.seance);
+    html+=guideCard('guide-sec-3','P3','Programme 3 mois','Le programme n’est plus une proposition générique : il est pré-défini sur 12 semaines selon IMC, objectif et jours de sport par semaine.',['2 jours : Full body A/B.','3 jours : Full body A/B/C.','4 jours : Upper / Lower.','5 jours et plus : PPL ou PPL + Upper/Lower.','Les phases changent selon perte, maintien/recomposition ou prise.'],buttons.programme);
+    html+=guideCard('guide-sec-4','EX','Bibliothèque','La bibliothèque sert à choisir rapidement les bons exercices sans surcharge.',['Recherche par nom ou abréviation : DC, DI, RDL, SDT, OHP, PAC.','Chaque exercice affiche XP, type, groupe et zone précise travaillée.','Tu peux filtrer machines, poulies, haltères, barre, poids du corps.']);
+    html+=guideCard('guide-sec-5','NU','Nutrition','La nutrition sert à suivre l’essentiel sans transformer l’app en tableur.',['Le calculateur estime calories et macros selon ton profil.','Les repas peuvent être loggés et sauvegardés.','Les objectifs restent modifiables dans les réglages.']);
+    html+=guideCard('guide-sec-6','JO','Journal','Le journal centralise logs, poids, séances validées et progression.',['Un set loggé est envoyé au journal.','Les séances terminées alimentent l’historique.','Tu peux consulter les jours précédents et suivre tes tendances.']);
+    html+=guideCard('guide-sec-7','XP','XP & classement','L’XP valorise l’effort réel sans désavantager la salle ou les activités sportives.',['Polyarticulaires lourds donnent plus d’XP que l’isolation.','Mobilité/récupération donne peu d’XP.','Les sports ont un barème selon la fatigue réelle.','Le classement XP sert à comparer la régularité et l’activité.']);
+    html+=guideCard('guide-sec-8','SQ','Squad & notifications','La partie sociale sert à prévenir, encourager et suivre les amis sans spam.',['Prévenir ta Squad au début d’une séance.','Réagir rapidement aux performances.','Gérer qui peut t’envoyer des notifications.','Chercher un user par username et l’ajouter.']);
+    html+=guideCard('guide-sec-9','PR','Profil','Le profil montre ton identité sportive, ton XP, tes badges et ton programme.',['Photo via le bouton +.','Salles de sport, sports, IMC et objectifs restent modifiables.','Les autres profils doivent donner assez d’infos pour comprendre le niveau et l’activité.'],buttons.profil);
+    html+=guideCard('guide-sec-10','RG','Réglages & compte','Les réglages sont rangés par compte, mot de passe, corps/objectifs, salles, sports et session.',['Changer le mot de passe si connecté.','Se déconnecter sans supprimer les données locales.','Reprendre l’inscription guidée depuis Profil.']);
+    html+='</div></div>';
+    document.body.insertAdjacentHTML('beforeend',html);
+  };
+})();
+</script>
+
+<script id="gs-final-auth-gate-program-guide-fix">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
+  function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('ath7',JSON.stringify(window.state||{}))}catch(e){}}
+  function toast(t){try{if(typeof window.notify==='function')window.notify(t);else if(typeof window.nt==='function')window.nt(t);else console.log(t)}catch(e){}}
+  function hideOnboarding(){var ob11=$('gs-onboard-v11');if(ob11)ob11.remove();var ob=$('onboard');if(ob){ob.style.display='none';ob.innerHTML='';}}
+  function showLanding(){
+    hideOnboarding();
+    var auth=$('auth-screen');
+    if(auth){auth.style.display='flex';auth.classList&&auth.classList.add('open');}
+    var ids=['auth-view-landing','auth-view-login','auth-view-signup-s1','auth-view-signup-s2','auth-view-signup-s3'];
+    ids.forEach(function(id){var el=$(id);if(el)el.style.display=(id==='auth-view-landing')?'block':'none';});
+    try{if(window._authLandingShow)window._authLandingShow('landing');}catch(e){}
+  }
+  window.gsShowAuthLanding=showLanding;
+
+  // Le wizard 11 étapes existe, mais il ne doit jamais s'ouvrir tout seul au lancement.
+  window.gsInstallOnboarding=function(){hideOnboarding();};
+
+  var manualObUntil=0;
+  var oldOpenOnboarding=window.openOnboardingWizard;
+  function open11(step){
+    manualObUntil=Date.now()+15000;
+    var auth=$('auth-screen'); if(auth)auth.style.display='none';
+    var ob=$('onboard'); if(ob)ob.style.display='none';
+    if(window.OB11)window.OB11.step=typeof step==='number'?Math.max(0,Math.min(10,step)):0;
+    if(typeof oldOpenOnboarding==='function')return oldOpenOnboarding.call(window,step||0);
+    if(typeof window.renderOb11==='function'){window.renderOb11();return;}
+  }
+  window.gsOpenSignupFlow=function(){open11(0)};
+  window.openOnboardingWizard=function(step){
+    var profileOpen=($('profil-ov')&&$('profil-ov').classList.contains('open'))||$('profile-settings-v1');
+    var alreadyInsideApp=!!profileOpen || (S().onboarded===true && ($('auth-screen')||{}).style.display==='none');
+    var manual=(Date.now()<manualObUntil)||alreadyInsideApp;
+    if(!manual && !S().onboarded && !sessionStorage.getItem('gs_guest_session')){showLanding();return;}
+    return open11(typeof step==='number'?step:0);
+  };
+
+  var prevAuthShow=window.authShowView;
+  window._authLandingShow=prevAuthShow;
+  window.authShowView=function(view){
+    if(view==='signup-s1'||view==='signup'||view==='signup11'||view==='onboarding'){window.gsOpenSignupFlow();return;}
+    if(typeof prevAuthShow==='function')return prevAuthShow.apply(this,arguments);
+    var ids=['landing','login','signup-s1','signup-s2','signup-s3'];
+    ids.forEach(function(v){var el=$('auth-view-'+v);if(el)el.style.display=(v===(view||'landing'))?'block':'none';});
+  };
+
+  // Remplace les boutons existants qui appelaient encore l'ancien flux signup en 3 étapes.
+  function rewriteAuthButtons(){
+    document.querySelectorAll('button').forEach(function(btn){
+      var oc=btn.getAttribute('onclick')||'';
+      if(oc.indexOf("authShowView('signup-s1')")!==-1 || oc.indexOf('authShowView("signup-s1")')!==-1 || oc.indexOf('openSignup11()')!==-1){
+        btn.setAttribute('onclick','gsOpenSignupFlow()');
+      }
+    });
+  }
+
+  window.skipAuth=function(){
+    sessionStorage.setItem('gs_guest_session','1');
+    var st=S();st.guestMode=true;st.onboarded=true;
+    if(!st.profil.name)st.profil.name='Athlète';
+    if(!st.profil.objectif)st.profil.objectif='maintien';
+    if(!st.profil.frequency)st.profil.frequency=3;
+    save();
+    var auth=$('auth-screen');if(auth)auth.style.display='none';
+    hideOnboarding();
+    try{if(typeof window.bootApp==='function')window.bootApp();else if(typeof window.bootSafe==='function')window.bootSafe('Mode invité activé.')}catch(e){console.warn(e)}
+    toast('Mode invité activé');
+  };
+
+  async function hasSupabaseSession(){
+    try{if(window._supa&&window._supa.auth){var sess=await window._supa.auth.getSession();return !!(sess&&sess.data&&sess.data.session&&sess.data.session.user)}}catch(e){}
+    return !!window._supaUser;
+  }
+  async function enforceAuthLanding(){
+    rewriteAuthButtons();
+    if(sessionStorage.getItem('gs_guest_session')==='1')return;
+    if(await hasSupabaseSession())return;
+    // Sans compte connecté : la porte d'entrée doit être Connexion / Inscription / Sans compte.
+    showLanding();
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){setTimeout(enforceAuthLanding,120);setTimeout(enforceAuthLanding,900);setTimeout(enforceAuthLanding,1800)});
+  }else{
+    setTimeout(enforceAuthLanding,120);setTimeout(enforceAuthLanding,900);setTimeout(enforceAuthLanding,1800);
+  }
+})();
+</script>
+
 </body>
 </html>
