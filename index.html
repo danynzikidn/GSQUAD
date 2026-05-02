@@ -8,6 +8,15 @@
 <meta name="apple-mobile-web-app-title" content="G-SQUAD">
 <meta name="theme-color" content="#070A0E">
 <title>G-SQUAD</title>
+<link rel="icon" type="image/png" sizes="32x32" href="./gsquad-icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./gsquad-icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./gsquad-icon-180.png">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="application-name" content="G-SQUAD">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="msapplication-TileColor" content="#070A0E">
+<meta name="msapplication-TileImage" content="./gsquad-icon-512.png">
+
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -11942,11 +11951,14 @@ body.gs-theme-light .gs-lb-final,body.gs-theme-light .gs-badge-sheet-final{backg
   function ensureDaySwitcher(){var f=$('f-day');if(!f||$('gs-day-switcher-final')){updateDaySwitcher();return}f.classList.add('gs-final-hidden-day');var box=document.createElement('div');box.id='gs-day-switcher-final';box.className='gs-day-switcher-final';box.innerHTML='<button type="button" aria-label="Jour précédent" onclick="gsChangeSessionDay(-1)">‹</button><div><strong id="gs-day-current-final"></strong><small id="gs-day-meta-final"></small></div><button type="button" aria-label="Jour suivant" onclick="gsChangeSessionDay(1)">›</button>';f.parentNode.insertBefore(box,f);updateDaySwitcher();}
   var oldRenderSeance=window.renderSeance;if(typeof oldRenderSeance==='function'){window.renderSeance=function(){var r=oldRenderSeance.apply(this,arguments);setTimeout(ensureDaySwitcher,0);return r}}
 
-  /* 3) Commencer une séance = prévenir / notification */
-  function addLocalNotif(type){var p=P(),s=S();s.notifications=Array.isArray(s.notifications)?s.notifications:[];var isWalk=type==='marche';var title=isWalk?'Activité lancée':'Séance lancée';var body=(p.name||p.username||'Un membre G-SQUAD')+(isWalk?' est parti en activité.':' a commencé sa séance.');s.notifications.unshift({type:isWalk?'walk_start':'session_start',title:title,body:body,status:'unread',created_at:new Date().toISOString()});s.notifications=s.notifications.slice(0,50);save();try{if(typeof window.updateGsNotificationBadge==='function')window.updateGsNotificationBadge()}catch(e){} }
-  async function pushSquadNotif(type){try{if(type!=='seance'||!window._supa||!window._supaUser)return;var friends=(S().friends||[]).map(function(f){return f.id}).filter(Boolean);if(!friends.length)return;var p=P();var rows=friends.map(function(id){return {user_id:id,actor_id:window._supaUser.id,type:'session_start',status:'unread',payload:{title:'Séance lancée',body:(p.name||p.username||'Ta Squad')+' vient de commencer une séance.'}}});await window._supa.from('notifications').insert(rows)}catch(e){console.warn('session notification error',e)}}
-  function browserNotif(type){try{if(type!=='seance'||!('Notification' in window))return;var send=function(){try{new Notification('G-SQUAD',{body:'Séance commencée. Ta Squad est prévenue.',tag:'gs-session-start'})}catch(e){}};if(Notification.permission==='granted')send();else if(Notification.permission!=='denied')Notification.requestPermission().then(function(p){if(p==='granted')send()})}catch(e){}}
-  var nativeStart=window.startSession;if(typeof nativeStart==='function'){window.startSession=function(type){var was=!!window.sessInt;var r=nativeStart.apply(this,arguments);setTimeout(function(){if(!was && window.sessInt){addLocalNotif(type);browserNotif(type);pushSquadNotif(type);toast(type==='marche'?'Activité lancée':'Séance lancée · notification envoyée')}} ,80);return r}}
+  /* 3) Commencer une séance = notification premium G-SQUAD/NRC-like, sans emojis. */
+  var GS_APP_ICON='./gsquad-icon-192.png';
+  function cleanNotifText(t){return String(t==null?'':t).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu,'').replace(/\bathl[eè]te\b/gi,'membre').replace(/\s+/g,' ').trim()}
+  function sessionNotifCopy(type){var p=P(),name=p.name||p.username||'Ta Squad';var isWalk=type==='marche'||type==='walk'||type==='course'||type==='running';return isWalk?{title:'Activité lancée',body:cleanNotifText(name+' est parti. Garde le rythme.')}:{title:'Séance lancée',body:cleanNotifText(name+' vient de démarrer. À toi de suivre le rythme.')}}
+  function addLocalNotif(type){var s=S(),copy=sessionNotifCopy(type);s.notifications=Array.isArray(s.notifications)?s.notifications:[];s.notifications.unshift({type:(type==='seance'?'session_start':'activity_start'),title:copy.title,body:copy.body,status:'unread',icon:GS_APP_ICON,created_at:new Date().toISOString()});s.notifications=s.notifications.slice(0,50);save();try{if(typeof window.updateGsNotificationBadge==='function')window.updateGsNotificationBadge()}catch(e){} }
+  async function pushSquadNotif(type){try{if(type!=='seance'||!window._supa||!window._supaUser)return;var friends=(S().friends||[]).map(function(f){return f.id}).filter(Boolean);if(!friends.length)return;var copy=sessionNotifCopy(type);var rows=friends.map(function(id){return {user_id:id,actor_id:window._supaUser.id,type:'session_start',status:'unread',payload:{title:copy.title,body:copy.body,icon:GS_APP_ICON,style:'nrc'}}});await window._supa.from('notifications').insert(rows)}catch(e){console.warn('session notification error',e)}}
+  function browserNotif(type){try{if(type!=='seance'||!('Notification' in window))return;var copy=sessionNotifCopy(type);var options={body:copy.body,tag:'gs-session-start',icon:GS_APP_ICON,badge:GS_APP_ICON,renotify:true,silent:false};var send=function(){try{if(navigator.serviceWorker&&navigator.serviceWorker.controller){navigator.serviceWorker.controller.postMessage({type:'GS_NOTIFY',title:'G-SQUAD',options:options});return}if(navigator.serviceWorker&&navigator.serviceWorker.ready){navigator.serviceWorker.ready.then(function(reg){if(reg&&reg.showNotification)reg.showNotification('G-SQUAD',options);else new Notification('G-SQUAD',options)}).catch(function(){new Notification('G-SQUAD',options)});return}new Notification('G-SQUAD',options)}catch(e){try{new Notification('G-SQUAD',options)}catch(_){}}};if(Notification.permission==='granted')send();else if(Notification.permission!=='denied')Notification.requestPermission().then(function(p){if(p==='granted')send()})}catch(e){}}
+  var nativeStart=window.startSession;if(typeof nativeStart==='function'){window.startSession=function(type){var was=!!window.sessInt;var r=nativeStart.apply(this,arguments);setTimeout(function(){if(!was && window.sessInt){addLocalNotif(type);browserNotif(type);pushSquadNotif(type);toast(type==='marche'?'Activité lancée':'Séance lancée · Squad prévenue')}} ,80);return r}}
 
   /* 4) Hamburger : clic sur une salle = ouvrir l'app, pas Maps. Salle la plus proche reste Maps. */
   var gymLinks={
@@ -12005,6 +12017,26 @@ body.gs-theme-light .gs-lb-final,body.gs-theme-light .gs-badge-sheet-final{backg
   function boot(){ensureDaySwitcher();patchPwd(document);ensureHomeBadges();try{window.renderBadgeSurfaces()}catch(e){}patchGymMenu();ensureGlobalLbMenu();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
   [200,800,1600,3200].forEach(function(ms){setTimeout(boot,ms)});
+})();
+</script>
+
+
+<script id="gs-logo-notif-safari-patch-20260502">
+(function(){
+  var GS_APP_ICON='./gsquad-icon-192.png';
+  function cleanNotifText(t){return String(t==null?'':t).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu,'').replace(/\bathl[eè]te\b/gi,'membre').replace(/\s+/g,' ').trim()}
+  try{
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(function(e){console.warn('SW G-SQUAD non enregistré',e)});}
+  }catch(e){}
+  // Nettoie les anciennes notifs stockées avec emoji/"athlète" pour que Safari et le centre soient clean.
+  try{
+    window.state=window.state||{};var s=window.state;['notifications','notifs'].forEach(function(k){if(Array.isArray(s[k]))s[k].forEach(function(n){if(n){n.title=cleanNotifText(n.title||'Notification');n.body=cleanNotifText(n.body||n.message||'');n.message=cleanNotifText(n.message||n.body||'');n.icon=GS_APP_ICON;}})});if(typeof window.sv==='function')window.sv();
+  }catch(e){}
+  // Les overlays Notifications affichent toujours une copie sobre, même si une vieille donnée contient un emoji.
+  var nativeOpen=window.openNotifications;
+  if(typeof nativeOpen==='function'){
+    window.openNotifications=function(){try{var s=window.state||{};['notifications','notifs'].forEach(function(k){if(Array.isArray(s[k]))s[k].forEach(function(n){if(n){n.title=cleanNotifText(n.title||'Notification');n.body=cleanNotifText(n.body||n.message||'');n.message=cleanNotifText(n.message||n.body||'');n.icon=GS_APP_ICON;}})});}catch(e){}return nativeOpen.apply(this,arguments)};
+  }
 })();
 </script>
 
