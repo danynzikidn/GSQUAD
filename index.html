@@ -9517,5 +9517,871 @@ document.addEventListener('DOMContentLoaded',function(){
 })();
 </script>
 
+
+
+<!-- G-SQUAD PATCH — recherche intelligente exercices: alias RDL / DC / SDT / etc. -->
+<style id="gs-exo-alias-search-css">
+  .gs-alias-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;border:1px solid rgba(143,185,255,.28);background:rgba(143,185,255,.10);color:var(--acc);font-size:10px;font-weight:1000;text-transform:uppercase;letter-spacing:.06em;padding:5px 8px;margin-top:8px;white-space:nowrap}
+  .gs-alias-pill:before{content:'ALIAS';font-size:8px;color:var(--mut);letter-spacing:.10em}
+  .gs-alias-hint{font-size:11px;color:var(--mut);font-weight:800;margin-top:7px;line-height:1.35}
+  .gs-picker-search{position:sticky;top:0;z-index:4;background:rgba(7,10,14,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:0 0 12px;margin-bottom:10px}
+  .gs-picker-search input{width:100%;padding:12px 13px;border-radius:15px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.055);color:var(--txt);font-size:14px;font-family:inherit;-webkit-appearance:none;outline:none}
+  .gs-picker-search input:focus{border-color:rgba(143,185,255,.45);box-shadow:0 0 0 3px rgba(143,185,255,.08)}
+</style>
+<script id="gs-exo-alias-search-js">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function E(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}
+  function strip(v){try{return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()}catch(e){return String(v||'').toLowerCase().trim()}}
+  function compact(v){return strip(v).replace(/[^a-z0-9]/g,'')}
+  function has(text,needle){return strip(text).indexOf(strip(needle))>-1}
+  function add(list,items){items.forEach(function(x){if(x&&list.indexOf(x)===-1)list.push(x)})}
+
+  window.gsExerciseAliases=function(ex){
+    ex=ex||{}; var n=strip(ex.n||''), m=strip(ex.m||''), t=strip(ex.t||''), g=strip(ex.g||''); var a=[];
+    function H(x){return n.indexOf(strip(x))>-1}
+
+    // Pectoraux / press
+    if(H('developpe couche') && !H('haltere') && !H('smith')) add(a,['DC','développé couché','developpe couche','bench','bench press','BP','barbell bench']);
+    if(H('developpe couche haltere') || H('dumbbell bench')) add(a,['DCH','DC haltères','développé couché haltères','dumbbell bench','DB bench']);
+    if((H('developpe incline') || H('incline bench')) && !H('haltere') && !H('machine')) add(a,['DI','développé incliné','developpe incline','incline bench','incline press']);
+    if(H('developpe incline haltere') || H('incline dumbbell')) add(a,['DIH','DI haltères','développé incliné haltères','incline dumbbell press','incline DB']);
+    if(H('chest press')) add(a,['CP','chest press','développé machine','developpe machine','machine press']);
+    if(H('pec deck') || H('butterfly') || H('chest fly')) add(a,['pec deck','butterfly','fly machine','écarté machine','ecarte machine']);
+    if(H('ecarte') || H('fly')) add(a,['fly','écarté','ecarte','écartés','ecartes']);
+    if(H('pompes') || H('push-up') || H('push up')) add(a,['pompes','push up','push-up','PU pompes']);
+    if(H('dips pectoraux') || H('chest dips')) add(a,['dips pecs','dips pectoraux','chest dips']);
+
+    // Dos / tirages
+    if(H('traction') || H('pull-up') || H('pull ups') || H('chin-up')) add(a,['tractions','pull up','pull-ups','PU tractions','chin up','chin-ups']);
+    if(H('tractions lest')) add(a,['tractions lestées','weighted pull ups','pull ups lestées']);
+    if(H('rowing barre') || H('barbell row')) add(a,['RB','rowing barre','barbell row']);
+    if(H('rowing haltere') || H('dumbbell row')) add(a,['RH','rowing haltère','rowing haltere','dumbbell row','DB row']);
+    if(H('tirage vertical') || H('lat pulldown')) add(a,['TV','tirage vertical','lat pulldown','pulldown']);
+    if(H('tirage horizontal') || H('seated row') || H('cable row')) add(a,['TH','tirage horizontal','seated row','cable row','rowing poulie']);
+    if(H('face pull')) add(a,['FP','face pull']);
+    if((H('souleve de terre') || H('deadlift')) && !H('roumain') && !H('romanian') && !H('smith machine romanian')) add(a,['SDT','soulevé de terre','souleve de terre','deadlift','DL']);
+    if(H('souleve de terre roumain') || H('romanian deadlift') || H('smith machine romanian deadlift')) add(a,['RDL','Romanian Deadlift','Romanian Dead Lift','soulevé de terre roumain','souleve de terre roumain','SDT roumain','rdl barre','rdl smith']);
+    if(H('single leg rdl') || H('rdl unilateral')) add(a,['RDL unilatéral','single leg RDL','SL RDL','RDL une jambe']);
+    if(H('hyperextension') || H('back extension')) add(a,['back extension','hyperextension','lombaires']);
+
+    // Épaules
+    if(H('developpe militaire') || H('overhead press')) add(a,['DM','OHP','développé militaire','developpe militaire','overhead press','shoulder press']);
+    if(H('developpe halteres') || H('dumbbell shoulder')) add(a,['DH épaules','shoulder press haltères','dumbbell shoulder press']);
+    if(H('elevation laterale') || H('lateral raise')) add(a,['EL','élévations latérales','elevations laterales','lateral raise','lat raise']);
+    if(H('oiseau') || H('rear delt')) add(a,['oiseau','rear delt','arrière épaules','arriere epaules']);
+    if(H('shrug')) add(a,['shrugs','trapèzes','trapezes']);
+    if(H('upright row')) add(a,['upright row','tirage menton']);
+
+    // Bras
+    if(H('curl barre')) add(a,['curl EZ','curl barre','EZ curl']);
+    if(H('curl marteau') || H('hammer curl')) add(a,['CM','curl marteau','hammer curl']);
+    if(H('curl incline')) add(a,['curl incliné','incline curl']);
+    if(H('curl cable') || H('curl biceps cable')) add(a,['curl poulie','curl câble','cable curl']);
+    if(H('skull crusher')) add(a,['skull crusher','barre front','extension front']);
+    if(H('extension triceps') || H('pushdown') || H('triceps pushdown')) add(a,['pushdown','triceps poulie','extension triceps poulie','cable triceps pushdown']);
+    if(H('developpe serre') || H('close grip')) add(a,['DCS','développé serré','developpe serre','close grip bench']);
+    if(H('dips triceps')) add(a,['dips triceps','triceps dips']);
+
+    // Jambes / fessiers
+    if(H('squat barre') || H('barbell squat')) add(a,['SQ','squat','squat barre','barbell squat']);
+    if(H('goblet squat') || H('squat gobelet')) add(a,['goblet','squat gobelet','goblet squat']);
+    if(H('presse a cuisses') || H('leg press')) add(a,['PAC','LP','presse','presse à cuisses','presse a cuisses','leg press']);
+    if(H('leg extension')) add(a,['LE','leg extension','extension jambes','extension quadriceps']);
+    if(H('leg curl')) add(a,['LC','leg curl','curl ischios','ischios machine']);
+    if(H('fentes') || H('lunges')) add(a,['fentes','lunges','walking lunges']);
+    if(H('bulgarian') || H('fentes bulgares')) add(a,['BSS','bulgarian split squat','fentes bulgares']);
+    if(H('hack squat')) add(a,['hack squat','hack']);
+    if(H('mollets') || H('calf')) add(a,['mollets','calf raise','calves']);
+    if(H('hip thrust')) add(a,['HT','hip thrust','barbell hip thrust','machine hip thrust']);
+    if(H('glute bridge')) add(a,['glute bridge','pont fessier']);
+    if(H('abduction')) add(a,['abduction','hip abduction','moyen fessier']);
+    if(H('adduction')) add(a,['adduction','hip adduction','adducteurs']);
+    if(H('kickback')) add(a,['kickback','glute kickback','cable kickback']);
+    if(H('sumo squat')) add(a,['sumo squat','squat sumo']);
+    if(H('nordic')) add(a,['nordic curl','nordic']);
+
+    // Abdos / cardio
+    if(H('crunch cable') || H('crunchs cable')) add(a,['crunch poulie','crunch câble','cable crunch']);
+    if(H('crunch')) add(a,['crunch','abdos crunch']);
+    if(H('releves de jambes') || H('hanging leg')) add(a,['HLR','relevés de jambes','releves de jambes','hanging leg raise']);
+    if(H('planche') || H('plank')) add(a,['plank','planche','gainage']);
+    if(H('ab wheel')) add(a,['ab wheel','roulette abdos']);
+    if(H('dragon flag')) add(a,['dragon flag']);
+    if(H('russian twist')) add(a,['russian twist','obliques']);
+    if(H('mountain climbers')) add(a,['mountain climbers']);
+    if(H('hollow')) add(a,['hollow body','hollow hold']);
+    if(H('dead bug')) add(a,['dead bug']);
+    if(H('box jumps')) add(a,['box jump','box jumps']);
+    if(H('sprint')) add(a,['sprint','30m']);
+    if(H('corde a sauter') || H('jump rope')) add(a,['corde à sauter','corde a sauter','jump rope']);
+    if(H('burpees')) add(a,['burpees']);
+    if(H('velo elliptique') || H('elliptique')) add(a,['elliptique','vélo elliptique','velo elliptique','elliptical']);
+    if(H('kettlebell swing')) add(a,['KB swing','kettlebell swing','swing']);
+    if(H('battle ropes')) add(a,['battle ropes']);
+
+    // Fallback: mots du titre FR/EN séparés pour les recherches naturelles.
+    add(a,(ex.n||'').split('/').map(function(x){return x.trim()}).filter(Boolean));
+    return a.filter(function(x,i,self){return x&&self.map(strip).indexOf(strip(x))===i});
+  };
+
+  window.gsExerciseSearchText=function(ex){
+    var focus=''; try{if(typeof getExerciseFocus==='function'){var f=getExerciseFocus(ex); focus=[f.main,f.detail].join(' ')}}catch(e){}
+    return strip([ex.n,ex.m,ex.t,ex.g,ex.xpLabel,focus,window.gsExerciseAliases(ex).join(' ')].join(' '));
+  };
+
+  window.gsExerciseMatchesSearch=function(ex,query){
+    var q=strip(query); if(!q)return true;
+    var aliases=window.gsExerciseAliases(ex).map(strip);
+    var qCompact=compact(q);
+    if(aliases.some(function(a){return a===q || compact(a)===qCompact})) return true;
+    if(q.length<=3) return false; // ex: DC/RDL doivent matcher uniquement leurs alias, pas un morceau de mot au hasard.
+    var hay=window.gsExerciseSearchText(ex);
+    return hay.indexOf(q)>-1 || compact(hay).indexOf(qCompact)>-1;
+  };
+
+  window.gsExerciseSearchRank=function(ex,query){
+    var q=strip(query); if(!q)return 50;
+    var aliases=window.gsExerciseAliases(ex).map(strip), qCompact=compact(q), n=strip(ex.n||''), hay=window.gsExerciseSearchText(ex);
+    if(aliases.some(function(a){return a===q || compact(a)===qCompact})) return 0;
+    if(n.indexOf(q)===0 || compact(n).indexOf(qCompact)===0) return 1;
+    if(n.indexOf(q)>-1 || compact(n).indexOf(qCompact)>-1) return 2;
+    if(hay.indexOf(q)>-1 || compact(hay).indexOf(qCompact)>-1) return 3;
+    return 9;
+  };
+
+  function aliasPill(ex,query){
+    var q=strip(query); if(!q)return '';
+    var hit=(window.gsExerciseAliases(ex)||[]).find(function(a){return strip(a)===q || compact(a)===compact(q)});
+    if(!hit || strip(hit)===strip(ex.n))return '';
+    return '<div class="gs-alias-pill">'+E(hit)+' → '+E((ex.n||'').split('/').pop().trim()||ex.n)+'</div>';
+  }
+  function symbol(name){var d={youtube:'M10 9l5 3-5 3z M3 7s0-2 2-2h14c2 0 2 2 2 2v10s0 2-2 2H5c-2 0-2-2-2-2z',tiktok:'M14 3v10a4 4 0 1 1-4-4'}[name]||'M4 12h16';return '<span class="gs-symbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg></span>'}
+  function xpBadge(ex){try{if(typeof window.gsExerciseXPBadge==='function')return window.gsExerciseXPBadge(ex)}catch(e){} var xp=ex.doneXP||ex.xp||'';return xp?'<span class="gs-xp-badge">+'+E(xp)+' XP</span>':''}
+
+  function updatePlaceholders(){
+    var s=$('bib-search'); if(s){s.placeholder='Rechercher : RDL, DC, DI, SDT, hip thrust…';}
+  }
+
+  window.renderBib=function(){
+    try{if(typeof window.gsApplyExerciseXPToLibrary==='function')window.gsApplyExerciseXPToLibrary()}catch(e){}
+    var el=$('bib-list');if(!el||!window.EXOS_DB)return;
+    var search=($('bib-search')?$('bib-search').value:'').trim();
+    var group=window.bibFilter||'';var type=window.bibTypeFilter||'';
+    var gNames={pecs:'Pectoraux',dos:'Dos',epaules:'Épaules',biceps:'Biceps',triceps:'Triceps',jambes:'Jambes',fessiers:'Fessiers',abdos:'Abdominaux',cardio:'Cardio / explosivité'};
+    var typeMap={Machine:'Machine','Câble':'Poulie',Cable:'Poulie','Poulie':'Poulie','Poids du corps':'Poids du corps',Barre:'Barre','Haltères':'Haltères'};
+    var order=['pecs','dos','epaules','biceps','triceps','jambes','fessiers','abdos','cardio'];
+    var all=(window.EXOS_DB||[]).filter(function(e){return (!group||e.g===group)&&(!type||e.t===type||e.t===(type==='Cable'?'Câble':type)||e.t===(type==='Poulie'?'Câble':type))&&window.gsExerciseMatchesSearch(e,search)}).sort(function(a,b){return window.gsExerciseSearchRank(a,search)-window.gsExerciseSearchRank(b,search)||(order.indexOf(a.g)-order.indexOf(b.g))||((b.xp||0)-(a.xp||0))||String(a.n).localeCompare(String(b.n),'fr')});
+    var filters='<div class="gs-bib-toolbar-v6"><div class="gs-bib-topline"><b>Bibliothèque</b><span class="gs-bib-count">'+all.length+' exos · alias actifs</span></div><div class="gs-bib-filter-row">'+[['','Tous'],['Machine','Machines'],['Cable','Poulies'],['Poids du corps','Poids du corps'],['Barre','Barre'],['Haltères','Haltères']].map(function(f){return '<button class="gs-bib-filter '+(type===f[0]?'on':'')+'" onclick="window.bibTypeFilter=\''+f[0]+'\';renderBib()">'+f[1]+'</button>'}).join('')+'</div>'+(search?'<div class="gs-alias-hint">Recherche intelligente : '+E(search)+' peut matcher un alias comme RDL, DC, DI, SDT, OHP, BSS…</div>':'')+'</div>';
+    if(!all.length){el.innerHTML=filters+'<div style="text-align:center;color:var(--mut);padding:36px 18px">Aucun exercice trouvé.</div>';return}
+    var cur='',html=filters;
+    all.forEach(function(e){
+      if(e.g!==cur){cur=e.g;html+='<div class="gs-bib-section">'+E(gNames[cur]||cur)+'</div>'}
+      var yt=e.yt||('https://www.youtube.com/results?search_query='+encodeURIComponent(e.n+' technique musculation'));
+      html+='<div class="gs-bib-card"><div class="gs-bib-name">'+E(e.n)+'</div><div class="gs-bib-sub">'+E(e.m||'Muscles ciblés')+'</div>'+aliasPill(e,search)+'<div class="gs-bib-tags"><span class="gs-bib-tag">'+E(typeMap[e.t]||e.t||'Exercice')+'</span><span class="gs-bib-tag">'+E(gNames[e.g]||e.g)+'</span></div><div class="gs-bib-xp-row">'+xpBadge(e)+'</div><div class="gs-bib-actions"><a href="'+E(yt)+'" target="_blank">'+symbol('youtube')+' YouTube</a><button onclick="return openTikTokForExercise(\''+E(e.n).replace(/&#39;/g,"\\'")+'\')">'+symbol('tiktok')+' TikTok</button></div></div>';
+    });
+    el.innerHTML=html;
+  };
+
+  window.renderPickerBody=function(){
+    try{if(typeof window.gsApplyExerciseXPToLibrary==='function')window.gsApplyExerciseXPToLibrary()}catch(e){}
+    var title=$('picker-title'), body=$('picker-body'); if(!body)return;
+    var groupNames={pecs:'Pectoraux',dos:'Dos',epaules:'Épaules',biceps:'Biceps',triceps:'Triceps',jambes:'Jambes',fessiers:'Fessiers',abdos:'Abdominaux',cardio:'Cardio / explosivité'};
+    var pickerSearch=(window._pickerExoSearch||'');
+    if(pickerSearch){
+      if(title)title.textContent='Recherche exercice';
+      var results=(window.EXOS_DB||[]).filter(function(e){return window.gsExerciseMatchesSearch(e,pickerSearch)}).sort(function(a,b){return window.gsExerciseSearchRank(a,pickerSearch)-window.gsExerciseSearchRank(b,pickerSearch)||String(a.n).localeCompare(String(b.n),'fr')}).slice(0,60);
+      var day=(window.DAYS||[])[window.exosDayIdx]||{exercises:[]}; var dejaLa=(day.exercises||[]).map(function(e){return e.n});
+      body.innerHTML='<div class="gs-picker-search"><input id="picker-exo-search" value="'+E(pickerSearch)+'" placeholder="RDL, DC, SDT, DI…" oninput="window._pickerExoSearch=this.value;renderPickerBody()"><div class="gs-alias-hint">Tape un alias : RDL = Romanian Deadlift, DC = Développé couché.</div></div><button onclick="window._pickerExoSearch=\'\';renderPickerBody()" style="background:none;border:none;color:var(--mut);font-size:13px;cursor:pointer;padding:0 0 12px;display:flex;align-items:center;gap:6px">← Voir les groupes</button>'+(results.length?'':'<div style="text-align:center;color:var(--mut);padding:30px 12px">Aucun exercice trouvé.</div>')+results.map(function(ex){var present=dejaLa.indexOf(ex.n)!==-1;var p=typeof window.gsXPExerciseInfo==='function'?window.gsXPExerciseInfo(ex):{doneXP:ex.xp||''};return '<div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--brd)"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:850;color:var(--txt);line-height:1.25">'+E(ex.n)+'</div><div style="font-size:11px;color:var(--mut);margin-top:3px;line-height:1.3">'+E(ex.m||'')+' — '+E(ex.t||'')+' <span class="gs-picker-xp">+'+E(p.doneXP)+' XP</span></div>'+aliasPill(ex,pickerSearch)+'</div>'+(present?'<span style="font-size:12px;color:var(--grn);padding:6px 11px;flex-shrink:0">✓ Ajouté</span>':'<button onclick="addExoToDay(\''+E(ex.n).replace(/&#39;/g,"\\'")+'\')" style="background:var(--acc);border:none;color:#000;border-radius:8px;padding:6px 12px;font-weight:1000;font-size:12px;cursor:pointer;flex-shrink:0">Ajouter</button>')+'</div>'}).join('');
+      setTimeout(function(){var i=$('picker-exo-search'); if(i){i.focus(); try{i.setSelectionRange(i.value.length,i.value.length)}catch(e){}}},0);
+      return;
+    }
+    if(window.pickerStep==='groupe'){
+      if(title)title.textContent='Quel groupe musculaire ?';
+      body.innerHTML='<div class="gs-picker-search"><input id="picker-exo-search" placeholder="Recherche rapide : RDL, DC, DI, SDT…" oninput="window._pickerExoSearch=this.value;renderPickerBody()"></div>'+Object.keys(groupNames).map(function(g){var count=(window.EXOS_DB||[]).filter(function(e){return e.g===g}).length;return '<button onclick="pickerSelectGroupe(\''+g+'\')" style="display:flex;align-items:center;gap:14px;padding:16px;background:var(--card);border-radius:13px;border:1px solid var(--brd);width:100%;text-align:left;cursor:pointer;margin-bottom:8px"><span style="width:34px;height:34px;border-radius:12px;background:rgba(143,185,255,.10);border:1px solid rgba(143,185,255,.18);display:flex;align-items:center;justify-content:center;color:var(--acc);font-size:11px;font-weight:1000">'+E(g.slice(0,2).toUpperCase())+'</span><div style="flex:1"><div style="font-size:15px;font-weight:800;color:var(--txt)">'+E(groupNames[g])+'</div><div style="font-size:11px;color:var(--mut);margin-top:2px">'+count+' exercices</div></div></button>'}).join('');
+    }else{
+      if(title)title.textContent=groupNames[window.pickerGroupe]||window.pickerGroupe;
+      var exosDuGroupe=(window.EXOS_DB||[]).filter(function(e){return e.g===window.pickerGroupe}).sort(function(a,b){return (b.xp||0)-(a.xp||0)||String(a.n).localeCompare(String(b.n),'fr')});
+      var day2=(window.DAYS||[])[window.exosDayIdx]||{exercises:[]}; var deja=(day2.exercises||[]).map(function(e){return e.n});
+      body.innerHTML='<div class="gs-picker-search"><input id="picker-exo-search" placeholder="Recherche rapide : RDL, DC, DI…" oninput="window._pickerExoSearch=this.value;renderPickerBody()"></div><button onclick="pickerStep=\'groupe\';renderPickerBody()" style="background:none;border:none;color:var(--mut);font-size:13px;cursor:pointer;padding:0 0 12px;display:flex;align-items:center;gap:6px">← Retour</button>'+exosDuGroupe.map(function(ex){var present=deja.indexOf(ex.n)!==-1;var p=typeof window.gsXPExerciseInfo==='function'?window.gsXPExerciseInfo(ex):{doneXP:ex.xp||''};return '<div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--brd)"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:850;color:var(--txt);line-height:1.25">'+E(ex.n)+'</div><div style="font-size:11px;color:var(--mut);margin-top:3px;line-height:1.3">'+E(ex.m||'')+' — '+E(ex.t||'')+' <span class="gs-picker-xp">+'+E(p.doneXP)+' XP</span></div></div>'+(present?'<span style="font-size:12px;color:var(--grn);padding:6px 11px;flex-shrink:0">✓ Ajouté</span>':'<button onclick="addExoToDay(\''+E(ex.n).replace(/&#39;/g,"\\'")+'\')" style="background:var(--acc);border:none;color:#000;border-radius:8px;padding:6px 12px;font-weight:1000;font-size:12px;cursor:pointer;flex-shrink:0">Ajouter</button>')+'</div>'}).join('');
+    }
+  };
+
+  var oldPickerSelect=window.pickerSelectGroupe;
+  window.pickerSelectGroupe=function(g){window._pickerExoSearch='';window.pickerGroupe=g;window.pickerStep='liste';try{window.renderPickerBody()}catch(e){if(oldPickerSelect)oldPickerSelect(g)}};
+
+  function boot(){updatePlaceholders(); try{if(typeof window.renderBib==='function')window.renderBib()}catch(e){console.warn('alias renderBib',e)}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(boot,120)});else setTimeout(boot,120);
+  setTimeout(boot,900);
+})();
+</script>
+
+
+
+<!-- PATCH 2026-05-02 — auth signup no blank / 11-step safe exit -->
+<style id="gs-auth-blank-fix-css">
+  .gs-auth-info-card{background:rgba(143,185,255,.10);border:1px solid rgba(143,185,255,.22);border-radius:22px;padding:18px;margin:14px 0;color:var(--txt);line-height:1.45}
+  .gs-auth-info-card b{display:block;font-size:18px;font-weight:1000;letter-spacing:-.03em;margin-bottom:6px}
+  .gs-auth-info-card span{display:block;color:var(--txt2);font-size:13px}
+  .gs-auth-mini-link{width:100%;background:none;border:none;color:var(--mut);font-size:13px;font-weight:850;cursor:pointer;padding:11px;margin-top:8px;text-align:center}
+</style>
+<script id="gs-auth-blank-fix-js">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function toast(msg){try{if(typeof notify==='function')notify(msg);else if(typeof nt==='function')nt(msg);else console.log('[G-SQUAD]',msg)}catch(e){console.log('[G-SQUAD]',msg)}}
+  function ensureState(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
+  function save(){try{if(typeof sv==='function')sv();else localStorage.setItem('ath7',JSON.stringify(window.state||{}))}catch(e){}}
+  function hideAppGates(){
+    var auth=$('auth-screen'); if(auth){auth.style.display='none';auth.classList.remove('open')}
+    var old=$('onboard'); if(old){old.style.display='none'}
+    var ob4=$('gs-onboard-v4'); if(ob4)ob4.remove();
+    var ob11=$('gs-onboard-v11'); if(ob11)ob11.remove();
+  }
+  function showAuth(view){
+    var auth=$('auth-screen'); if(auth){auth.style.display='flex';auth.classList.add('open')}
+    try{window.authShowView(view||'landing')}catch(e){}
+  }
+  function showSignupSuccess(email){
+    showAuth('login');
+    var v=$('auth-view-login'); if(!v)return;
+    var old=$('gs-signup-success-card'); if(old)old.remove();
+    v.insertAdjacentHTML('afterbegin','<div id="gs-signup-success-card" class="gs-auth-info-card"><b>Compte créé</b><span>'+ (email?'Connecte-toi avec '+E(email)+'. Si Supabase demande une confirmation, vérifie aussi tes mails.':'Tu peux maintenant te connecter.') +'</span></div>');
+    var input=$('auth-email'); if(input&&email)input.value=email;
+  }
+  function noBlankFallback(){
+    var auth=$('auth-screen'), ob11=$('gs-onboard-v11'), ob4=$('gs-onboard-v4');
+    var panels=document.querySelectorAll('.panel.act');
+    var appVisible=!!document.querySelector('.app');
+    if(auth && auth.style.display!=='none'){
+      var any=Array.prototype.some.call(auth.querySelectorAll('[id^="auth-view-"]'),function(x){return x.style.display!=='none'});
+      if(!any){try{window.authShowView('landing')}catch(e){}}
+    }
+    if(!auth && !ob11 && !ob4 && !appVisible && typeof bootApp==='function'){
+      try{bootApp()}catch(e){}
+    }
+  }
+
+  function rebuildSignupViews(){
+    var s1=$('auth-view-signup-s1'),s2=$('auth-view-signup-s2'),s3=$('auth-view-signup-s3');
+    if(!s1||!s2||!s3||s1.dataset.gsRebuilt==='1')return;
+    s1.dataset.gsRebuilt=s2.dataset.gsRebuilt=s3.dataset.gsRebuilt='1';
+    s1.innerHTML='<button type="button" onclick="authShowView(\'landing\')" style="background:none;border:none;color:var(--mut);font-size:13px;font-weight:800;cursor:pointer;padding:0 0 16px;display:flex;align-items:center;gap:6px">← Retour</button><div style="display:flex;gap:5px;margin-bottom:24px"><div style="flex:1;height:3px;border-radius:99px;background:var(--acc)"></div><div style="flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.1)"></div><div style="flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.1)"></div></div><div class="auth-sub" style="font-size:28px;margin-bottom:6px">Ton email</div><div style="font-size:13px;color:var(--mut);font-weight:700;margin-bottom:20px">Étape 1 — pour créer ton compte et synchroniser tes données.</div><input class="auth-inp" id="auth-email2" type="email" placeholder="email@exemple.com" autocomplete="email" inputmode="email"><div class="auth-err" id="auth-err-s1"></div><button type="button" class="auth-btn" onclick="authSignupNext1()" style="margin-top:8px">Continuer →</button><button type="button" class="gs-auth-mini-link" onclick="skipAuth()">Continuer sans compte</button>';
+    s2.innerHTML='<button type="button" onclick="authShowView(\'signup-s1\')" style="background:none;border:none;color:var(--mut);font-size:13px;font-weight:800;cursor:pointer;padding:0 0 16px;display:flex;align-items:center;gap:6px">← Retour</button><div style="display:flex;gap:5px;margin-bottom:24px"><div style="flex:1;height:3px;border-radius:99px;background:var(--acc)"></div><div style="flex:1;height:3px;border-radius:99px;background:var(--acc)"></div><div style="flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.1)"></div></div><div class="auth-sub" style="font-size:28px;margin-bottom:6px">Mot de passe</div><div style="font-size:13px;color:var(--mut);font-weight:700;margin-bottom:20px">Étape 2 — au moins 6 caractères.</div><div class="gs-ob11-passwrap"><input class="auth-inp" id="auth-password2" type="password" data-gs-password="1" placeholder="Mot de passe" autocomplete="new-password"><button type="button" class="gs-ob11-eye" onclick="var i=document.getElementById(\'auth-password2\');if(i){i.type=i.type===\'password\'?\'text\':\'password\';this.textContent=i.type===\'password\'?\'Voir\':\'Masquer\'}">Voir</button></div><div class="auth-err" id="auth-err-s2"></div><button type="button" class="auth-btn" onclick="authSignupNext2()" style="margin-top:8px">Continuer →</button>';
+    s3.innerHTML='<button type="button" onclick="authShowView(\'signup-s2\')" style="background:none;border:none;color:var(--mut);font-size:13px;font-weight:800;cursor:pointer;padding:0 0 16px;display:flex;align-items:center;gap:6px">← Retour</button><div style="display:flex;gap:5px;margin-bottom:24px"><div style="flex:1;height:3px;border-radius:99px;background:var(--acc)"></div><div style="flex:1;height:3px;border-radius:99px;background:var(--acc)"></div><div style="flex:1;height:3px;border-radius:99px;background:var(--acc)"></div></div><div class="auth-sub" style="font-size:28px;margin-bottom:6px">Username</div><div style="font-size:13px;color:var(--mut);font-weight:700;margin-bottom:20px">Étape 3 — visible par ta Squad.</div><div style="position:relative;margin-bottom:8px"><span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--mut);font-size:16px;font-weight:900;pointer-events:none">@</span><input class="auth-inp" id="auth-username" type="text" placeholder="ex: dany_lifts" autocomplete="off" maxlength="20" style="padding-left:34px" oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,\'\').toLowerCase();authCheckUsername(this.value)"></div><div id="auth-username-hint" style="font-size:12px;color:var(--mut);font-weight:700;margin-bottom:16px;min-height:18px"></div><div class="auth-err" id="auth-err-s3"></div><div class="auth-loader" id="auth-loader-signup" style="display:none;color:var(--mut);font-size:13px;text-align:center;padding:8px">Création du compte…</div><button type="button" class="auth-btn" onclick="doSignup()" style="margin-top:8px">Créer mon compte</button>';
+  }
+
+  var oldAuthShow=window.authShowView;
+  window.authShowView=function(view){
+    rebuildSignupViews();
+    ['landing','login','signup-s1','signup-s2','signup-s3'].forEach(function(v){var el=$('auth-view-'+v);if(el)el.style.display=v===view?'':'none'});
+    ['auth-err','auth-err-s1','auth-err-s2','auth-err-s3'].forEach(function(id){var el=$(id);if(el)el.textContent=''})
+  };
+
+  window.authSignupNext1=function(){
+    rebuildSignupViews();
+    var email=(($('auth-email2')||{}).value||'').trim().toLowerCase();
+    var err=$('auth-err-s1');
+    if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(err)err.textContent='Adresse email invalide.';return}
+    ensureState().profil.email=email; save(); window.authShowView('signup-s2');
+  };
+  window.authSignupNext2=function(){
+    var pass=(($('auth-password2')||{}).value||'');
+    var err=$('auth-err-s2');
+    if(pass.length<6){if(err)err.textContent='Mot de passe trop court (6 min).';return}
+    window.authShowView('signup-s3');
+  };
+
+  window.afterAuth=async function(user){
+    if(!user || !user.id){
+      showAuth('login');
+      toast('Compte créé. Connecte-toi après validation si Supabase le demande.');
+      return false;
+    }
+    window._supaUser=user;
+    hideAppGates();
+    try{await loadFromSupabase(user.id)}catch(e){console.warn('loadFromSupabase failed',e)}
+    var st=ensureState(),p=st.profil||{};
+    if(user.email)p.email=user.email;
+    if(window._pendingUsername){p.username=window._pendingUsername;window._pendingUsername=''}
+    st.profil=p;
+    try{
+      if(window._supa&&window._supa.from){
+        await window._supa.from('profiles').upsert({id:user.id,email:user.email||p.email||null,username:p.username||null,display_name:p.name||p.display_name||null,data:st,updated_at:new Date().toISOString()},{onConflict:'id'});
+      }
+    }catch(e){console.warn('profile upsert failed',e)}
+    save();
+    if(!st.onboarded){
+      if(typeof window.openOnboardingWizard==='function')window.openOnboardingWizard(0);
+      else if(typeof window.renderOb11==='function'){window.OB11=window.OB11||{step:0,total:11,password:''};window.OB11.step=0;window.renderOb11();}
+      else {var ob=$('onboard');if(ob)ob.style.display='flex'}
+    }else{
+      try{if(typeof bootApp==='function')bootApp()}catch(e){console.error(e);showAuth('landing')}
+    }
+    return true;
+  };
+
+  window.doSignup=async function(){
+    rebuildSignupViews();
+    var email=(($('auth-email2')||{}).value||'').trim().toLowerCase();
+    var pass=(($('auth-password2')||{}).value||'');
+    var username=(($('auth-username')||{}).value||'').trim().replace(/^@/,'').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();
+    if(!email || !pass || !username){window.authShowView(!email?'signup-s1':(!pass?'signup-s2':'signup-s3'));authShowErr('Remplis tous les champs.');return}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){window.authShowView('signup-s1');authShowErr('Adresse email invalide.');return}
+    if(pass.length<6){window.authShowView('signup-s2');authShowErr('Mot de passe trop court (6 min).');return}
+    if(username.length<3){window.authShowView('signup-s3');authShowErr('Username trop court (3 min).');return}
+    if(!window._supa||!window._supa.auth){toast('Supabase indisponible. Tu peux continuer sans compte.');return}
+    try{if(typeof setAuthLoading==='function')setAuthLoading(true)}catch(e){}
+    try{
+      try{
+        var check=await window._supa.from('profiles').select('id').eq('username',username).maybeSingle();
+        if(check&&check.data){try{setAuthLoading(false)}catch(e){};window.authShowView('signup-s3');authShowErr('Ce @username est déjà pris.');return}
+      }catch(e){console.warn('username check skipped',e)}
+      var res=await window._supa.auth.signUp({email:email,password:pass,options:{data:{username:username,display_name:username}}});
+      try{if(typeof setAuthLoading==='function')setAuthLoading(false)}catch(e){}
+      if(res.error){window.authShowView('signup-s3');authShowErr(res.error.message||'Création impossible.');return}
+      window._pendingUsername=username;
+      ensureState().profil.email=email; ensureState().profil.username=username; save();
+      var session=res.data&&res.data.session, user=res.data&&res.data.user;
+      if(session&&user){await window.afterAuth(user);toast('Compte créé');return}
+      showSignupSuccess(email);
+      toast('Compte créé. Vérifie tes mails si une confirmation est demandée.');
+    }catch(e){
+      try{if(typeof setAuthLoading==='function')setAuthLoading(false)}catch(_e){}
+      console.error('Signup failed',e);window.authShowView('signup-s3');authShowErr('Création impossible. Réessaie.');
+    }
+  };
+
+  var oldOb11Next=window.ob11Next;
+  if(typeof oldOb11Next==='function'){
+    window.ob11Next=async function(){
+      var before=(window.OB11&&typeof window.OB11.step==='number')?window.OB11.step:0;
+      await oldOb11Next.apply(this,arguments);
+      if(before>=10 || !$('gs-onboard-v11')){hideAppGates();try{if(typeof bootApp==='function')bootApp()}catch(e){}}
+      setTimeout(noBlankFallback,50);
+    };
+  }
+  var oldOb11Skip=window.ob11Skip;
+  if(typeof oldOb11Skip==='function'){
+    window.ob11Skip=function(){var r=oldOb11Skip.apply(this,arguments);hideAppGates();setTimeout(noBlankFallback,50);return r};
+  }
+  var oldGsObSkip=window.gsObSkip;
+  if(typeof oldGsObSkip==='function')window.gsObSkip=function(){var r=oldGsObSkip.apply(this,arguments);hideAppGates();setTimeout(noBlankFallback,50);return r};
+
+  document.addEventListener('DOMContentLoaded',function(){rebuildSignupViews();setTimeout(noBlankFallback,600);setTimeout(noBlankFallback,1800)});
+  if(document.readyState!=='loading'){rebuildSignupViews();setTimeout(noBlankFallback,200)}
+})();
+</script>
+
+
+<!-- G-SQUAD PATCH — route create account to 11-step onboarding -->
+<script id="gs-route-signup-to-ob11">
+(function(){
+  function open11(){
+    try{
+      var auth=document.getElementById('auth-screen');
+      if(auth) auth.style.display='none';
+      var onboard=document.getElementById('onboard');
+      if(onboard) onboard.style.display='none';
+      if(window.OB11) window.OB11.step=0;
+      if(typeof window.openOnboardingWizard==='function') window.openOnboardingWizard(0);
+      else if(typeof window.renderOb11==='function') window.renderOb11();
+      else {
+        if(auth) auth.style.display='flex';
+        if(window._oldAuthShowViewFor11) window._oldAuthShowViewFor11('signup-s1');
+      }
+    }catch(e){console.warn('open 11-step signup failed',e)}
+  }
+  window.openSignup11=open11;
+  if(!window._oldAuthShowViewFor11 && typeof window.authShowView==='function') window._oldAuthShowViewFor11=window.authShowView;
+  window.authShowView=function(view){
+    if(view==='signup-s1'||view==='signup'||view==='signup11'||view==='onboarding') { open11(); return; }
+    if(window._oldAuthShowViewFor11) return window._oldAuthShowViewFor11(view);
+  };
+  document.addEventListener('DOMContentLoaded',function(){
+    setTimeout(function(){
+      document.querySelectorAll('button').forEach(function(btn){
+        var oc=btn.getAttribute('onclick')||'';
+        if(oc.indexOf("authShowView('signup-s1')")!==-1 || oc.indexOf('authShowView(\"signup-s1\")')!==-1){
+          btn.setAttribute('onclick','openSignup11()');
+        }
+      });
+    },80);
+  });
+})();
+</script>
+
+
+
+<!-- PATCH 2026-05-02 — séance start compact + bibliothèque clean v8 -->
+<style id="gs-session-bib-clean-v8-css">
+  /* Séance : bouton start compact */
+  .session-clean .sess-start-dock{
+    position:sticky!important;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 86px)!important;
+    z-index:44!important;
+    margin:10px 0 2px!important;
+    padding:8px!important;
+    border-radius:22px!important;
+    border:1px solid rgba(255,255,255,.08)!important;
+    background:rgba(7,10,14,.72)!important;
+    backdrop-filter:blur(18px)!important;
+    -webkit-backdrop-filter:blur(18px)!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:10px!important;
+    box-shadow:0 14px 40px rgba(0,0,0,.28)!important;
+  }
+  .session-clean .sess-start-mini-copy{min-width:0;line-height:1.12;padding-left:4px}
+  .session-clean .sess-start-mini-copy b{display:block;font-size:13px;font-weight:1000;color:var(--txt);letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .session-clean .sess-start-mini-copy span{display:block;margin-top:3px;font-size:10px;font-weight:850;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .session-clean .sess-start-dock #start-sess-btn{
+    width:auto!important;
+    min-width:104px!important;
+    height:42px!important;
+    padding:0 16px!important;
+    border-radius:999px!important;
+    font-size:13px!important;
+    font-weight:1000!important;
+    letter-spacing:-.01em!important;
+    white-space:nowrap!important;
+    box-shadow:0 10px 26px rgba(0,0,0,.35)!important;
+  }
+  .session-clean .sess-start-dock #start-sess-btn.is-live{min-width:92px!important;background:rgba(115,214,162,.16)!important;color:var(--grn)!important;border:1px solid rgba(115,214,162,.28)!important;box-shadow:none!important}
+
+  /* Bibliothèque : structure plus lisible, sans doublons visuels */
+  #exo-slide-bib > div:first-child{
+    background:rgba(7,10,14,.88)!important;
+    border-bottom:1px solid rgba(255,255,255,.07)!important;
+    padding:12px 14px 10px!important;
+  }
+  #bib-search{
+    height:44px!important;
+    border-radius:17px!important;
+    border:1px solid rgba(255,255,255,.08)!important;
+    background:rgba(255,255,255,.055)!important;
+    font-size:14px!important;
+    font-weight:750!important;
+  }
+  #bib-filters,#bib-type-filters{gap:7px!important;padding-bottom:7px!important;scrollbar-width:none!important}
+  #bib-filters::-webkit-scrollbar,#bib-type-filters::-webkit-scrollbar{display:none!important}
+  #exo-slide-bib .exos-filt{
+    border-radius:999px!important;
+    border:1px solid rgba(255,255,255,.08)!important;
+    background:rgba(255,255,255,.045)!important;
+    color:var(--txt2)!important;
+    font-size:12px!important;
+    font-weight:950!important;
+    padding:8px 12px!important;
+  }
+  #exo-slide-bib .exos-filt.act{
+    background:var(--txt)!important;
+    color:#071018!important;
+    border-color:var(--txt)!important;
+  }
+  #bib-list{padding:12px 14px 100px!important;background:transparent!important}
+  .gs-bib-v8-summary{
+    position:sticky;top:0;z-index:5;
+    margin:-12px -14px 12px!important;
+    padding:12px 14px 10px!important;
+    background:linear-gradient(180deg,rgba(7,10,14,.98),rgba(7,10,14,.90))!important;
+    border-bottom:1px solid rgba(255,255,255,.06)!important;
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  }
+  .gs-bib-v8-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .gs-bib-v8-head b{display:block;font-size:20px;font-weight:1000;color:var(--txt);letter-spacing:-.05em;line-height:1}
+  .gs-bib-v8-head span{display:block;font-size:11px;font-weight:850;color:var(--mut);margin-top:4px;line-height:1.25}
+  .gs-bib-v8-count{flex:0 0 auto;border-radius:999px;border:1px solid rgba(143,185,255,.22);background:rgba(143,185,255,.09);color:var(--acc);font-size:11px;font-weight:1000;padding:7px 10px;white-space:nowrap}
+  .gs-bib-v8-active{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}.gs-bib-v8-active::-webkit-scrollbar{display:none}
+  .gs-bib-v8-chip{flex:0 0 auto;border-radius:999px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08);color:var(--txt2);font-size:11px;font-weight:900;padding:7px 10px;white-space:nowrap}
+  .gs-bib-section.v8{margin:18px 0 9px!important;font-size:11px!important;color:var(--mut)!important;font-weight:1000!important;text-transform:uppercase!important;letter-spacing:.12em!important;display:flex!important;align-items:center!important;gap:9px!important}
+  .gs-bib-section.v8:after{content:'';height:1px;background:rgba(255,255,255,.07);flex:1}
+  .gs-bib-card.v8{
+    position:relative;overflow:hidden;
+    background:linear-gradient(145deg,rgba(18,24,33,.98),rgba(12,17,23,.96))!important;
+    border:1px solid rgba(255,255,255,.075)!important;
+    border-radius:23px!important;
+    padding:15px!important;
+    margin-bottom:10px!important;
+    box-shadow:0 12px 36px rgba(0,0,0,.16)!important;
+  }
+  .gs-bib-card.v8:before{content:'';position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:999px;background:rgba(143,185,255,.44)}
+  .gs-bib-card.v8.heavy:before{background:rgba(245,243,238,.72)}
+  .gs-bib-card.v8.poly:before{background:rgba(143,185,255,.72)}
+  .gs-bib-card.v8.assist:before{background:rgba(115,214,162,.72)}
+  .gs-bib-card.v8.iso:before{background:rgba(246,199,109,.72)}
+  .gs-bib-card.v8.recovery:before{background:rgba(167,176,188,.72)}
+  .gs-bib-v8-top{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start}
+  .gs-bib-v8-name{font-size:15px;font-weight:1000;line-height:1.22;color:var(--txt);letter-spacing:-.025em;margin-bottom:7px}
+  .gs-bib-v8-focus{font-size:12px;color:var(--txt2);font-weight:760;line-height:1.36;margin-bottom:10px}
+  .gs-bib-v8-focus b{color:var(--txt);font-weight:950}
+  .gs-bib-v8-xp{border-radius:15px;border:1px solid rgba(143,185,255,.22);background:rgba(143,185,255,.09);padding:9px 10px;text-align:center;min-width:66px;white-space:nowrap}
+  .gs-bib-v8-xp b{display:block;color:var(--acc);font-size:16px;font-weight:1000;line-height:1}.gs-bib-v8-xp span{display:block;color:var(--mut);font-size:9px;font-weight:950;text-transform:uppercase;letter-spacing:.07em;margin-top:3px}
+  .gs-bib-v8-tags{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
+  .gs-bib-v8-tag{border-radius:999px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);color:var(--txt2);font-size:10px;font-weight:950;padding:6px 8px;line-height:1}
+  .gs-bib-v8-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gs-bib-v8-actions a,.gs-bib-v8-actions button{min-height:38px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.05);color:var(--txt);font-size:12px;font-weight:950;display:flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;font-family:inherit}
+  .gs-bib-v8-actions button{cursor:pointer}
+  .gs-empty-v8{border:1px dashed rgba(255,255,255,.10);border-radius:22px;padding:34px 18px;text-align:center;color:var(--mut);font-size:13px;font-weight:800;background:rgba(255,255,255,.025)}
+</style>
+<script id="gs-session-bib-clean-v8-js">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function strip(v){try{return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()}catch(e){return String(v||'').toLowerCase().trim()}}
+  function symbol(name){
+    var d={youtube:'M10 9l5 3-5 3z M3 7s0-2 2-2h14c2 0 2 2 2 2v10s0 2-2 2-2H5c-2 0-2-2-2-2z',tiktok:'M14 3v10a4 4 0 1 1-4-4'}[name]||'M4 12h16';
+    return '<span class="gs-symbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg></span>';
+  }
+  function typeLabel(t){var m={Machine:'Machine','Câble':'Poulie',Cable:'Poulie',Poulie:'Poulie','Poids du corps':'Poids du corps',Barre:'Barre','Haltères':'Haltères'};return m[t]||t||'Exercice'}
+  function groupLabel(g){return {pecs:'Pectoraux',dos:'Dos',epaules:'Épaules',biceps:'Biceps',triceps:'Triceps',jambes:'Jambes',fessiers:'Fessiers',abdos:'Abdominaux',cardio:'Cardio / explosivité'}[g]||g||'Autre'}
+  function xpProfile(ex){try{if(typeof window.gsXPExerciseInfo==='function')return window.gsXPExerciseInfo(ex)}catch(e){}return {doneXP:ex.xp||10,label:ex.xpLabel||'Assistance',css:ex.xpCss||'assist'}}
+  function focus(ex){try{if(typeof window.getExerciseFocus==='function')return window.getExerciseFocus(ex)}catch(e){}return {main:ex.m||'Zone travaillée',detail:'Détail musculaire à préciser.'}}
+  function matches(ex,search){try{if(typeof window.gsExerciseMatchesSearch==='function')return window.gsExerciseMatchesSearch(ex,search)}catch(e){}var q=strip(search);return !q||strip([ex.n,ex.m,ex.t,ex.g,ex.xpLabel].join(' ')).indexOf(q)>-1}
+  function rank(ex,search){try{if(typeof window.gsExerciseSearchRank==='function')return window.gsExerciseSearchRank(ex,search)}catch(e){}return search?2:50}
+  function alias(ex,search){try{if(typeof window.gsExerciseAliases!=='function')return '';var q=strip(search);if(!q)return '';var hit=(window.gsExerciseAliases(ex)||[]).find(function(a){return strip(a)===q || strip(a).replace(/[^a-z0-9]/g,'')===q.replace(/[^a-z0-9]/g,'')});if(!hit)return '';return '<span class="gs-bib-v8-tag">Alias : '+E(hit)+'</span>'}catch(e){return ''}}
+  function activeChips(search,group,type){
+    var chips=[]; if(search)chips.push('Recherche : '+search); if(group)chips.push(groupLabel(group)); if(type)chips.push(typeLabel(type)); if(!chips.length)chips.push('Tous les exercices');
+    return '<div class="gs-bib-v8-active">'+chips.map(function(c){return '<span class="gs-bib-v8-chip">'+E(c)+'</span>'}).join('')+'</div>';
+  }
+  function cleanFilterLabels(){
+    var labels={ 'btf-all':'Tout','btf-machine':'Machine','btf-cable':'Poulie','btf-corps':'Poids du corps','btf-barre':'Barre','btf-halt':'Haltères' };
+    Object.keys(labels).forEach(function(id){var el=$(id); if(el)el.textContent=labels[id];});
+    var s=$('bib-search'); if(s)s.placeholder='Rechercher : RDL, DC, DI, SDT…';
+  }
+  var prevRender=window.renderSeance;
+  function compactStart(){
+    var dock=document.querySelector('.session-clean .sess-start-dock'); if(!dock)return;
+    var btn=dock.querySelector('#start-sess-btn'); if(!btn)return;
+    if(!dock.querySelector('.sess-start-mini-copy'))dock.insertAdjacentHTML('afterbegin','<div class="sess-start-mini-copy"><b>Séance</b><span>Action rapide</span></div>');
+    btn.textContent=btn.classList.contains('is-live')?'En cours':'Démarrer';
+  }
+  window.renderSeance=function(){ if(typeof prevRender==='function')prevRender.apply(this,arguments); compactStart(); };
+  setTimeout(compactStart,80); setTimeout(compactStart,500);
+
+  window.renderBib=function(){
+    cleanFilterLabels();
+    try{if(typeof window.gsApplyExerciseXPToLibrary==='function')window.gsApplyExerciseXPToLibrary()}catch(e){}
+    var el=$('bib-list'); if(!el||!window.EXOS_DB)return;
+    var search=($('bib-search')?$('bib-search').value:'').trim();
+    var group=window.bibFilter||''; var type=window.bibTypeFilter||'';
+    var order=['pecs','dos','epaules','biceps','triceps','jambes','fessiers','abdos','cardio'];
+    var all=(window.EXOS_DB||[]).filter(function(e){
+      var typeOk=!type||e.t===type||e.t===(type==='Cable'?'Câble':type)||e.t===(type==='Poulie'?'Câble':type);
+      return (!group||e.g===group)&&typeOk&&matches(e,search);
+    }).sort(function(a,b){
+      return rank(a,search)-rank(b,search)||(order.indexOf(a.g)-order.indexOf(b.g))||((xpProfile(b).doneXP||0)-(xpProfile(a).doneXP||0))||String(a.n||'').localeCompare(String(b.n||''),'fr');
+    });
+    var html='<div class="gs-bib-v8-summary"><div class="gs-bib-v8-head"><div><b>Bibliothèque</b><span>Triée par groupe, zone travaillée et valeur XP.</span></div><div class="gs-bib-v8-count">'+all.length+' exos</div></div>'+activeChips(search,group,type)+'</div>';
+    if(!all.length){el.innerHTML=html+'<div class="gs-empty-v8">Aucun exercice trouvé. Essaie un alias comme RDL, DC ou SDT.</div>';return;}
+    var cur='';
+    all.forEach(function(e){
+      if(e.g!==cur){cur=e.g;html+='<div class="gs-bib-section v8">'+E(groupLabel(cur))+'</div>'}
+      var p=xpProfile(e), f=focus(e), yt=e.yt||('https://www.youtube.com/results?search_query='+encodeURIComponent((e.n||'exercice')+' technique musculation'));
+      var css=E(p.css||p.type||'assist');
+      html+='<article class="gs-bib-card v8 '+css+'">'
+        +'<div class="gs-bib-v8-top"><div><div class="gs-bib-v8-name">'+E(e.n||'Exercice')+'</div><div class="gs-bib-v8-focus"><b>'+E(f.main||e.m||'Zone travaillée')+'</b> · '+E(f.detail||e.m||'Détail musculaire')+'</div></div><div class="gs-bib-v8-xp"><b>+'+E(p.doneXP||e.xp||0)+'</b><span>XP</span></div></div>'
+        +'<div class="gs-bib-v8-tags"><span class="gs-bib-v8-tag">'+E(typeLabel(e.t))+'</span><span class="gs-bib-v8-tag">'+E(groupLabel(e.g))+'</span><span class="gs-bib-v8-tag">'+E(p.label||e.xpLabel||'Assistance')+'</span>'+alias(e,search)+'</div>'
+        +'<div class="gs-bib-v8-actions"><a href="'+E(yt)+'" target="_blank">'+symbol('youtube')+' YouTube</a><button type="button" data-ex="'+E(e.n||'')+'" onclick="return openTikTokForExercise(this.dataset.ex)">'+symbol('tiktok')+' TikTok</button></div>'
+        +'</article>';
+    });
+    el.innerHTML=html;
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){cleanFilterLabels();try{window.renderBib()}catch(e){}},100)});else setTimeout(function(){cleanFilterLabels();try{window.renderBib()}catch(e){}},100);
+  setTimeout(function(){cleanFilterLabels();try{window.renderBib()}catch(e){}},700);
+})();
+</script>
+
+
+
+<!-- PATCH 2026-05-02 — Smart program proposal based on BMI + goal -->
+<style id="gs-smart-program-ob11-css">
+  .gs-sp-card{background:rgba(18,24,33,.92);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:16px;margin:12px 0;text-align:left}
+  .gs-sp-kicker{font-size:10px;font-weight:1000;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);margin-bottom:8px}
+  .gs-sp-title{font-size:22px;font-weight:1000;letter-spacing:-.045em;line-height:1.05;color:var(--txt);margin-bottom:7px}
+  .gs-sp-sub{font-size:12px;font-weight:750;line-height:1.45;color:var(--txt2)}
+  .gs-sp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .gs-sp-metric{border-radius:17px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.04);padding:12px;text-align:left}
+  .gs-sp-metric b{display:block;font-size:18px;font-weight:1000;color:var(--txt);line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gs-sp-metric span{display:block;margin-top:5px;font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:var(--mut)}
+  .gs-sp-list{display:grid;gap:8px;margin-top:12px}
+  .gs-sp-day{display:grid;grid-template-columns:74px 1fr;gap:10px;align-items:start;border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.035);padding:11px}
+  .gs-sp-day b{font-size:11px;font-weight:1000;letter-spacing:.08em;color:var(--acc);text-transform:uppercase}
+  .gs-sp-day span{font-size:13px;font-weight:900;color:var(--txt);line-height:1.25}
+  .gs-sp-day small{display:block;margin-top:3px;font-size:11px;font-weight:650;color:var(--mut);line-height:1.35}
+  .gs-sp-alert{border-radius:16px;border:1px solid rgba(246,199,109,.25);background:rgba(246,199,109,.08);padding:12px;margin-top:12px;color:#f6c76d;font-size:12px;font-weight:800;line-height:1.45}
+  .gs-sp-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:14px}
+  .gs-sp-actions button{width:100%;border-radius:17px;border:1px solid rgba(255,255,255,.08);padding:13px 12px;font-size:13px;font-weight:1000;cursor:pointer;background:rgba(255,255,255,.05);color:var(--txt)}
+  .gs-sp-actions button.primary{background:var(--txt);color:#071018;border-color:var(--txt)}
+  .gs-ob11-noemoji .gs-ob11-title,.gs-ob11-noemoji .gs-ob11-sub,.gs-ob11-noemoji button{font-family:'DM Sans',system-ui,-apple-system,BlinkMacSystemFont,sans-serif!important}
+</style>
+<script id="gs-smart-program-ob11-js">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
+  function P(){return S().profil}
+  function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('ath7',JSON.stringify(window.state||{}))}catch(e){}}
+  function toast(m){try{if(typeof window.notify==='function')window.notify(m);else console.log('[G-SQUAD]',m)}catch(e){console.log('[G-SQUAD]',m)}}
+  function clamp(n,min,max){n=parseInt(n,10);if(!n)return min;return Math.max(min,Math.min(max,n))}
+  function num(v){return parseFloat(String(v||'').replace(',','.'))||0}
+  var STEP_IDS=['email','password','username','name','height','weight','bmi','goal','nutrition','program','start'];
+  var DAYS_LABELS=['LUNDI','MARDI','MERCREDI','JEUDI','VENDREDI','SAMEDI','DIMANCHE'];
+
+  function bmiInfo(profile){
+    var h=num(profile.taille||profile.height), w=num(profile.poids||profile.weight);
+    if(!h||!w)return {value:null,label:'Non renseigné',zone:'unknown',note:'Taille ou poids manquant : proposition standard et modifiable.'};
+    var b=Math.round((w/Math.pow(h/100,2))*10)/10;
+    if(b<18.5)return {value:b,label:'Sous-poids',zone:'low',note:'Priorité construction musculaire, récupération et calories suffisantes.'};
+    if(b<25)return {value:b,label:'Zone normale',zone:'normal',note:'Objectif et fréquence déterminent surtout le programme.'};
+    if(b<30)return {value:b,label:'Surpoids',zone:'high',note:'Recomposition/perte progressive, cardio bas impact et force régulière.'};
+    return {value:b,label:'IMC élevé',zone:'very_high',note:'Progression progressive, machines stables, cardio doux et articulations protégées.'};
+  }
+
+  function macroSmart(profile){
+    var w=num(profile.poids||profile.weight)||75,h=num(profile.taille||profile.height)||175,age=parseInt(profile.age||25,10)||25;
+    var freq=clamp(profile.frequency||profile.frequence||4,2,6), obj=profile.objectif||'maintien', b=bmiInfo(profile);
+    var bmr=Math.round(10*w+6.25*h-5*age+5);
+    var mult=1.32+(Math.min(freq,6)*0.055);
+    var maintenance=Math.round(bmr*mult);
+    var target=maintenance;
+    if(obj==='perte')target-= b.zone==='low'?0:(b.zone==='normal'?250:350);
+    if(obj==='prise')target+= b.zone==='high'||b.zone==='very_high'?0:250;
+    target=Math.max(1450,Math.round(target/10)*10);
+    return {kcal:target,maintenance:Math.round(maintenance/10)*10,prot:Math.round(w*(obj==='perte'?2.1:obj==='prise'?2.0:1.8)),carbs:Math.round((target*0.43)/4),fat:Math.round((target*0.27)/9)};
+  }
+
+  function smartProgram(profile){
+    profile=profile||P();
+    var b=bmiInfo(profile), obj=profile.objectif||'maintien', freq=clamp(profile.frequency||profile.frequence||4,2,6);
+    var effective=obj, warnings=[];
+    if(b.zone==='low' && obj==='perte'){
+      effective='maintien';
+      warnings.push('Objectif perte ajusté : avec cet IMC, l’app propose maintien/recomposition plutôt qu’un déficit agressif.');
+    }
+    if((b.zone==='high'||b.zone==='very_high') && obj==='prise'){
+      effective='maintien';
+      warnings.push('Objectif prise ajusté : avec cet IMC, priorité recomposition avant surplus calorique.');
+    }
+    var split=freq<=2?'Full body 2 jours':freq===3?'Full body 3 jours':freq===4?'Upper / Lower 4 jours':'PPL + Upper/Lower 5 jours';
+    var name='Programme Base';
+    var priority='Progression technique et régularité';
+    var cardio='Marche active 1 à 2 fois/semaine';
+    var intensity='RPE 7-8, 1 à 3 reps en réserve';
+    var avoid='Échec musculaire systématique';
+    var volume='Volume modéré';
+    if(effective==='perte'){
+      name=b.zone==='very_high'?'Recomposition progressive':'Fat Loss Performance';
+      priority='Force maintenue, dépense maîtrisée, fatigue contrôlée';
+      cardio=b.zone==='normal'?'Cardio léger 2 fois/semaine':'Marche inclinée ou vélo doux 2 à 3 fois/semaine';
+      intensity='RPE 7, repos courts/modérés';
+      avoid='Sauts, sprints et volume excessif si récupération basse';
+      volume='3 à 4 exercices forts + 1 cardio court';
+    }else if(effective==='prise'){
+      name=b.zone==='low'?'Muscle Build Prioritaire':'Hypertrophie contrôlée';
+      priority='Surcharge progressive, polyarticulaires, récupération';
+      cardio='Cardio minimum : 1 marche douce/semaine';
+      intensity='RPE 8, progression charge ou reps chaque semaine';
+      avoid='Trop de cardio et séances à jeun';
+      volume='Volume plus élevé, 10 à 16 séries/groupe/semaine';
+    }else{
+      name=b.zone==='high'||b.zone==='very_high'?'Recomposition stable':'Recomposition équilibrée';
+      priority='Construire du muscle sans exploser la fatigue';
+      cardio=b.zone==='normal'?'Marche ou vélo 1 à 2 fois/semaine':'Marche active 2 fois/semaine';
+      intensity='RPE 7-8, progression régulière';
+      avoid='Changer de programme toutes les semaines';
+      volume='Volume équilibré';
+    }
+    if(b.zone==='very_high'){
+      split=freq>=4?'Upper / Lower progressif':'Full body progressif';
+      intensity='RPE 6-7 au début, montée progressive';
+      avoid='Impacts répétés, sprints, sauts lourds, échec musculaire fréquent';
+    }
+    if(b.zone==='low'){
+      cardio='Cardio limité : mobilité + marche légère';
+      avoid='Déficit calorique et cardio long inutile';
+    }
+    return {name:name,objective:obj,effectiveObjective:effective,bmi:b,frequency:freq,split:split,priority:priority,cardio:cardio,intensity:intensity,avoid:avoid,volume:volume,warnings:warnings,macros:macroSmart(profile)};
+  }
+
+  function ex(n,s,note,yt){return {n:n,s:s,note:note||'',yt:yt||('https://www.youtube.com/results?search_query='+encodeURIComponent(n+' technique musculation'))}}
+  function recoveryDay(name,type){return {name:name,type:type||'Récupération active',dur:'30-45 min',exercises:[ex('Marche active','30-45 min','Zone facile, tu dois pouvoir parler.'),ex('Mobilité hanches épaules','10 min','Amplitude propre, zéro douleur.'),ex('Étirements doux','8-12 min','Récupération, pas performance.')]}}
+  function day(name,type,dur,arr){return {name:name,type:type,dur:dur,exercises:arr}}
+  function fullA(plan){var high=plan.bmi.zone==='high'||plan.bmi.zone==='very_high', prise=plan.effectiveObjective==='prise';return day('LUNDI','Full Body A',prise?'70 min':'60 min',[ex(high?'Chest Press machine':'Développé couché barre',prise?'4 x 6-10 reps':'3 x 8-10 reps','Pectoraux + triceps, progression propre.'),ex('Tirage vertical','3 x 8-12 reps','Grand dorsal, contrôle complet.'),ex(high?'Presse à cuisses':'Squat barre',prise?'4 x 8-10 reps':'3 x 8-10 reps','Polyarticulaire jambes.'),ex('Leg Curl assis machine','3 x 10-12 reps','Ischios, protection genou.'),ex('Gainage planche','3 x 30-45 s','Tronc solide.')])}
+  function fullB(plan){var high=plan.bmi.zone==='high'||plan.bmi.zone==='very_high', prise=plan.effectiveObjective==='prise';return day('MERCREDI','Full Body B',prise?'70 min':'60 min',[ex(high?'Row machine':'Rowing barre',prise?'4 x 8-10 reps':'3 x 8-12 reps','Épaisseur du dos.'),ex('Shoulder Press machine','3 x 8-10 reps','Épaules + triceps sans surcharge inutile.'),ex('Soulevé de terre roumain','3 x 8-10 reps','Ischios + fessiers.'),ex('Fentes marchées haltères','3 x 10 reps par jambe','Jambes, fessiers, stabilité.'),ex('Crunch câble','3 x 12-15 reps','Abdos en contrôle.')])}
+  function fullC(plan){var perte=plan.effectiveObjective==='perte', high=plan.bmi.zone==='high'||plan.bmi.zone==='very_high';return day('VENDREDI','Full Body C',perte?'55 min':'65 min',[ex(high?'Presse à cuisses':'Hack Squat machine','3 x 10-12 reps','Quadriceps + fessiers.'),ex('Tractions assistées machine','3 x 6-10 reps','Dos + biceps, progression vers poids du corps.'),ex('Développé incliné haltères','3 x 8-12 reps','Haut des pectoraux.'),ex('Hip Thrust machine ou barre','3 x 10-12 reps','Fessiers, extension de hanche.'),ex(perte?'Tapis incliné':'Élévations latérales','12-20 min','Finisher adapté à l’objectif.')])}
+  function upperA(plan){return day('LUNDI','Upper A',plan.effectiveObjective==='prise'?'75 min':'65 min',[ex('Développé couché barre','4 x 6-8 reps','Force pectoraux.'),ex('Tirage vertical','4 x 8-10 reps','Dos largeur.'),ex('Développé incliné haltères','3 x 8-10 reps','Haut des pectoraux.'),ex('Row machine','3 x 10-12 reps','Épaisseur du dos.'),ex('Élévations latérales','3 x 12-15 reps','Deltoïde moyen.'),ex('Extension triceps à la poulie','3 x 10-12 reps','Triceps.')])}
+  function lowerA(plan){var high=plan.bmi.zone==='high'||plan.bmi.zone==='very_high';return day('MARDI','Lower A',plan.effectiveObjective==='prise'?'75 min':'65 min',[ex(high?'Presse à cuisses':'Squat barre','4 x 6-10 reps','Base jambes.'),ex('Soulevé de terre roumain','3 x 8-10 reps','Ischios + fessiers.'),ex('Leg Curl assis machine','3 x 10-12 reps','Ischios.'),ex('Abducteurs machine','3 x 12-15 reps','Moyen fessier.'),ex('Mollets debout machine','3 x 12-20 reps','Mollets.'),ex('Gainage','3 x 40 s','Tronc.')])}
+  function upperB(plan){return day('JEUDI','Upper B','65-70 min',[ex('Shoulder Press machine','3 x 8-10 reps','Épaules.'),ex('Tractions assistées machine','4 x 6-10 reps','Dos + biceps.'),ex('Chest Press convergente','3 x 8-12 reps','Pectoraux.'),ex('Low Row machine','3 x 10-12 reps','Dos épaisseur.'),ex('Face Pull','3 x 12-15 reps','Arrière épaule + posture.'),ex('Curl barre EZ','3 x 10-12 reps','Biceps.')])}
+  function lowerB(plan){var perte=plan.effectiveObjective==='perte';return day('VENDREDI','Lower B',perte?'60 min':'70 min',[ex('Hip Thrust barre','4 x 8-12 reps','Fessiers.'),ex('Hack Squat machine','3 x 8-12 reps','Quadriceps.'),ex('Leg Extension machine','3 x 12-15 reps','Quadriceps isolés.'),ex('Leg Curl couché machine','3 x 10-12 reps','Ischios.'),ex('Abducteurs machine','3 x 15-20 reps','Côté des fessiers.'),ex(perte?'Tapis incliné':'Crunch câble','12-18 min','Finisher adapté.')])}
+  function pushDay(plan){return day('LUNDI','Push','70-75 min',[ex('Développé couché barre','4 x 6-8 reps'),ex('Développé incliné haltères','3 x 8-10 reps'),ex('Shoulder Press machine','3 x 8-10 reps'),ex('Élévations latérales','3 x 12-15 reps'),ex('Extension triceps à la poulie','3 x 10-12 reps')])}
+  function pullDay(plan){return day('MARDI','Pull','70 min',[ex('Tractions assistées machine','4 x 6-10 reps'),ex('Rowing barre','4 x 8-10 reps'),ex('Tirage vertical','3 x 10-12 reps'),ex('Face Pull','3 x 12-15 reps'),ex('Curl barre EZ','3 x 10-12 reps')])}
+  function legsDay(plan){return day('MERCREDI','Legs','75 min',[ex(plan.bmi.zone==='very_high'?'Presse à cuisses':'Squat barre','4 x 6-10 reps'),ex('Soulevé de terre roumain','3 x 8-10 reps'),ex('Leg Curl assis machine','3 x 10-12 reps'),ex('Hip Thrust barre','3 x 8-12 reps'),ex('Mollets debout machine','3 x 12-20 reps')])}
+  function weeklyTemplate(plan){
+    var f=plan.frequency, arr=[];
+    if(f<=2){arr=[fullA(plan),recoveryDay('MARDI'),fullB(plan),recoveryDay('JEUDI'),recoveryDay('VENDREDI','Repos actif'),recoveryDay('SAMEDI','Marche / mobilité'),day('DIMANCHE','Repos complet','Repos',[ex('Repos complet','Libre','Sommeil, hydratation, pas de pression.')])]}
+    else if(f===3){arr=[fullA(plan),recoveryDay('MARDI'),fullB(plan),recoveryDay('JEUDI'),fullC(plan),recoveryDay('SAMEDI','Marche / mobilité'),day('DIMANCHE','Repos complet','Repos',[ex('Repos complet','Libre','Récupération complète.')])]}
+    else if(f===4){arr=[upperA(plan),lowerA(plan),recoveryDay('MERCREDI'),upperB(plan),lowerB(plan),recoveryDay('SAMEDI','Marche / mobilité'),day('DIMANCHE','Repos complet','Repos',[ex('Repos complet','Libre','Récupération complète.')])]}
+    else {arr=[pushDay(plan),pullDay(plan),legsDay(plan),recoveryDay('JEUDI'),upperB(plan),lowerB(plan),day('DIMANCHE','Repos complet','Repos',[ex('Repos complet','Libre','Récupération complète.')])]}
+    for(var i=0;i<7;i++){arr[i].name=DAYS_LABELS[i]}
+    return arr;
+  }
+
+  function applyProgram(){
+    var plan=smartProgram(P()), days=weeklyTemplate(plan);
+    var st=S();st.smartProgram=plan;st.profil.programProposal=plan.name+' — '+plan.split;st.profil.programRecommendation=plan;
+    if(Array.isArray(window.DAYS)){
+      for(var i=0;i<7;i++){window.DAYS[i]=days[i]}
+      st.customDays={};
+      days.forEach(function(d,idx){st.customDays[idx]=(d.exercises||[]).map(function(e){return {n:e.n,s:e.s,note:e.note||'',yt:e.yt||''}})});
+    }
+    save();
+    try{if(typeof window.renderSeance==='function')window.renderSeance();if(typeof window.renderProgBody==='function')window.renderProgBody()}catch(e){}
+    toast('Programme appliqué selon IMC + objectif');
+  }
+  window.gsApplySmartProgram=applyProgram;
+  window.gsGetSmartProgram=function(){return smartProgram(P())};
+
+  function closeOb11(){var el=$('gs-onboard-v11');if(el)el.remove();var ob=$('onboard');if(ob){ob.style.display='none';ob.innerHTML=''}}
+  function readCurrent(){var p=P(),s=STEP_IDS[(window.OB11&&window.OB11.step)||0],v=(($('ob11-main-input')||{}).value||'').trim();if(!v&&s==='password')v=(($('ob11-password-input')||{}).value||'').trim();if(v){if(s==='email')p.email=v;if(s==='password')window.OB11.password=v;if(s==='username')p.username=v.replace(/^@/,'').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();if(s==='name')p.name=v;if(s==='height')p.taille=v;if(s==='weight')p.poids=v}save()}
+  function sym(name){var d={mail:'M4 7h16v10H4z M4 7l8 6 8-6',lock:'M7 10V8a5 5 0 0 1 10 0v2 M6 10h12v10H6z',user:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M4 20a8 8 0 0 1 16 0',id:'M4 6h16v12H4z M8 10h4 M8 14h8',height:'M12 3v18 M8 7l4-4 4 4 M8 17l4 4 4-4',weight:'M7 8h10l2 12H5L7 8Z M9 8a3 3 0 0 1 6 0',bmi:'M4 18h16 M6 18V9 M12 18V5 M18 18v-7',goal:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z',nutrition:'M6 3v18 M10 3v18 M14 3c3 2 4 5 2 8v10',program:'M4 19V5 M4 19h16 M8 15l3-3 3 2 5-7',start:'M8 5v14l11-7Z'}[name]||'M4 12h16';return '<span class="gs-ob11-symbol"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg></span>'}
+  window.ob11TogglePassword=function(){var i=$('ob11-password-input');if(!i)return;i.type=i.type==='password'?'text':'password';var b=document.querySelector('.gs-ob11-eye');if(b)b.textContent=i.type==='password'?'Voir':'Masquer'};
+  window.ob11Pick=function(k,v){P()[k]=v;save();window.renderOb11()};
+  window.ob11SetFrequency=function(v){P().frequency=clamp(v,2,6);P().frequence=P().frequency;save();window.renderOb11()};
+  window.ob11SaveNutrition=function(){var m=macroSmart(P()),p=P();p.kcal=m.kcal;p.protein=m.prot;p.prot=m.prot;p.carbs=m.carbs;p.fat=m.fat;S().nutritionTarget={kcal:m.kcal,prot:m.prot,glucides:m.carbs,lipides:m.fat};save();toast('Base nutrition sauvegardée')};
+  window.ob11SaveProgram=function(){var plan=smartProgram(P());P().programProposal=plan.name+' — '+plan.split;P().programRecommendation=plan;S().smartProgram=plan;save();toast('Proposition sauvegardée')};
+  async function maybeCreateAccount(){var p=P(),email=(p.email||'').trim(),pass=(window.OB11&&window.OB11.password)||'';if(!email||!pass||!window._supa||window._supaUser)return true;try{var res=await window._supa.auth.signUp({email:email,password:pass,options:{data:{username:p.username||'',display_name:p.name||''}}});if(res.error){toast('Compte non créé : '+res.error.message+'. Tu continues en local.');return true}window._supaUser=res.data&&res.data.user?res.data.user:window._supaUser;try{if(window._supaUser){await window._supa.from('profiles').upsert({id:window._supaUser.id,email:email,username:p.username||null,display_name:p.name||null,data:S(),updated_at:new Date().toISOString()},{onConflict:'id'})}}catch(e){}return true}catch(e){toast('Compte non créé. Tu continues en local.');return true}}
+
+  window.ob11Next=async function(){readCurrent();var idx=window.OB11.step||0;if(STEP_IDS[idx]==='nutrition')window.ob11SaveNutrition();if(STEP_IDS[idx]==='program')window.ob11SaveProgram();if(idx<10){window.OB11.step=idx+1;window.renderOb11();return}await maybeCreateAccount();S().onboarded=true;S().onboardingComplete=true;save();closeOb11();try{if(typeof window.bootApp==='function')window.bootApp()}catch(e){}toast('Bienvenue sur G-SQUAD')};
+  window.ob11Prev=function(){readCurrent();if((window.OB11.step||0)>0){window.OB11.step--;window.renderOb11()}};
+  window.ob11SkipStep=function(){readCurrent();if((window.OB11.step||0)<10){window.OB11.step++;window.renderOb11()}else{window.ob11Skip()}};
+  window.ob11Skip=function(){S().onboarded=true;save();closeOb11();try{if(typeof window.bootApp==='function')window.bootApp()}catch(e){}toast('Tu peux compléter ça dans Profil')};
+
+  window.renderOb11=function(){
+    closeOb11();
+    window.OB11=window.OB11||{step:0,total:11,password:''};window.OB11.total=11;
+    var p=P(),idx=Math.max(0,Math.min(10,window.OB11.step||0)),s=STEP_IDS[idx],title='',sub='',body='',ico='id';
+    var b=bmiInfo(p), m=macroSmart(p), plan=smartProgram(p);
+    if(s==='email'){ico='mail';title='Email';sub='Étape 1/11. Pour synchroniser ton compte. Tu peux passer.';body='<input id="ob11-main-input" class="gs-ob11-input" type="email" inputmode="email" autocomplete="email" placeholder="email@exemple.com" value="'+E(p.email||'')+'"><div class="gs-ob11-hint">Inscription non obligatoire : tu peux utiliser l’app en local.</div>'}
+    if(s==='password'){ico='lock';title='Mot de passe';sub='Étape 2/11. Aperçu possible avant validation.';body='<div class="gs-ob11-passwrap"><input id="ob11-password-input" class="gs-ob11-input" type="password" autocomplete="new-password" placeholder="Mot de passe" value="'+E(window.OB11.password||'')+'"><button type="button" class="gs-ob11-eye" onclick="ob11TogglePassword()">Voir</button></div><div class="gs-ob11-hint">Minimum 6 caractères. Non stocké localement.</div>'}
+    if(s==='username'){ico='user';title='Username';sub='Étape 3/11. Identifiant public pour la Squad.';body='<input id="ob11-main-input" class="gs-ob11-input" autocomplete="off" maxlength="20" placeholder="@username" value="'+E(p.username||'')+'" oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,\'\').toLowerCase()">'}
+    if(s==='name'){ico='id';title='Nom';sub='Étape 4/11. Nom affiché sur ton profil.';body='<input id="ob11-main-input" class="gs-ob11-input" placeholder="ex : Dany" maxlength="30" value="'+E(p.name||'')+'">'}
+    if(s==='height'){ico='height';title='Taille';sub='Étape 5/11. Sert à calculer ton IMC.';body='<input id="ob11-main-input" class="gs-ob11-input" type="number" inputmode="decimal" placeholder="Taille en cm" value="'+E(p.taille||'')+'">'}
+    if(s==='weight'){ico='weight';title='Poids';sub='Étape 6/11. Sert aux macros et aux recommandations.';body='<input id="ob11-main-input" class="gs-ob11-input" type="number" inputmode="decimal" step="0.1" placeholder="Poids en kg" value="'+E(p.poids||'')+'">'}
+    if(s==='bmi'){ico='bmi';title='IMC';sub='Étape 7/11. Repère utilisé pour éviter de proposer n’importe quoi.';body='<div class="gs-sp-card"><div class="gs-sp-kicker">Analyse profil</div><div class="gs-sp-title">'+(b.value?b.value:'—')+' · '+E(b.label)+'</div><div class="gs-sp-sub">'+E(b.note)+'</div><div class="gs-sp-grid"><div class="gs-sp-metric"><b>'+E(p.taille||'—')+'</b><span>Taille cm</span></div><div class="gs-sp-metric"><b>'+E(p.poids||'—')+'</b><span>Poids kg</span></div></div></div>'}
+    if(s==='goal'){ico='goal';title='Objectif + séances';sub='Étape 8/11. Le programme sera calculé avec ces infos + ton IMC.';body='<div class="gs-ob11-grid"><button type="button" class="gs-ob11-choice '+(p.objectif==='perte'?'sel':'')+'" onclick="ob11Pick(\'objectif\',\'perte\')">Perte de gras<span>Sec, dépense contrôlée</span></button><button type="button" class="gs-ob11-choice '+(p.objectif==='maintien'?'sel':'')+'" onclick="ob11Pick(\'objectif\',\'maintien\')">Maintien / recomposition<span>Progresser proprement</span></button><button type="button" class="gs-ob11-choice '+(p.objectif==='prise'?'sel':'')+'" onclick="ob11Pick(\'objectif\',\'prise\')">Prise de muscle<span>Volume, force, récupération</span></button></div><div class="gs-sp-card"><div class="gs-sp-kicker">Nombre de séances</div><div class="gs-ob11-grid"><button type="button" class="gs-ob11-choice '+((p.frequency||p.frequence)==2?'sel':'')+'" onclick="ob11SetFrequency(2)">2 / semaine<span>Minimal efficace</span></button><button type="button" class="gs-ob11-choice '+((p.frequency||p.frequence||4)==3?'sel':'')+'" onclick="ob11SetFrequency(3)">3 / semaine<span>Full body solide</span></button><button type="button" class="gs-ob11-choice '+((p.frequency||p.frequence||4)==4?'sel':'')+'" onclick="ob11SetFrequency(4)">4 / semaine<span>Upper / Lower</span></button><button type="button" class="gs-ob11-choice '+((p.frequency||p.frequence)==5?'sel':'')+'" onclick="ob11SetFrequency(5)">5+ / semaine<span>Plus structuré</span></button></div></div>'}
+    if(s==='nutrition'){ico='nutrition';title='Calculateur nutrition';sub='Étape 9/11. Calculé avec poids, taille, objectif et fréquence.';body='<div class="gs-sp-card"><div class="gs-sp-kicker">Base nutrition</div><div class="gs-sp-title">'+m.kcal+' kcal / jour</div><div class="gs-sp-sub">Maintenance estimée : '+m.maintenance+' kcal. Base modifiable dans Nutrition.</div><div class="gs-sp-grid"><div class="gs-sp-metric"><b>'+m.prot+' g</b><span>Protéines</span></div><div class="gs-sp-metric"><b>'+m.carbs+' g</b><span>Glucides</span></div><div class="gs-sp-metric"><b>'+m.fat+' g</b><span>Lipides</span></div><div class="gs-sp-metric"><b>'+E(p.objectif||'maintien')+'</b><span>Objectif</span></div></div><div class="gs-sp-actions"><button type="button" class="primary" onclick="ob11SaveNutrition()">Sauvegarder cette base</button></div></div>'}
+    if(s==='program'){
+      ico='program';title='Proposition programme';sub='Étape 10/11. Calculée selon IMC + objectif + nombre de séances.';
+      var days=weeklyTemplate(plan).filter(function(d){return d.type!=='Repos complet'}).slice(0,6);
+      body='<div class="gs-sp-card"><div class="gs-sp-kicker">Programme conseillé</div><div class="gs-sp-title">'+E(plan.name)+'</div><div class="gs-sp-sub">Base : IMC '+(plan.bmi.value||'—')+' ('+E(plan.bmi.label)+') · objectif '+E(plan.objective||'maintien')+' · '+plan.frequency+' séances/semaine.</div><div class="gs-sp-grid"><div class="gs-sp-metric"><b>'+E(plan.split)+'</b><span>Split</span></div><div class="gs-sp-metric"><b>'+E(plan.effectiveObjective)+'</b><span>Objectif réel</span></div><div class="gs-sp-metric"><b>'+E(plan.intensity)+'</b><span>Intensité</span></div><div class="gs-sp-metric"><b>'+E(plan.cardio)+'</b><span>Cardio</span></div></div>'+ (plan.warnings.length?'<div class="gs-sp-alert">'+plan.warnings.map(E).join('<br>')+'</div>':'') +'<div class="gs-sp-list">'+days.map(function(d){return '<div class="gs-sp-day"><b>'+E(d.name)+'</b><div><span>'+E(d.type)+'</span><small>'+E(d.exercises.slice(0,4).map(function(x){return x.n}).join(' · '))+'</small></div></div>'}).join('')+'</div><div class="gs-sp-actions"><button type="button" class="primary" onclick="gsApplySmartProgram()">Appliquer à mon programme</button><button type="button" onclick="ob11SaveProgram()">Sauvegarder sans appliquer</button></div></div><div class="gs-sp-card"><div class="gs-sp-kicker">Logique</div><div class="gs-sp-sub">Priorité : '+E(plan.priority)+'. À éviter : '+E(plan.avoid)+'. Volume : '+E(plan.volume)+'.</div></div>';
+    }
+    if(s==='start'){ico='start';title='START';sub='Étape 11/11. Tout reste modifiable dans Profil.';body='<div class="gs-sp-card"><div class="gs-sp-kicker">Résumé</div><div class="gs-sp-title">'+E(plan.name)+'</div><div class="gs-sp-sub">Programme basé sur IMC '+(plan.bmi.value||'—')+', objectif '+E(plan.objective||'maintien')+' et '+plan.frequency+' séances/semaine.</div><div class="gs-sp-grid"><div class="gs-sp-metric"><b>'+m.kcal+'</b><span>kcal</span></div><div class="gs-sp-metric"><b>'+E(plan.split)+'</b><span>Programme</span></div></div></div>'}
+    var bars=STEP_IDS.map(function(_,i){return '<i class="'+(i<=idx?'on':'')+'"></i>'}).join('');
+    var html='<div class="gs-onboard-v11 gs-ob11-noemoji" id="gs-onboard-v11"><div class="gs-ob11-box"><div class="gs-ob11-logo">G-SQUAD</div><div class="gs-ob11-stepcount">Étape '+(idx+1)+' / 11</div><div class="gs-ob11-progress">'+bars+'</div>'+sym(ico)+'<h1 class="gs-ob11-title">'+title+'</h1><div class="gs-ob11-sub">'+sub+'</div>'+body+'<div class="gs-ob11-actions"><button type="button" onclick="ob11Prev()" '+(idx===0?'disabled':'')+'>Retour</button><button type="button" class="primary" onclick="ob11Next()">'+(s==='start'?'START':'Continuer')+'</button></div><button type="button" class="gs-ob11-skip" onclick="ob11SkipStep()">Passer cette étape — retrouvable dans Profil</button></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html);
+    var input=$('ob11-main-input')||$('ob11-password-input');if(input)setTimeout(function(){try{input.focus()}catch(e){}},60);
+  };
+  window.renderOnboardingWizard=function(step){window.OB11=window.OB11||{step:0,total:11,password:''};if(typeof step==='number')window.OB11.step=Math.max(0,Math.min(10,step));window.renderOb11()};
+  window.openOnboardingWizard=function(step){window.OB11=window.OB11||{step:0,total:11,password:''};window.OB11.step=typeof step==='number'?Math.max(0,Math.min(10,step)):0;window.renderOb11()};
+})();
+</script>
+
+
+
+<!-- G-SQUAD PATCH — log set = validation + retour journal visible -->
+<style id="gs-log-validates-journal-css">
+  .gs-journal-quick{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.055);color:var(--txt);border-radius:999px;padding:10px 13px;font-size:12px;font-weight:950;white-space:nowrap}
+  .gs-journal-quick svg{width:16px;height:16px;stroke:currentColor}
+  .gs-session-journal-access{margin:12px 0;display:flex;gap:8px;align-items:center;justify-content:space-between;background:rgba(18,24,33,.72);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:12px 14px}
+  .gs-session-journal-access b{display:block;font-size:14px;font-weight:1000;color:var(--txt);letter-spacing:-.02em}
+  .gs-session-journal-access span{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+</style>
+<script id="gs-log-validates-journal-js">
+(function(){
+  function $(id){return document.getElementById(id)}
+  function S(){return window.state || (window.state={})}
+  function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('ath7',JSON.stringify(S()))}catch(e){}}
+  function toast(t){try{if(typeof window.notify==='function')window.notify(t);else if(typeof window.nt==='function')window.nt(t);else console.log(t)}catch(e){}}
+  function today(){return new Date().toLocaleDateString('fr-FR')}
+  function days(){try{if(typeof window.getDays==='function')return window.getDays()}catch(e){} return window.DAYS||[]}
+  function getExercise(di,ei){var d=(days()[di]||{});return ((d.exercises||[])[ei])||{n:'Exercice',s:''}}
+  function isChecked(di,ei){var st=S();return !!(st.checks&&st.checks[di]&&st.checks[di][ei])}
+  function setChecked(di,ei,val){var st=S();st.checks=st.checks||{};st.checks[di]=st.checks[di]||{};st.checks[di][ei]=!!val}
+  function allChecked(di){var d=days()[di]||{}, exs=d.exercises||[];if(!exs.length)return false;return exs.every(function(_,i){return isChecked(di,i)})}
+  function syncJournal(di,ei,ex){
+    var st=S(), date=today();st.journal=st.journal||{};st.journal[date]=st.journal[date]||{};
+    var jd=st.journal[date];jd.lastSessionDay=di;jd.updatedAt=new Date().toISOString();
+    jd.validatedExercises=jd.validatedExercises||[];
+    var name=(ex&&ex.n)||'Exercice';
+    if(jd.validatedExercises.indexOf(name)===-1)jd.validatedExercises.push(name);
+    jd.logsCount=(st.logs||[]).filter(function(l){return l.date===date}).length;
+    if(allChecked(di)){jd.seanceDone=true;jd.seanceDoneAt=jd.seanceDoneAt||new Date().toISOString();try{if(typeof window.snapshotToday==='function')window.snapshotToday(true)}catch(e){}}
+  }
+  function addDoneXPOnce(di,ei,ex){
+    var st=S(), key=['done',today(),di,ei,''].join(':');st.xpEvents=st.xpEvents||{};
+    if(st.xpEvents[key])return 0;
+    var info={doneXP:10,type:'assistance',label:'Assistance'};
+    try{if(typeof window.gsXPExerciseInfo==='function')info=window.gsXPExerciseInfo(ex)||info}catch(e){}
+    var amount=parseInt(info.doneXP||0,10)||0;
+    if(amount>0){st.xp=(parseInt(st.xp||0,10)||0)+amount;st.xpHistory=st.xpHistory||[];st.xpHistory.push({date:new Date().toISOString(),amount:amount,reason:'validation automatique après log',exercise:(ex&&ex.n)||'',kind:info.type||''});if(st.xpHistory.length>400)st.xpHistory=st.xpHistory.slice(-400);st.xpEvents[key]={amount:amount,type:info.type||'',exercise:(ex&&ex.n)||''};}
+    return amount;
+  }
+  function validateAfterLog(di,ei){
+    if(isChecked(di,ei))return false;
+    var ex=getExercise(di,ei);
+    setChecked(di,ei,true);
+    var xp=addDoneXPOnce(di,ei,ex);
+    syncJournal(di,ei,ex);
+    save();
+    toast('Set enregistré · exercice validé'+(xp?' · +'+xp+' XP':''));
+    try{if(typeof window.renderDayBar==='function')window.renderDayBar()}catch(e){}
+    try{if(typeof window.renderJournal==='function')window.renderJournal()}catch(e){}
+    return true;
+  }
+
+  var prevSaveML=window.saveML;
+  window.saveML=function(){
+    var di=parseInt(window.cDay||0,10)||0, ei=parseInt(window.cEx||0,10)||0;
+    var already=isChecked(di,ei), ret;
+    if(typeof prevSaveML==='function')ret=prevSaveML.apply(this,arguments);
+    else toast('Set enregistré');
+    setTimeout(function(){
+      try{
+        if(!already && !isChecked(di,ei))validateAfterLog(di,ei);
+        else syncJournal(di,ei,getExercise(di,ei));
+        if(typeof window.renderSeance==='function')window.renderSeance();
+      }catch(e){console.warn('log validation patch',e)}
+    },40);
+    return ret;
+  };
+
+  window.openJournal=function(){
+    try{if(typeof window.closeHamburger==='function')window.closeHamburger()}catch(e){}
+    try{if(typeof window.goTab==='function')window.goTab('journal',null)}catch(e){}
+    try{if(typeof window.renderJournal==='function')window.renderJournal()}catch(e){}
+  };
+  function journalIcon(){return '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>'}
+  function injectSessionJournal(){
+    var p=$('p-seance');if(!p||p.querySelector('[data-gs-session-journal]'))return;
+    var anchor=p.querySelector('.sess-stat-row')||p.querySelector('.gs-soft-card')||p.querySelector('.sess-xp-card');
+    if(!anchor)return;
+    var html='<div class="gs-session-journal-access" data-gs-session-journal="1"><div><b>Journal de bord</b><span>Sets, poids, séances validées et progression.</span></div><button type="button" class="gs-journal-quick" onclick="openJournal()">'+journalIcon()+'Ouvrir</button></div>';
+    anchor.insertAdjacentHTML('afterend',html);
+  }
+  function injectMenuJournal(){
+    var sh=$('more-sh');if(!sh||sh.querySelector('[data-gs-menu-journal]'))return;
+    var html='<button class="gs-menu-btn" data-gs-menu-journal="1" onclick="openJournal()"><span class="gs-menu-logo">'+journalIcon()+'</span><span><span class="gs-menu-title">Journal de bord</span><span class="gs-menu-sub">Logs, poids, séances et progression</span></span></button>';
+    var grid=sh.querySelector('.gs-menu-grid');
+    if(grid)grid.insertAdjacentHTML('beforeend',html);else sh.insertAdjacentHTML('beforeend','<div class="gs-menu-grid">'+html+'</div>');
+  }
+  var prevRender=window.renderSeance;
+  window.renderSeance=function(){if(typeof prevRender==='function')prevRender.apply(this,arguments);setTimeout(injectSessionJournal,0)};
+  var prevHam=window.openHamburger;
+  window.openHamburger=function(){if(typeof prevHam==='function')prevHam.apply(this,arguments);setTimeout(injectMenuJournal,0)};
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){try{injectSessionJournal();injectMenuJournal()}catch(e){}},300)});
+})();
+</script>
+
 </body>
 </html>
