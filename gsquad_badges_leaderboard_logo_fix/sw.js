@@ -1,7 +1,0 @@
-const GS_CACHE='gsquad-v4-logo-badges-leaderboard';
-const GS_ICON='./gsquad-icon-v4-192.png';
-self.addEventListener('install',event=>{self.skipWaiting();event.waitUntil(caches.open(GS_CACHE).then(c=>c.addAll(['./','./index.html','./manifest-v4.webmanifest',GS_ICON,'./gsquad-icon-v4-512.png']).catch(()=>{})));});
-self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==GS_CACHE&&k.startsWith('gsquad-')).map(k=>caches.delete(k)))));self.clients.claim();});
-self.addEventListener('fetch',event=>{event.respondWith(fetch(event.request).catch(()=>caches.match(event.request).then(r=>r||caches.match('./index.html'))));});
-self.addEventListener('push',event=>{let data={};try{data=event.data?event.data.json():{};}catch(e){data={body:event.data?event.data.text():''};}const title=(data.title||'G-SQUAD').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu,'').trim()||'G-SQUAD';const body=(data.body||data.message||'Séance lancée. À toi de suivre le rythme.').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu,'').trim();event.waitUntil(self.registration.showNotification(title,{body,icon:GS_ICON,badge:GS_ICON,tag:data.tag||'gsquad',renotify:true}));});
-self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(list=>{for(const c of list){if('focus' in c)return c.focus();}if(clients.openWindow)return clients.openWindow('./');}));});
