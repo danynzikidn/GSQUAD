@@ -1,5 +1,3 @@
-/* G-SQUAD JavaScript externalisé depuis index.html — ordre conservé, logique non modifiée. */
-/* ==== inline-script-1 ==== */
 // DATA
 // ============================================================
 var DAYS = [
@@ -1662,8 +1660,8 @@ function saveAPIKey(){
 // ============================================================
 // SUPABASE CONFIG
 // ============================================================
-var SUPABASE_URL = 'https://wtaalaenhthcvcztsqjb.supabase.co';
-var SUPABASE_KEY = 'sb_publishable_-NIiFXvur7ktZCe2nfkl9g_u1urf6t-';
+var SUPABASE_URL = 'https://TON_PROJECT_ID.supabase.co';
+var SUPABASE_KEY = 'ta_anon_key_ici';
 var _supa = window.supabase? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY): null;
 var _supaUser = null;
 var _svTimeout = null;
@@ -1891,14 +1889,16 @@ async function initAuth() {
 var tVal=0, tMode='up', tRun=false, tInt=null;
 function tTick(){
  if(tMode==='up'){tVal++;tDraw();}
- else{tVal--;if(tVal<=0){tVal=0;tDraw();clearInterval(tInt);tInt=null;tRun=false;tDraw();notifyRestDone();}else tDraw();}
+ else{tVal--;if(tVal<=0){tVal=0;tDraw();clearInterval(tInt);tInt=null;tRun=false;tDraw();gsTimerFloatHide();notifyRestDone();}else tDraw();}
 }
 function tDraw(){
- var el=document.getElementById('tdisp');if(el)el.textContent=f2(Math.floor(Math.abs(tVal)/60))+':'+f2(Math.abs(tVal)%60);
+ var fmt=f2(Math.floor(Math.abs(tVal)/60))+':'+f2(Math.abs(tVal)%60);
+ var el=document.getElementById('tdisp');if(el)el.textContent=fmt;
  var b=document.getElementById('tstart');if(b)b.innerHTML=tRun?'&#9646;&#9646;':'&#9654;';
+ gsTimerFloatSync(fmt);
 }
-function tToggle(){if(tRun){clearInterval(tInt);tInt=null;tRun=false;}else{tRun=true;tInt=setInterval(tTick,1000);}tDraw();}
-function tReset(){clearInterval(tInt);tInt=null;tRun=false;tVal=0;tMode='up';tDraw();}
+function tToggle(){if(tRun){clearInterval(tInt);tInt=null;tRun=false;}else{tRun=true;tInt=setInterval(tTick,1000);}tDraw();if(tRun&&tMode==='down'&&tVal>0)gsTimerFloatShow();}
+function tReset(){clearInterval(tInt);tInt=null;tRun=false;tVal=0;tMode='up';tDraw();gsTimerFloatHide();}
 function tSet(s){clearInterval(tInt);tInt=null;tRun=false;tVal=s;tMode='down';tDraw();}
 function tCustom(){
  var m=parseInt(document.getElementById('tmin').value)||0;
@@ -1908,6 +1908,78 @@ function tCustom(){
  tSet(total);
 }
 function f2(n){return String(n).padStart(2,'0');}
+
+/* ── Timer flottant persistant inter-pages ──────────────────────────
+   Un mini-pill fixé juste au-dessus de la bottom bar. Il apparaît dès
+   que le timer repos est lancé en mode countdown et reste visible sur
+   toutes les pages. Un tap ramène l'utilisateur sur la séance.
+   Il disparaît automatiquement quand le compte à rebours atteint 0. */
+(function(){
+ var PILL_ID='gs-timer-float-pill';
+ function ensurePill(){
+  if(document.getElementById(PILL_ID))return;
+  var p=document.createElement('div');
+  p.id=PILL_ID;
+  p.setAttribute('style',
+   'position:fixed;left:50%;transform:translateX(-50%);'
+   +'bottom:calc(env(safe-area-inset-bottom,0px)+90px);'
+   +'z-index:8000;display:none;'
+   +'align-items:center;gap:10px;'
+   +'background:rgba(10,15,22,.96);'
+   +'border:1.5px solid rgba(255,255,255,.22);'
+   +'border-radius:999px;'
+   +'padding:10px 18px 10px 14px;'
+   +'backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);'
+   +'box-shadow:0 8px 32px rgba(0,0,0,.40);'
+   +'cursor:pointer;'
+   +'font-family:DM Sans,sans-serif;'
+   +'animation:gsFade .2s ease both;'
+  );
+  p.innerHTML=
+   '<span style="width:8px;height:8px;border-radius:50%;background:#73D6A2;flex-shrink:0;'
+   +'animation:gsTimerPulse 1s ease-in-out infinite"></span>'
+   +'<span id="gs-timer-float-label" style="font-size:15px;font-weight:950;letter-spacing:-.03em;color:#fff;min-width:46px;text-align:center">00:00</span>'
+   +'<span style="font-size:11px;font-weight:800;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.08em">Repos</span>';
+  p.addEventListener('click',function(){
+   try{
+    /* Retour sur l'onglet séance si on n'y est pas déjà */
+    var nbSeance=document.querySelector('.nb[data-tab="seance"],.nb[onclick*="seance"]');
+    if(nbSeance)nbSeance.click();
+    /* Scroll jusqu'au timer sur la page séance */
+    setTimeout(function(){var t=document.querySelector('.sess-timer,.rest-card');if(t)t.scrollIntoView({behavior:'smooth',block:'center'});},320);
+   }catch(e){}
+  });
+  /* Keyframe pour le dot pulsant */
+  if(!document.getElementById('gs-timer-float-kf')){
+   var st=document.createElement('style');
+   st.id='gs-timer-float-kf';
+   st.textContent='@keyframes gsTimerPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.78)}}';
+   document.head.appendChild(st);
+  }
+  document.body.appendChild(p);
+ }
+ window.gsTimerFloatShow=function(){
+  ensurePill();
+  var p=document.getElementById(PILL_ID);
+  if(p)p.style.display='flex';
+ };
+ window.gsTimerFloatHide=function(){
+  var p=document.getElementById(PILL_ID);
+  if(p)p.style.display='none';
+ };
+ window.gsTimerFloatSync=function(fmt){
+  var lbl=document.getElementById('gs-timer-float-label');
+  if(lbl)lbl.textContent=fmt||'00:00';
+  /* Cache le pill si timer à 0 et pas en cours */
+  if(!window.tRun&&window.tVal===0){gsTimerFloatHide();return;}
+  /* Affiche le pill uniquement si on est en mode countdown actif */
+  if(window.tRun&&window.tMode==='down'){
+   ensurePill();
+   var p=document.getElementById(PILL_ID);
+   if(p)p.style.display='flex';
+  }
+ };
+})();
 
 // ============================================================
 // UTILS
@@ -4493,6 +4565,14 @@ function bootApp(){
 
  window.goTab=function(name,el){
  brand();
+ /* ── Fermer tous les overlays ouverts (profil, friend, social…) ── */
+ ['profil-ov','friend-ov','social-ov','leaderboard-ov','notif-ov',
+  'profile-settings-v1','gs-sq-modal'].forEach(function(id){
+   var ov=document.getElementById(id);
+   if(!ov)return;
+   ov.classList.remove('open');
+   if(id!=='social-ov')ov.style.display='';
+ });
  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('act');p.style.display='';});
  document.querySelectorAll('.nb,.nb-plus').forEach(function(b){b.classList.remove('act');});
  var panel=document.getElementById('p-'+name); if(panel){panel.classList.add('act'); if(name==='coach')panel.style.display='flex';}
@@ -4915,9 +4995,7 @@ document.addEventListener('DOMContentLoaded',function(){
  document.getElementById('onboard').style.display='none';
  initAuth();
 });
-;
 
-/* ==== inline-script-2 ==== */
 /* ============================================================
  G-SQUAD HOTFIX - guest skip + onboarding frequency + enter CTA
  Added by ChatGPT, 2026-05-01
@@ -5108,9 +5186,7 @@ document.addEventListener('DOMContentLoaded',function(){
  }, 0);
  });
 })();
-;
 
-/* ==== inline-script-3 ==== */
 /* ============================================================
  G-SQUAD FINAL STABILITY PATCH - auth + onboarding clickable
  Fixes: Basic-Fit selection, IMC button, auth screen, guest skip,
@@ -5912,9 +5988,7 @@ document.addEventListener('DOMContentLoaded',function(){
  }catch(e){el.innerHTML='<div style="color:var(--mut);font-size:13px;padding:14px">Erreur de chargement</div>';}
  }
 })();
-;
 
-/* ==== gs-hotfix-script ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function E(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}
@@ -6157,9 +6231,7 @@ document.addEventListener('DOMContentLoaded',function(){
  // On load/apply once.
  setTimeout(function(){try{document.querySelectorAll('#header-logo').forEach(function(x){x.textContent='G-SQUAD';});}catch(e){}},200);
 })();
-;
 
-/* ==== gs-v4-clean-js ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function st(){return window.state||(window.state={})}
@@ -6246,9 +6318,7 @@ document.addEventListener('DOMContentLoaded',function(){
  window.openHamburger=function(){if(typeof previousHam==='function')previousHam();setTimeout(function(){var sh=$('more-sh');if(!sh)return;sh.style.maxHeight='86vh';sh.style.overflowY='auto';sh.style.webkitOverflowScrolling='touch';sh.querySelectorAll('.gs-menu-logo').forEach(function(el){var txt=(el.textContent||'').trim();if(txt==='🏆')el.innerHTML=icon('rank');else if(txt==='🔔')el.innerHTML=icon('bell');else if(txt==='📈')el.innerHTML=icon('program');else if(txt==='📍')el.innerHTML=icon('gym');else if(txt==='⚡')el.innerHTML=icon('exercise');else if(txt==='⚙️')el.innerHTML=icon('settings')});},0)}
  setTimeout(function(){var logo=$('header-logo');if(logo)logo.textContent='G-SQUAD';try{if(document.querySelector('#p-seance.act'))renderSeance()}catch(e){}},500)
 })();
-;
 
-/* ==== gs-final-patch-logout-gyms ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function showAuth(){
@@ -6314,9 +6384,7 @@ document.addEventListener('DOMContentLoaded',function(){
  }
  document.addEventListener('DOMContentLoaded', function(){ addGoldGym(); injectGoldButton(document); });
 })();
-;
 
-/* ==== gs-patch-signup-order-real-logos ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];})}
@@ -6393,9 +6461,7 @@ document.addEventListener('DOMContentLoaded',function(){
  function refreshLogos(){ensureGymData();document.querySelectorAll('[data-gym="goldsgym"], [data-gym-set="goldsgym"]').forEach(function(el){var ico=el.querySelector('.ob-gym-ico')||el.querySelector('.gs-menu-logo'); if(ico)ico.innerHTML=window.gsGymLogo('goldsgym',true);});}
  document.addEventListener('DOMContentLoaded',refreshLogos);setTimeout(refreshLogos,400);setTimeout(refreshLogos,1200);
 })();
-;
 
-/* ==== gs-force-visible-logout-js ==== */
 (function(){
  function $(id){return document.getElementById(id);}
  function toast(msg){try{ if(typeof notify==='function') notify(msg); else if(typeof nt==='function') nt(msg); }catch(e){}}
@@ -6479,9 +6545,7 @@ document.addEventListener('DOMContentLoaded',function(){
  setTimeout(injectAll,500);
  setTimeout(injectAll,1500);
 })();
-;
 
-/* ==== gs-password-settings-patch ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
@@ -6525,9 +6589,7 @@ document.addEventListener('DOMContentLoaded',function(){
  var oldOpen=window.openProfilSettings;window.openProfilSettings=function(){if(typeof oldOpen==='function')oldOpen.apply(this,arguments);setTimeout(window.gsInjectPasswordSettings,0);setTimeout(window.gsInjectPasswordSettings,250)};
  setTimeout(enhancePasswords,300);
 })();
-;
 
-/* ==== gs-password-current-verify-patch ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
@@ -6556,9 +6618,7 @@ document.addEventListener('DOMContentLoaded',function(){
  if(btn){btn.disabled=false;btn.textContent='Changer le mot de passe';}
  };
 })();
-;
 
-/* ==== gs-final-password-settings-logos-js ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];})}
@@ -6674,9 +6734,7 @@ document.addEventListener('DOMContentLoaded',function(){
  document.addEventListener('DOMContentLoaded',function(){refreshAll();try{new MutationObserver(function(){refreshAll();}).observe(document.body,{childList:true,subtree:true});}catch(e){}});
  setTimeout(refreshAll,250);setTimeout(refreshAll,1000);setTimeout(refreshAll,2200);
 })();
-;
 
-/* ==== gs-social-exos-pro-patch-js ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function S(){return window.state||(window.state={})}
@@ -6727,9 +6785,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
  setTimeout(function(){try{if(document.querySelector('#fl-exos.open')){renderExosDay();renderBib()}}catch(e){}},600);
 })();
-;
 
-/* ==== gs-xp-session-clean-v7-js ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function E(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}
@@ -7108,9 +7164,7 @@ document.addEventListener('DOMContentLoaded',function(){
  // Refresh visuel si la page est déjà ouverte.
  setTimeout(function(){try{if($('p-accueil')&&$('p-accueil').classList.contains('act'))window.renderAccueil();if($('profil-ov')&&$('profil-ov').classList.contains('open'))enhanceProfileBadges();if($('p-seance')&&$('p-seance').classList.contains('act')&&typeof window.renderSeance==='function')window.renderSeance();}catch(e){}},120);
 })();
-;
 
-/* ==== gs-onboarding-11-and-pro-notifs-js ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function safeState(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
@@ -7175,9 +7229,7 @@ document.addEventListener('DOMContentLoaded',function(){
  function cleanNotifText(root){try{(root||document).querySelectorAll('*').forEach(function(el){if(el.childNodes&&el.childNodes.length===1&&el.childNodes[0].nodeType===3){el.textContent=el.textContent.replace(/[💪🔥🏆🥇🥈🥉🚀✅🥳🏅]/g,'').replace(/ATHLETE/g,'ATHLÈTE').replace(/\s{2,}/g,' ').trim()}})}catch(e){}}
  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){cleanNotifText(document)},800)});
 })();
-;
 
-/* ==== gs-xp-activity-fatigue-ranking ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function S(){return window.state || (window.state={})}
@@ -7273,9 +7325,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
  setTimeout(function(){try{if(typeof window.renderSeance==='function' && document.getElementById('p-seance') && document.getElementById('p-seance').classList.contains('act'))window.renderSeance()}catch(e){}},120);
 })();
-;
 
-/* ==== gs-exo-library-xp-v1-js ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function E(v){return String(v==null?'':v).replace(/[&<>\'\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]})}
@@ -7396,9 +7446,7 @@ document.addEventListener('DOMContentLoaded',function(){
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(boot,80)});else setTimeout(boot,80);
  setTimeout(boot,700);setTimeout(boot,1800);
 })();
-;
 
-/* ==== gs-exo-alias-search-js ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function E(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}
@@ -7584,9 +7632,7 @@ document.addEventListener('DOMContentLoaded',function(){
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(boot,120)});else setTimeout(boot,120);
  setTimeout(boot,900);
 })();
-;
 
-/* ==== gs-auth-blank-fix-js ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -7732,9 +7778,7 @@ document.addEventListener('DOMContentLoaded',function(){
  document.addEventListener('DOMContentLoaded',function(){rebuildSignupViews();setTimeout(noBlankFallback,600);setTimeout(noBlankFallback,1800)});
  if(document.readyState!=='loading'){rebuildSignupViews();setTimeout(noBlankFallback,200)}
 })();
-;
 
-/* ==== gs-route-signup-to-ob11 ==== */
 (function(){
  function open11(){
  try{
@@ -7768,9 +7812,7 @@ document.addEventListener('DOMContentLoaded',function(){
  },80);
  });
 })();
-;
 
-/* ==== gs-session-bib-clean-v8-js ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -7836,9 +7878,7 @@ document.addEventListener('DOMContentLoaded',function(){
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){cleanFilterLabels();try{window.renderBib()}catch(e){}},100)});else setTimeout(function(){cleanFilterLabels();try{window.renderBib()}catch(e){}},100);
  setTimeout(function(){cleanFilterLabels();try{window.renderBib()}catch(e){}},700);
 })();
-;
 
-/* ==== gs-smart-program-ob11-js ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -8008,9 +8048,7 @@ document.addEventListener('DOMContentLoaded',function(){
  window.renderOnboardingWizard=function(step){window.OB11=window.OB11||{step:0,total:11,password:''};if(typeof step==='number')window.OB11.step=Math.max(0,Math.min(10,step));window.renderOb11()};
  window.openOnboardingWizard=function(step){window.OB11=window.OB11||{step:0,total:11,password:''};window.OB11.step=typeof step==='number'?Math.max(0,Math.min(10,step)):0;window.renderOb11()};
 })();
-;
 
-/* ==== gs-log-validates-journal-js ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function S(){return window.state || (window.state={})}
@@ -8094,9 +8132,7 @@ document.addEventListener('DOMContentLoaded',function(){
  window.openHamburger=function(){if(typeof prevHam==='function')prevHam.apply(this,arguments);setTimeout(injectMenuJournal,0)};
  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){try{injectSessionJournal();injectMenuJournal()}catch(e){}},300)});
 })();
-;
 
-/* ==== gs-3mo-program-guide-js ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -8296,9 +8332,7 @@ document.addEventListener('DOMContentLoaded',function(){
  document.body.insertAdjacentHTML('beforeend',html);
  };
 })();
-;
 
-/* ==== gs-final-auth-gate-program-guide-fix ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
@@ -8387,9 +8421,7 @@ document.addEventListener('DOMContentLoaded',function(){
  setTimeout(enforceAuthLanding,120);setTimeout(enforceAuthLanding,900);setTimeout(enforceAuthLanding,1800);
  }
 })();
-;
 
-/* ==== inline-script-25 ==== */
 (function(){
   function $(id){return document.getElementById(id)}
   function say(msg){try{ if(typeof window.notify==='function') window.notify(msg); else console.log(msg); }catch(e){}}
@@ -8462,9 +8494,7 @@ document.addEventListener('DOMContentLoaded',function(){
     if(a)ev.preventDefault();
   },true);
 })();
-;
 
-/* ==== gs-final-user-fixes-js ==== */
 (function(){
   function $(id){return document.getElementById(id)}
   function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -8629,9 +8659,7 @@ document.addEventListener('DOMContentLoaded',function(){
   if(typeof oldRenderOb11==='function'){window.renderOb11=function(){var r=oldRenderOb11.apply(this,arguments);setTimeout(polishOb11,0);return r;};}
   document.addEventListener('click',function(){setTimeout(polishOb11,80)},true);
 })();
-;
 
-/* ==== gs-moments-profile-patch ==== */
 (function(){
   function $(id){return document.getElementById(id)}
   function S(){window.state=window.state||{};return window.state}
@@ -8676,9 +8704,7 @@ document.addEventListener('DOMContentLoaded',function(){
   var prevQuick=window.openQuickAction;window.openQuickAction=function(){ensureInputs();var r=prevQuick?prevQuick.apply(this,arguments):undefined;setTimeout(function(){var ov=$('quick-action-ov');if(!ov||ov.querySelector('[data-gs-moment-upload]'))return;var grid=ov.querySelector('.gs-menu-grid')||ov.querySelector('div[style*="grid-template-columns"]')||ov.querySelector('div');if(!grid)return;grid.insertAdjacentHTML('beforeend','<button data-gs-moment-upload="1" class="gs-menu-btn" onclick="document.getElementById(\'quick-action-ov\')&&document.getElementById(\'quick-action-ov\').remove();openMomentUpload(\'photo\')"><span class="gs-menu-logo">'+icon('photo')+'</span><span><span class="gs-menu-title">Ajouter une photo</span><span class="gs-menu-sub">Moment ou progression</span></span></button><button data-gs-moment-upload="1" class="gs-menu-btn" onclick="document.getElementById(\'quick-action-ov\')&&document.getElementById(\'quick-action-ov\').remove();openMomentUpload(\'before_after\')"><span class="gs-menu-logo">AV</span><span><span class="gs-menu-title">Avant / après</span><span class="gs-menu-sub">Deux photos comparées</span></span></button>');},0);return r;};
   document.addEventListener('DOMContentLoaded',function(){ensureInputs();setTimeout(function(){try{if($('p-accueil')&&$('p-accueil').classList.contains('act'))window.renderAccueil();}catch(e){}},500);});
 })();
-;
 
-/* ==== gs-undo-bib-badges-fix-js ==== */
 (function(){
   function $(id){return document.getElementById(id)}
   function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
@@ -8816,9 +8842,7 @@ document.addEventListener('DOMContentLoaded',function(){
   document.addEventListener('DOMContentLoaded',function(){ensureStarterBadges();setTimeout(function(){polishSession();decorateMedia(document);try{window.renderBib&&window.renderBib()}catch(e){}try{window.renderBadgeSurfaces&&window.renderBadgeSurfaces()}catch(e){}},500)});
   setTimeout(function(){ensureStarterBadges();polishSession();decorateMedia(document);try{window.renderBadgeSurfaces&&window.renderBadgeSurfaces()}catch(e){}},900);
 })();
-;
 
-/* ==== gs-private-squad-script ==== */
 (function(){
   'use strict';
   function qs(id){return document.getElementById(id)}
@@ -8830,7 +8854,7 @@ document.addEventListener('DOMContentLoaded',function(){
   function ensurePrivateSquad(){var s=st();s.privateSquad=s.privateSquad||{};if(!s.privateSquad.prefix)s.privateSquad.prefix='G';if(!Array.isArray(s.privateSquad.members))s.privateSquad.members=[];s.privateSquad.name=(s.privateSquad.prefix||'G').trim()+'-Squad';return s.privateSquad}
   function personId(p){return p&&String(p.id||p.user_id||p.follower_id||p.following_id||p.email||p.username||'')}
   function getSquadPeople(){var s=st(), seen={}, out=[];function add(p){if(!p)return;var id=personId(p);if(!id||seen[id])return;seen[id]=1;out.push({id:id,name:p.name||p.display_name||p.from_name||p.email||'Ami',username:p.username||p.from_username||'',avatar:p.avatar||p.from_avatar||'',xp:p.xp||0,_raw:p})} (s.squadPeople||[]).forEach(add);(s.friends||[]).forEach(add);return out}
-  function privateName(){var ps=ensurePrivateSquad();return (ps.prefix||'G').trim()+'-Squad'}
+  function privateName(){var ps=ensurePrivateSquad();return (ps.prefix||'G').trim().toUpperCase()+'-SQUAD'}
   function buildAvatar(p){return p.avatar?'<img src="'+esc(p.avatar)+'" alt="">':initials(p.name)}
   function patchSocialTabs(){var tabs=document.querySelectorAll('.social-tabs');tabs.forEach(function(t){if(!t.querySelector('#stab-private')){var b=document.createElement('button');b.className='social-tab';b.id='stab-private';b.type='button';b.textContent='Privée';b.setAttribute('onclick',"switchSocialTab('private')");var search=t.querySelector('#stab-search');if(search)t.insertBefore(b,search);else t.appendChild(b)}var amis=t.querySelector('#stab-amis');if(amis)amis.textContent='Ma Squad'});}
   function setTabState(tab){['stab-amis','stab-private','stab-search'].forEach(function(id){document.querySelectorAll('#'+id).forEach(function(b){b.classList.toggle('act',(id==='stab-amis'&&tab==='amis')||(id==='stab-private'&&tab==='private')||(id==='stab-search'&&tab==='search'))})});}
@@ -8839,7 +8863,7 @@ document.addEventListener('DOMContentLoaded',function(){
   function socialResults(){return Array.prototype.slice.call(document.querySelectorAll('#social-results'))}
   function renderMainSquad(){var people=getSquadPeople();var html='<div class="gs-squad-card"><div class="gs-squad-title">Ma Squad</div><div class="gs-squad-sub">Ta Squad principale regroupe uniquement tes abonnés et tes abonnements. Elle n’est pas modifiée manuellement ici.</div><div class="gs-squad-rule"><i></i><div>Pour choisir un cercle précis avant un partage, utilise la Squad privée.</div></div></div>';if(!people.length){html+='<div class="gs-squad-empty"><b style="color:var(--txt)">Ta Squad est vide.</b><br>Ajoute des amis depuis la recherche pour remplir tes abonnés et abonnements.</div>'}else{html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 10px"><div class="gs-squad-title" style="margin:0">Abonnés et abonnements</div><span class="gs-squad-pill">'+people.length+' membre'+(people.length>1?'s':'')+'</span></div>';html+=people.map(function(p){return '<div class="gs-squad-member" onclick="openFriendProfile&&openFriendProfile('+JSON.stringify(p).replace(/"/g,'&quot;')+')"><div class="av">'+buildAvatar(p)+'</div><div><b>'+esc(p.name)+'</b><span>'+(p.username?'@'+esc(p.username)+' · ':'')+(p.xp||0)+' XP</span></div><button type="button" class="gs-squad-toggle on" onclick="event.stopPropagation();switchSocialTab(\'private\')">Privée</button></div>'}).join('')}socialSections().forEach(function(el){el.innerHTML=html;el.style.display=''});socialResults().forEach(function(el){el.innerHTML=''})}
   function renderPrivateSquad(){var ps=ensurePrivateSquad(), people=getSquadPeople(), chosen={};ps.members.forEach(function(id){chosen[String(id)]=1});var selected=people.filter(function(p){return chosen[personId(p)]});var html='<div class="gs-squad-card"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><div><div class="gs-squad-title">Squad privée</div><div class="gs-squad-sub">Un cercle choisi parmi tes amis. C’est ici seulement que tu crées une Squad manuellement.</div></div><span class="gs-squad-pill">'+selected.length+'/'+people.length+'</span></div><div class="gs-squad-name-row"><input class="gs-squad-input" id="private-squad-prefix" value="'+esc(ps.prefix||'G')+'" maxlength="22" placeholder="G"><button class="gs-squad-save" type="button" onclick="savePrivateSquadName()">Sauvegarder</button></div><div class="gs-squad-sub" style="margin-top:8px">Nom affiché : <strong style="color:var(--txt)" id="private-squad-preview">'+esc(privateName())+'</strong></div></div>';if(!people.length){html+='<div class="gs-squad-empty"><b style="color:var(--txt)">Aucun ami disponible.</b><br>Ajoute d’abord des personnes à ta Squad principale, puis choisis qui entre dans ta Squad privée.</div>'}else{html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 10px"><div class="gs-squad-title" style="margin:0">Membres privés</div><span class="gs-squad-pill">'+esc(privateName())+'</span></div>';html+=people.map(function(p){var id=personId(p), on=!!chosen[id];return '<div class="gs-squad-member"><div class="av">'+buildAvatar(p)+'</div><div><b>'+esc(p.name)+'</b><span>'+(p.username?'@'+esc(p.username)+' · ':'')+(on?'Dans la privée':'Disponible')+'</span></div><button type="button" class="gs-squad-toggle '+(on?'on':'')+'" onclick="togglePrivateSquadMember(\''+esc(id)+'\')">'+(on?'Retirer':'Ajouter')+'</button></div>'}).join('')}socialSections().forEach(function(el){el.innerHTML=html;el.style.display=''});socialResults().forEach(function(el){el.innerHTML=''});setTimeout(function(){var inp=qs('private-squad-prefix');if(inp){inp.oninput=function(){var prev=qs('private-squad-preview');if(prev)prev.textContent=(inp.value.trim()||'G')+'-Squad'}}},0)}
-  window.savePrivateSquadName=function(){var inp=qs('private-squad-prefix');var ps=ensurePrivateSquad();ps.prefix=((inp&&inp.value)||'G').trim()||'G';ps.name=ps.prefix+'-Squad';save();toast('Squad privée renommée : '+ps.name);renderPrivateSquad()};
+  window.savePrivateSquadName=function(){var inp=qs('private-squad-prefix');var ps=ensurePrivateSquad();ps.prefix=((inp&&inp.value)||'G').trim().toUpperCase()||'G';ps.name=ps.prefix+'-SQUAD';save();toast('Squad privée renommée : '+ps.name);renderPrivateSquad()};
   window.togglePrivateSquadMember=function(id){var ps=ensurePrivateSquad();id=String(id);var i=ps.members.indexOf(id);if(i>=0)ps.members.splice(i,1);else ps.members.push(id);ps.name=privateName();save();renderPrivateSquad()};
   window.getPrivateSquadTargets=function(){var ps=ensurePrivateSquad(), chosen={};ps.members.forEach(function(id){chosen[String(id)]=1});return getSquadPeople().filter(function(p){return chosen[personId(p)]})};
   async function loadFollowBasedSquad(){var s=st();if(!window._supa||!window._supaUser)return getSquadPeople();try{var myId=window._supaUser.id;var followers=await window._supa.from('follows').select('follower_id').eq('following_id',myId).eq('status','accepted');var following=await window._supa.from('follows').select('following_id').eq('follower_id',myId).eq('status','accepted');var ids=[];(followers.data||[]).forEach(function(r){if(r.follower_id)ids.push(r.follower_id)});(following.data||[]).forEach(function(r){if(r.following_id)ids.push(r.following_id)});ids=Array.from(new Set(ids));if(ids.length){var profs=await window._supa.from('profiles').select('id,display_name,username,data').in('id',ids);s.squadPeople=(profs.data||[]).map(function(p){return {id:p.id,name:p.display_name||(p.data&&p.data.profil&&p.data.profil.name)||'Ami',username:p.username||'',avatar:(p.data&&p.data.profil&&p.data.profil.avatar)||'',xp:(p.data&&p.data.xp)||0}});save()}}catch(e){/* follows table optional */}return getSquadPeople()}
@@ -8850,9 +8874,7 @@ document.addEventListener('DOMContentLoaded',function(){
   document.addEventListener('DOMContentLoaded',function(){ensurePrivateSquad();patchSocialTabs();setTimeout(function(){try{window.updateSquadBar&&window.updateSquadBar()}catch(e){}},500)});
   setTimeout(function(){ensurePrivateSquad();patchSocialTabs();try{window.updateSquadBar&&window.updateSquadBar()}catch(e){}},900);
 })();
-;
 
-/* ==== gs-final-request-patch-js ==== */
 (function(){
   function $(id){return document.getElementById(id)}
   function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
@@ -9004,9 +9026,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
   setInterval(decorateAll,1500);
 })();
-;
 
-/* ==== gs-targeted-fixes-js ==== */
 (function(){
   function $(id){return document.getElementById(id)}
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -9173,9 +9193,7 @@ document.addEventListener('DOMContentLoaded',function(){
   // Lance quelques corrections après chargement.
   setTimeout(function(){try{if(typeof renderSeance==='function')renderSeance();addActivities();if(typeof renderBib==='function')renderBib();cleanModifierSeriesButtons(document)}catch(e){}},700);
 })();
-;
 
-/* ==== gs-light-theme-patch-js ==== */
 (function(){
   function $(id){return document.getElementById(id)}
   function getTheme(){
@@ -9224,9 +9242,7 @@ document.addEventListener('DOMContentLoaded',function(){
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
   setTimeout(init,500);
 })();
-;
 
-/* ==== gs-route-program-final-patch-js ==== */
 (function(){
   function $(id){return document.getElementById(id)}
   function S(){window.state=window.state||{};return window.state}
@@ -9342,9 +9358,7 @@ document.addEventListener('DOMContentLoaded',function(){
   // Init si l'overlay est déjà ouvert.
   setTimeout(function(){try{if(document.querySelector('#fl-marche.open'))window.gsRenderRouteClean();window.gsPatchProgramExerciseButtons();}catch(e){}},600);
 })();
-;
 
-/* ==== gs-route-badges-final-tune-js ==== */
 (function(){
   function $(id){return document.getElementById(id)}
   function S(){window.state=window.state||{};return window.state}
@@ -9436,9 +9450,7 @@ document.addEventListener('DOMContentLoaded',function(){
   document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){tuneBadges();try{if(document.querySelector('#fl-marche.open'))window.gsRenderRouteClean()}catch(e){}},600)});
   setTimeout(tuneBadges,1200);
 })();
-;
 
-/* ==== gs-final-request-fix-js ==== */
 (function(){
   function $(id){return document.getElementById(id)}
   function S(){window.state=window.state||{};return window.state}
@@ -9516,9 +9528,7 @@ document.addEventListener('DOMContentLoaded',function(){
   setTimeout(boot,250);setTimeout(boot,850);setTimeout(boot,1600);
   setInterval(function(){try{updateBellBadge()}catch(e){}},2000);
 })();
-;
 
-/* ==== gs-targeted-fix-20260502-js ==== */
 (function(){
   function $(id){return document.getElementById(id)}
   function S(){window.state=window.state||{};return window.state}
@@ -9644,9 +9654,7 @@ document.addEventListener('DOMContentLoaded',function(){
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
   setTimeout(boot,200);setTimeout(boot,800);setTimeout(boot,1800);setInterval(function(){refreshBell();},2000);
 })();
-;
 
-/* ==== gs-user-final-fixes-js ==== */
 (function(){
   function $(id){return document.getElementById(id)}
   function S(){window.state=window.state||{};return window.state}
@@ -9778,9 +9786,7 @@ document.addEventListener('DOMContentLoaded',function(){
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
   [200,800,1600,3200].forEach(function(ms){setTimeout(boot,ms)});
 })();
-;
 
-/* ==== gs-patch-clean-v2-js ==== */
 (function () {
   'use strict';
 
@@ -10068,9 +10074,7 @@ document.addEventListener('DOMContentLoaded',function(){
   }
 
 })();
-;
 
-/* ==== gs-restore-result-js ==== */
 (function(){
 'use strict';
 if(window.__GS_RESTORE_RESULT_20260502)return;window.__GS_RESTORE_RESULT_20260502=true;
@@ -10124,15 +10128,22 @@ function isLoggedIn(){return !!(window._supaUser||S().user||S().session||S().cur
 function accountAction(){if(isLoggedIn()){if(window.gsLogout)return window.gsLogout();if(window.logout)return window.logout();state.user=null;state.session=null;save();nt('Déconnecté');return}var a=$('auth-screen');if(window.openAuth)window.openAuth();else if(a){a.style.display='flex';a.classList&&a.classList.add('open')}}
 window.gsRestoreAccountAction=accountAction
 window.openHamburger=function(){var ov=$('more-ov'),sh=$('more-sh');if(!ov||!sh)return;header();var p=S().profil||{},name=p.name||p.prenom||p.username||'Dany',initial=(name.charAt(0)||'G').toUpperCase();var gyms=selectedGymList();var auth=isLoggedIn();sh.classList.add('gs-restore-open');var html='<div class="gs-r-menu-head"><div class="gs-r-avatar">'+E(initial)+'</div><div onclick="closeHamburger();openProfil&&openProfil()"><div class="gs-r-menu-name">'+E(name)+'</div><div class="gs-r-menu-sub">Voir mon profil</div></div><button class="gs-r-x" type="button" onclick="closeHamburger()">×</button></div><div class="gs-r-menu-section">Navigation</div><div class="gs-r-menu-list">'+menuBtn(menuIcon('program'),'Programme','Plan d’entraînement',"closeHamburger();openFL('programme')")+menuBtn(menuIcon('journal'),'Journal de bord','Logs, poids, séances et progression',"closeHamburger();goTab('journal',document.getElementById('nb-journal'))")+menuBtn(menuIcon('trophy'),'Leaderboard global','GOAT, Endurance, Force, Volume, XP',"closeHamburger();window.openLeaderboard?openLeaderboard():null")+'</div><div class="gs-r-menu-section">Musique</div><div class="gs-r-music"><a href="spotify://">'+musicLogo('spotify')+'Spotify</a><a href="deezer://">'+musicLogo('deezer')+'Deezer</a><a href="soundcloud://">'+musicLogo('sound')+'SoundCloud</a><a href="music://">'+musicLogo('apple')+'Apple</a></div><div class="gs-r-menu-section">Salles de sport</div><div class="gs-r-menu-list">'+menuBtn('<span class="gs-r-pin">📍</span>','Trouver une salle près de moi','Maps selon tes salles sélectionnées',"openGymSearch()")+gyms.map(function(g){var lab=gymLabel(g),key=gymKey(lab),ico=(typeof window.gsGymLogo==='function')?window.gsGymLogo(key,false):(key.indexOf('basicfit')>-1?logoBasicFit():menuIcon('gym'));return menuBtn(ico,lab,'Ouvrir l’app '+lab,"openGymLink('"+JS(lab)+"')",key.indexOf('basicfit')>-1?'data-gym="basicfit"':'')}).join('')+'</div><div class="gs-r-menu-section">Compte</div><button class="gs-r-account" onclick="closeHamburger();window.gsRestoreAccountAction&&window.gsRestoreAccountAction()">'+(auth?'Se déconnecter':'Connexion')+'</button>';sh.innerHTML=html;ov.classList.add('open');sh.classList.add('open');setTimeout(function(){Array.prototype.slice.call(sh.querySelectorAll('[data-gs-logout-menu],[data-gs-logout-menu-grid]')).forEach(function(n){try{n.remove()}catch(e){}});cleanHeaderDupes()},0);setTimeout(cleanHeaderDupes,250)};
-window.closeHamburger=function(){var ov=$('more-ov'),sh=$('more-sh');if(ov)ov.classList.remove('open');if(sh){sh.classList.remove('open');sh.classList.remove('gs-restore-open')}};
+window.closeHamburger=function(){
+ var ov=$('more-ov'),sh=$('more-sh');
+ if(ov)ov.classList.remove('open');
+ if(sh){sh.classList.remove('open');sh.classList.remove('gs-restore-open');}
+ /* Fermer aussi le profil si ouvert depuis le burger */
+ var profil=$('profil-ov');
+ if(profil&&profil.classList.contains('open')){
+  profil.classList.remove('open');
+ }
+};
 function sessionNotification(){try{if('Notification' in window){if(Notification.permission==='granted'){new Notification('G-SQUAD',{body:'Séance lancée. Focus exercice par exercice.',tag:'gsquad-session-start'});}else if(Notification.permission!=='denied'){Notification.requestPermission().then(function(p){if(p==='granted')new Notification('G-SQUAD',{body:'Séance lancée. Focus exercice par exercice.',tag:'gsquad-session-start'});});}}}catch(e){}try{nt('Séance lancée')}catch(e){}}
 var nativeStart=window.startSession;if(typeof nativeStart==='function'&&!nativeStart.__gsRestore){window.startSession=function(type){var r=nativeStart.apply(this,arguments);if(!type||String(type).indexOf('seance')>-1||String(type).indexOf('séance')>-1)sessionNotification();return r};window.startSession.__gsRestore=true}
 function boot(){header();cleanHeaderDupes();try{if($('fl-programme')&&$('fl-programme').classList.contains('open'))window.renderProgBody()}catch(e){}try{if($('p-accueil')&&$('p-accueil').classList.contains('act'))window.renderAccueil()}catch(e){}try{var daybar=$('daybar');if(daybar)daybar.style.display='none'}catch(e){}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(boot,80);setTimeout(boot,650);setTimeout(function(){try{window.goTab&&window.goTab('accueil',$('nb-accueil'))}catch(e){}},900);setTimeout(boot,2200);setTimeout(cleanHeaderDupes,2600)});else{setTimeout(boot,80);setTimeout(boot,650);setTimeout(boot,2200);setTimeout(cleanHeaderDupes,2600)}
 })();
-;
 
-/* ==== gs-user-request-20260502-js ==== */
 (function(){
 function byId(id){return document.getElementById(id)}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -10186,9 +10197,7 @@ var oldHam=window.openHamburger;window.openHamburger=function(){var r=oldHam?old
 var oldOpenFL=window.openFL;window.openFL=function(name){var r=oldOpenFL?oldOpenFL.apply(this,arguments):undefined;if(name==='programme')setTimeout(function(){installBackButtons();if(typeof renderProgBody==='function')renderProgBody()},0);return r};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){applyExactCustomDays();installBackButtons();fixBurger();try{if(byId('fl-programme')&&byId('fl-programme').classList.contains('open'))renderProgBody()}catch(e){}});else{applyExactCustomDays();installBackButtons();fixBurger()}
 })();
-;
 
-/* ==== gs-program-format-only-js ==== */
 (function(){
   function id(x){return document.getElementById(x)}
   function E(v){try{return typeof esc==='function'?esc(v):String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}catch(e){return String(v==null?'':v)}}
@@ -10229,9 +10238,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   window.renderProgBody=function(){applyCustom();var el=id('fl-prog-body');if(!el)return;var k=splitKey(),count=splitCount(k),ds=window.DAYS||[],p=profil(),obj=objKey(p.objectif),html='<div class="gs-r-prog"><section class="gs-r-prog-hero"><div><div class="gs-r-prog-label">Programme</div><div class="gs-r-prog-title">'+E(splitTitle(k))+'</div><div class="gs-r-prog-sub">'+E(objLabel(obj))+' · '+count+' séances/semaine · modifiable à tout moment</div></div><button type="button" class="gs-r-prog-calc" onclick="window.openProgramCalculator?openProgramCalculator():alert(\'Calculateur indisponible\')">Calculateur</button></section>'+formatsHtml();for(var di=0;di<count;di++){var day=objectiveAdjustDay(ds[di]||{},k,di,count,obj),exs=getExs(di),dn=programDayName(di,k);html+='<section class="gs-r-prog-day"><div class="gs-r-day-head"><div><div class="gs-r-day-label">Jour '+(di+1)+'</div><div class="gs-r-day-name">'+E(dn)+'</div><label class="gs-r-day-date"><span>Jour prévu</span><select onchange="gsProgramSetDayName('+di+',this.value)">'+dayOptions(dn)+'</select></label><div class="gs-r-day-sub">'+E(day.type||'Séance')+' · '+E(day.dur||'55-70 min')+'</div></div><button type="button" class="gs-r-day-edit" onclick="editDay('+di+')">Modifier</button></div>';if(exs.length){exs.forEach(function(ex,i){html+='<div class="gs-r-ex"><b>'+E((i+1)+'. '+(ex.n||'Exercice'))+'</b><span>'+E(ex.s||'')+'</span></div>'})}else html+='<div class="gs-r-ex"><b>Jour vidé</b><span>—</span></div>';html+='</section>'}el.innerHTML=html+'</div>';try{if(typeof installBackButtons==='function')installBackButtons()}catch(e){}};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){try{if(id('fl-programme')&&id('fl-programme').classList.contains('open'))renderProgBody()}catch(e){}});else{try{if(id('fl-programme')&&id('fl-programme').classList.contains('open'))renderProgBody()}catch(e){}}
 })();
-;
 
-/* ==== gs-session-focus-request-js ==== */
 (function(){
 function byId(id){return document.getElementById(id)}
 function esc(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}
@@ -10291,9 +10298,7 @@ var oldToggleML=window.toggleML;
 window.toggleML=function(){var box=byId('minilog');if(box){box.classList.toggle('open');return}if(typeof oldToggleML==='function')return oldToggleML.apply(this,arguments)};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){try{if(byId('p-seance')&&byId('p-seance').classList.contains('act'))window.renderSeance()}catch(e){}},120)});else setTimeout(function(){try{if(byId('p-seance')&&byId('p-seance').classList.contains('act'))window.renderSeance()}catch(e){}},120);
 })();
-;
 
-/* ==== gs-bib-smart-v9-js ==== */
 (function(){
 function $(id){return document.getElementById(id)}
 function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -10378,9 +10383,7 @@ window.renderBib=function(){extendLibrary();addTypeButtons();var el=$('bib-list'
 function boot(){extendLibrary();addTypeButtons();try{window.renderBib&&window.renderBib()}catch(e){}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(boot,150)});else setTimeout(boot,150);setTimeout(boot,700);
 })();
-;
 
-/* ==== gs-fix-search-notif-20260504-js ==== */
 (function(){
   'use strict';
   if(window.__gsFixSearchNotif20260504)return;
@@ -10522,9 +10525,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
   setTimeout(boot,120);setTimeout(boot,700);setTimeout(boot,1600);setInterval(refreshNotifBadges,2500);
 })();
-;
 
-/* ==== gs-nutri-food-db-20260504 ==== */
 (function(){
  function E(s){return String(s==null?'':s).replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c];})}
  function N(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/œ/g,'oe').replace(/[^a-z0-9]+/g,' ').trim()}
@@ -10692,9 +10693,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  html+='<div class="gs-nutri-section"><b>Repas enregistrés</b><span>'+meals.length+' repas</span></div>'+(meals.length?meals.map(function(m,i){return '<div class="gs-nutri-meal"><div><div style="font-weight:950;color:var(--txt)">'+E(m.type||'Repas')+'</div><div style="font-size:13px;color:var(--txt2);margin-top:3px">'+E(m.desc||'Repas')+'</div><div style="font-size:11px;color:var(--mut);margin-top:6px">'+Math.round(m.kcal||0)+' kcal · '+Math.round(m.prot||0)+'g prot · '+Math.round(m.carbs||m.glucides||0)+'g gluc · '+Math.round(m.fat||m.lipides||0)+'g lip</div></div>'+(isToday?'<div style="display:flex;gap:6px"><button class="gs-btn ghost" onclick="saveMealFavV2('+i+')">☆</button><button class="gs-btn ghost" onclick="deleteMealV2('+i+')">Supprimer</button></div>':'')+'</div>'}).join(''):'<div class="gs-v2-card"><div class="gs-card-sub">Aucun repas enregistré.</div></div>');html+='<div class="gs-nutri-section"><b>Compléments</b><span>check du jour</span></div><div class="gs-nutri-suppl">'+SUPPLS.map(function(s,i){var key=dateStr+'-'+i,done=!!(state.suppChecks||{})[key];return '<div class="si '+(done?'done':'')+'" onclick="togSuppl(\''+key+'\')"><div class="sc"><span style="font-size:12px;font-weight:900">'+s.ico+'</span></div><div><div class="sn">'+E(s.name)+'</div><div class="sd">'+E(s.dose)+'</div><div class="st">'+E(s.timing)+'</div></div></div>'}).join('')+'</div>';el.innerHTML=html;window.renderFoodResultsV2=renderFoodResults;renderFoodResults();renderBuilder()};
  window.renderNutriAndSuppl=function(){window.nSelectedDate=new Date();window.nEditMode=false;renderNutriPanel()};
 })();
-;
 
-/* ==== inline-script-46 ==== */
 (function(){
  function N(v){try{return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()}catch(e){return String(v||'').toLowerCase().trim()}}
  function E(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -10716,9 +10715,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  var old=window.renderNutriPanel;if(typeof old==='function'&&!old.__gsNutriScoreWrapped){var wrapped=function(){var r=old.apply(this,arguments);install();return r};wrapped.__gsNutriScoreWrapped=true;window.renderNutriPanel=wrapped}else install();
  document.addEventListener('DOMContentLoaded',install);
 })();
-;
 
-/* ==== gs-nutri-food-db-deep-20260504 ==== */
 (function(){
  function E(s){return String(s==null?'':s).replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c];})}
  function N(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/œ/g,'oe').replace(/[^a-z0-9]+/g,' ').trim()}
@@ -10738,9 +10735,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 function install(){var D=db();MORE.forEach(addFood);D.forEach(tune);window.GS_NUTRI_FOOD_DB=D;window.renderFoodResultsV2=render;window.setNutriFoodCatV2=setCat;inject();wrapNutriPanel();try{render()}catch(e){}}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(install,80);setTimeout(install,500)});else{install();setTimeout(install,500)}
 })();
-;
 
-/* ==== gs-nutri-fastfood-snacks-fr-20260504 ==== */
 (function(){
  function N(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/œ/g,'oe').replace(/[^a-z0-9]+/g,' ').trim()}
  var MORE=[{"n":"McDo Big Mac","c":"Fast-food","kcal":540,"prot":27,"carbs":46,"fat":28,"portion":"1 burger","a":"McDo Big Mac livraison uber eats deliveroo just eat","h":14},{"n":"McDo Double Big Mac","c":"Fast-food","kcal":720,"prot":42,"carbs":47,"fat":42,"portion":"1 burger","a":"McDo Double Big Mac livraison uber eats deliveroo just eat","h":12},{"n":"McDo Cheeseburger","c":"Fast-food","kcal":304,"prot":15,"carbs":32,"fat":13,"portion":"1 burger","a":"McDo Cheeseburger livraison uber eats deliveroo just eat","h":18},{"n":"McDo Double Cheese","c":"Fast-food","kcal":440,"prot":25,"carbs":34,"fat":24,"portion":"1 burger","a":"McDo Double Cheese livraison uber eats deliveroo just eat","h":15},{"n":"McDo Royal Cheese","c":"Fast-food","kcal":530,"prot":32,"carbs":36,"fat":29,"portion":"1 burger","a":"McDo Royal Cheese livraison uber eats deliveroo just eat","h":14},{"n":"McDo Royal Deluxe","c":"Fast-food","kcal":560,"prot":31,"carbs":39,"fat":32,"portion":"1 burger","a":"McDo Royal Deluxe livraison uber eats deliveroo just eat","h":13},{"n":"McDo McChicken","c":"Fast-food","kcal":440,"prot":21,"carbs":44,"fat":21,"portion":"1 burger","a":"McDo McChicken livraison uber eats deliveroo just eat","h":17},{"n":"McDo McCrispy","c":"Fast-food","kcal":580,"prot":27,"carbs":57,"fat":28,"portion":"1 burger","a":"McDo McCrispy livraison uber eats deliveroo just eat","h":14},{"n":"McDo CBO","c":"Fast-food","kcal":650,"prot":33,"carbs":58,"fat":34,"portion":"1 burger","a":"McDo CBO livraison uber eats deliveroo just eat","h":12},{"n":"McDo Filet-O-Fish","c":"Fast-food","kcal":330,"prot":15,"carbs":36,"fat":15,"portion":"1 burger","a":"McDo Filet-O-Fish livraison uber eats deliveroo just eat","h":20},{"n":"McDo Croque McDo","c":"Fast-food","kcal":260,"prot":13,"carbs":28,"fat":11,"portion":"1 croque","a":"McDo Croque McDo livraison uber eats deliveroo just eat","h":20},{"n":"McDo McFirst Bœuf","c":"Fast-food","kcal":475,"prot":24,"carbs":42,"fat":24,"portion":"1 burger","a":"McDo McFirst Bœuf livraison uber eats deliveroo just eat","h":16},{"n":"McDo McFirst Poulet","c":"Fast-food","kcal":470,"prot":23,"carbs":45,"fat":22,"portion":"1 burger","a":"McDo McFirst Poulet livraison uber eats deliveroo just eat","h":16},{"n":"McDo McWrap Poulet Bacon","c":"Fast-food","kcal":620,"prot":32,"carbs":58,"fat":30,"portion":"1 wrap","a":"McDo McWrap Poulet Bacon livraison uber eats deliveroo just eat","h":16},{"n":"McDo Nuggets x6","c":"Fast-food","kcal":260,"prot":15,"carbs":17,"fat":15,"portion":"6 pièces","a":"McDo Nuggets x6 livraison uber eats deliveroo just eat","h":20},{"n":"McDo Nuggets x9","c":"Fast-food","kcal":390,"prot":22,"carbs":26,"fat":23,"portion":"9 pièces","a":"McDo Nuggets x9 livraison uber eats deliveroo just eat","h":18},{"n":"McDo Frites moyennes","c":"Fast-food","kcal":340,"prot":4,"carbs":45,"fat":16,"portion":"1 portion","a":"McDo Frites moyennes livraison uber eats deliveroo just eat","h":12},{"n":"McDo Potatoes","c":"Fast-food","kcal":330,"prot":5,"carbs":47,"fat":14,"portion":"1 portion","a":"McDo Potatoes livraison uber eats deliveroo just eat","h":14},{"n":"McDo McFlurry Oreo","c":"Fast-food","kcal":510,"prot":9,"carbs":75,"fat":18,"portion":"1 dessert","a":"McDo McFlurry Oreo livraison uber eats deliveroo just eat","h":10},{"n":"McDo McFlurry M&M’s","c":"Fast-food","kcal":540,"prot":10,"carbs":78,"fat":20,"portion":"1 dessert","a":"McDo McFlurry M&M’s livraison uber eats deliveroo just eat","h":9},{"n":"McDo Menu Big Mac","c":"Fast-food","kcal":980,"prot":31,"carbs":120,"fat":42,"portion":"1 menu","a":"McDo Menu Big Mac livraison uber eats deliveroo just eat","h":9},{"n":"McDo Menu McChicken","c":"Fast-food","kcal":900,"prot":25,"carbs":116,"fat":36,"portion":"1 menu","a":"McDo Menu McChicken livraison uber eats deliveroo just eat","h":10},{"n":"Burger King Whopper","c":"Fast-food","kcal":657,"prot":28,"carbs":49,"fat":40,"portion":"1 burger","a":"Burger King Whopper livraison uber eats deliveroo just eat","h":12},{"n":"Burger King Double Whopper Cheese","c":"Fast-food","kcal":920,"prot":55,"carbs":52,"fat":58,"portion":"1 burger","a":"Burger King Double Whopper Cheese livraison uber eats deliveroo just eat","h":9},{"n":"Burger King Steakhouse","c":"Fast-food","kcal":950,"prot":46,"carbs":70,"fat":56,"portion":"1 burger","a":"Burger King Steakhouse livraison uber eats deliveroo just eat","h":8},{"n":"Burger King Double Steakhouse","c":"Fast-food","kcal":1150,"prot":68,"carbs":72,"fat":72,"portion":"1 burger","a":"Burger King Double Steakhouse livraison uber eats deliveroo just eat","h":6},{"n":"Burger King Big King","c":"Fast-food","kcal":520,"prot":27,"carbs":42,"fat":28,"portion":"1 burger","a":"Burger King Big King livraison uber eats deliveroo just eat","h":14},{"n":"Burger King Long Chicken","c":"Fast-food","kcal":660,"prot":27,"carbs":61,"fat":34,"portion":"1 burger","a":"Burger King Long Chicken livraison uber eats deliveroo just eat","h":12},{"n":"Burger King Crispy Chicken","c":"Fast-food","kcal":520,"prot":23,"carbs":51,"fat":25,"portion":"1 burger","a":"Burger King Crispy Chicken livraison uber eats deliveroo just eat","h":15},{"n":"Burger King Bacon King","c":"Fast-food","kcal":1050,"prot":61,"carbs":51,"fat":72,"portion":"1 burger","a":"Burger King Bacon King livraison uber eats deliveroo just eat","h":6},{"n":"Burger King Nuggets x6","c":"Fast-food","kcal":270,"prot":15,"carbs":18,"fat":16,"portion":"6 pièces","a":"Burger King Nuggets x6 livraison uber eats deliveroo just eat","h":18},{"n":"Burger King Onion Rings","c":"Fast-food","kcal":280,"prot":4,"carbs":34,"fat":14,"portion":"1 portion","a":"Burger King Onion Rings livraison uber eats deliveroo just eat","h":14},{"n":"Burger King King Fries cheddar bacon","c":"Fast-food","kcal":560,"prot":16,"carbs":54,"fat":32,"portion":"1 portion","a":"Burger King King Fries cheddar bacon livraison uber eats deliveroo just eat","h":8},{"n":"Burger King Chili Cheese Nuggets x6","c":"Fast-food","kcal":310,"prot":12,"carbs":22,"fat":20,"portion":"6 pièces","a":"Burger King Chili Cheese Nuggets x6 livraison uber eats deliveroo just eat","h":12},{"n":"Burger King King Fusion Oreo","c":"Fast-food","kcal":460,"prot":8,"carbs":68,"fat":17,"portion":"1 dessert","a":"Burger King King Fusion Oreo livraison uber eats deliveroo just eat","h":11},{"n":"Burger King Menu Whopper","c":"Fast-food","kcal":1100,"prot":32,"carbs":124,"fat":52,"portion":"1 menu","a":"Burger King Menu Whopper livraison uber eats deliveroo just eat","h":8},{"n":"KFC Colonel Original","c":"Fast-food","kcal":560,"prot":28,"carbs":55,"fat":26,"portion":"1 burger","a":"KFC Colonel Original livraison uber eats deliveroo just eat","h":14},{"n":"KFC Tower Burger","c":"Fast-food","kcal":720,"prot":35,"carbs":68,"fat":34,"portion":"1 burger","a":"KFC Tower Burger livraison uber eats deliveroo just eat","h":10},{"n":"KFC Boxmaster","c":"Fast-food","kcal":750,"prot":38,"carbs":72,"fat":34,"portion":"1 wrap","a":"KFC Boxmaster livraison uber eats deliveroo just eat","h":10},{"n":"KFC Twister","c":"Fast-food","kcal":520,"prot":28,"carbs":52,"fat":23,"portion":"1 wrap","a":"KFC Twister livraison uber eats deliveroo just eat","h":15},{"n":"KFC Tenders x3","c":"Fast-food","kcal":360,"prot":30,"carbs":21,"fat":18,"portion":"3 pièces","a":"KFC Tenders x3 livraison uber eats deliveroo just eat","h":18},{"n":"KFC Tenders x5","c":"Fast-food","kcal":600,"prot":50,"carbs":35,"fat":30,"portion":"5 pièces","a":"KFC Tenders x5 livraison uber eats deliveroo just eat","h":13},{"n":"KFC Hot Wings x5","c":"Fast-food","kcal":450,"prot":30,"carbs":10,"fat":32,"portion":"5 pièces","a":"KFC Hot Wings x5 livraison uber eats deliveroo just eat","h":12},{"n":"KFC Bucket perso","c":"Fast-food","kcal":980,"prot":62,"carbs":54,"fat":56,"portion":"1 portion","a":"KFC Bucket perso livraison uber eats deliveroo just eat","h":8},{"n":"KFC Popcorn Chicken","c":"Fast-food","kcal":420,"prot":26,"carbs":30,"fat":24,"portion":"1 portion","a":"KFC Popcorn Chicken livraison uber eats deliveroo just eat","h":13},{"n":"KFC Frites","c":"Fast-food","kcal":330,"prot":4,"carbs":44,"fat":15,"portion":"1 portion","a":"KFC Frites livraison uber eats deliveroo just eat","h":13},{"n":"KFC Sundae chocolat","c":"Fast-food","kcal":310,"prot":7,"carbs":52,"fat":8,"portion":"1 dessert","a":"KFC Sundae chocolat livraison uber eats deliveroo just eat","h":14},{"n":"Quick Giant","c":"Fast-food","kcal":535,"prot":28,"carbs":43,"fat":29,"portion":"1 burger","a":"Quick Giant livraison uber eats deliveroo just eat","h":13},{"n":"Quick Giant Max","c":"Fast-food","kcal":760,"prot":43,"carbs":48,"fat":46,"portion":"1 burger","a":"Quick Giant Max livraison uber eats deliveroo just eat","h":9},{"n":"Quick Long Bacon","c":"Fast-food","kcal":720,"prot":34,"carbs":60,"fat":39,"portion":"1 burger","a":"Quick Long Bacon livraison uber eats deliveroo just eat","h":9},{"n":"Quick Quick’n Toast","c":"Fast-food","kcal":520,"prot":25,"carbs":42,"fat":29,"portion":"1 burger","a":"Quick Quick’n Toast livraison uber eats deliveroo just eat","h":14},{"n":"Quick Suprême Bacon","c":"Fast-food","kcal":780,"prot":39,"carbs":55,"fat":45,"portion":"1 burger","a":"Quick Suprême Bacon livraison uber eats deliveroo just eat","h":8},{"n":"Quick Fish Burger","c":"Fast-food","kcal":430,"prot":18,"carbs":46,"fat":20,"portion":"1 burger","a":"Quick Fish Burger livraison uber eats deliveroo just eat","h":17},{"n":"Quick Nuggets x6","c":"Fast-food","kcal":280,"prot":15,"carbs":18,"fat":17,"portion":"6 pièces","a":"Quick Nuggets x6 livraison uber eats deliveroo just eat","h":18},{"n":"Quick Cheesy Fries","c":"Fast-food","kcal":520,"prot":12,"carbs":55,"fat":28,"portion":"1 portion","a":"Quick Cheesy Fries livraison uber eats deliveroo just eat","h":9},{"n":"O’Tacos M 1 viande","c":"Fast-food","kcal":780,"prot":35,"carbs":82,"fat":34,"portion":"1 tacos","a":"O’Tacos M 1 viande livraison uber eats deliveroo just eat","h":10},{"n":"O’Tacos L 2 viandes","c":"Fast-food","kcal":1050,"prot":52,"carbs":108,"fat":46,"portion":"1 tacos","a":"O’Tacos L 2 viandes livraison uber eats deliveroo just eat","h":7},{"n":"O’Tacos XL 3 viandes","c":"Fast-food","kcal":1450,"prot":75,"carbs":150,"fat":62,"portion":"1 tacos","a":"O’Tacos XL 3 viandes livraison uber eats deliveroo just eat","h":4},{"n":"O’Tacos Nuggets sauce fromagère","c":"Fast-food","kcal":980,"prot":42,"carbs":106,"fat":44,"portion":"1 tacos","a":"O’Tacos Nuggets sauce fromagère livraison uber eats deliveroo just eat","h":7},{"n":"O’Tacos Cordon bleu","c":"Fast-food","kcal":940,"prot":44,"carbs":98,"fat":42,"portion":"1 tacos","a":"O’Tacos Cordon bleu livraison uber eats deliveroo just eat","h":7},{"n":"O’Tacos Tenders","c":"Fast-food","kcal":960,"prot":48,"carbs":96,"fat":44,"portion":"1 tacos","a":"O’Tacos Tenders livraison uber eats deliveroo just eat","h":7},{"n":"O’Tacos Kebab","c":"Fast-food","kcal":980,"prot":46,"carbs":100,"fat":46,"portion":"1 tacos","a":"O’Tacos Kebab livraison uber eats deliveroo just eat","h":7},{"n":"O’Tacos Gratiné cheddar","c":"Fast-food","kcal":1180,"prot":55,"carbs":108,"fat":58,"portion":"1 tacos","a":"O’Tacos Gratiné cheddar livraison uber eats deliveroo just eat","h":5},{"n":"O’Tacos Bowl","c":"Fast-food","kcal":850,"prot":42,"carbs":82,"fat":38,"portion":"1 bowl","a":"O’Tacos Bowl livraison uber eats deliveroo just eat","h":11},{"n":"Tacos 1 viande","c":"Fast-food","kcal":760,"prot":34,"carbs":80,"fat":32,"portion":"1 tacos","a":"Tacos 1 viande livraison uber eats deliveroo just eat","h":10},{"n":"Tacos 2 viandes","c":"Fast-food","kcal":980,"prot":50,"carbs":96,"fat":44,"portion":"1 tacos","a":"Tacos 2 viandes livraison uber eats deliveroo just eat","h":7},{"n":"Tacos 3 viandes","c":"Fast-food","kcal":1300,"prot":70,"carbs":128,"fat":58,"portion":"1 tacos","a":"Tacos 3 viandes livraison uber eats deliveroo just eat","h":5},{"n":"Tacos gratiné raclette","c":"Fast-food","kcal":1120,"prot":54,"carbs":102,"fat":56,"portion":"1 tacos","a":"Tacos gratiné raclette livraison uber eats deliveroo just eat","h":5},{"n":"Tacos tenders cordon bleu","c":"Fast-food","kcal":1050,"prot":56,"carbs":104,"fat":48,"portion":"1 tacos","a":"Tacos tenders cordon bleu livraison uber eats deliveroo just eat","h":6},{"n":"Kebab galette","c":"Fast-food","kcal":720,"prot":36,"carbs":70,"fat":32,"portion":"1 galette","a":"Kebab galette livraison uber eats deliveroo just eat","h":12},{"n":"Kebab pain","c":"Fast-food","kcal":760,"prot":38,"carbs":76,"fat":34,"portion":"1 sandwich","a":"Kebab pain livraison uber eats deliveroo just eat","h":11},{"n":"Kebab frites","c":"Fast-food","kcal":950,"prot":42,"carbs":110,"fat":38,"portion":"1 menu","a":"Kebab frites livraison uber eats deliveroo just eat","h":8},{"n":"Assiette kebab complète","c":"Fast-food","kcal":1050,"prot":55,"carbs":105,"fat":45,"portion":"1 assiette","a":"Assiette kebab complète livraison uber eats deliveroo just eat","h":9},{"n":"Dürüm kebab","c":"Fast-food","kcal":780,"prot":38,"carbs":78,"fat":34,"portion":"1 dürüm","a":"Dürüm kebab livraison uber eats deliveroo just eat","h":11},{"n":"Naan kebab","c":"Fast-food","kcal":860,"prot":42,"carbs":86,"fat":38,"portion":"1 sandwich","a":"Naan kebab livraison uber eats deliveroo just eat","h":9},{"n":"Chicken naan","c":"Fast-food","kcal":820,"prot":44,"carbs":82,"fat":34,"portion":"1 sandwich","a":"Chicken naan livraison uber eats deliveroo just eat","h":11},{"n":"Sandwich américain steak frites","c":"Fast-food","kcal":900,"prot":38,"carbs":95,"fat":42,"portion":"1 sandwich","a":"Sandwich américain steak frites livraison uber eats deliveroo just eat","h":8},{"n":"Panini jambon fromage","c":"Fast-food","kcal":620,"prot":28,"carbs":58,"fat":28,"portion":"1 panini","a":"Panini jambon fromage livraison uber eats deliveroo just eat","h":17},{"n":"Panini poulet curry","c":"Fast-food","kcal":650,"prot":32,"carbs":62,"fat":28,"portion":"1 panini","a":"Panini poulet curry livraison uber eats deliveroo just eat","h":17},{"n":"Panini 3 fromages","c":"Fast-food","kcal":720,"prot":30,"carbs":58,"fat":38,"portion":"1 panini","a":"Panini 3 fromages livraison uber eats deliveroo just eat","h":12},{"n":"Nabab Kebab sandwich","c":"Fast-food","kcal":760,"prot":38,"carbs":76,"fat":34,"portion":"1 sandwich","a":"Nabab Kebab sandwich livraison uber eats deliveroo just eat","h":11},{"n":"Berliner kebab","c":"Fast-food","kcal":820,"prot":40,"carbs":82,"fat":36,"portion":"1 sandwich","a":"Berliner kebab livraison uber eats deliveroo just eat","h":10},{"n":"Chamas Tacos M","c":"Fast-food","kcal":820,"prot":38,"carbs":86,"fat":36,"portion":"1 tacos","a":"Chamas Tacos M livraison uber eats deliveroo just eat","h":9},{"n":"Tacos Avenue L","c":"Fast-food","kcal":1050,"prot":52,"carbs":106,"fat":46,"portion":"1 tacos","a":"Tacos Avenue L livraison uber eats deliveroo just eat","h":7},{"n":"Chicken Street tenders x5","c":"Fast-food","kcal":620,"prot":50,"carbs":36,"fat":32,"portion":"5 pièces","a":"Chicken Street tenders x5 livraison uber eats deliveroo just eat","h":12},{"n":"Chicken Street wings x8","c":"Fast-food","kcal":720,"prot":46,"carbs":20,"fat":52,"portion":"8 pièces","a":"Chicken Street wings x8 livraison uber eats deliveroo just eat","h":8},{"n":"G La Dalle burger signature","c":"Fast-food","kcal":780,"prot":38,"carbs":70,"fat":40,"portion":"1 burger","a":"G La Dalle burger signature livraison uber eats deliveroo just eat","h":8},{"n":"G La Dalle tenders x5","c":"Fast-food","kcal":620,"prot":48,"carbs":34,"fat":32,"portion":"5 pièces","a":"G La Dalle tenders x5 livraison uber eats deliveroo just eat","h":12},{"n":"Black and White Burger classique","c":"Fast-food","kcal":760,"prot":38,"carbs":66,"fat":40,"portion":"1 burger","a":"Black and White Burger classique livraison uber eats deliveroo just eat","h":9},{"n":"Pepe Chicken burger","c":"Fast-food","kcal":720,"prot":36,"carbs":68,"fat":34,"portion":"1 burger","a":"Pepe Chicken burger livraison uber eats deliveroo just eat","h":10},{"n":"Five Guys Hamburger","c":"Fast-food","kcal":700,"prot":38,"carbs":39,"fat":43,"portion":"1 burger","a":"Five Guys Hamburger livraison uber eats deliveroo just eat","h":10},{"n":"Five Guys Cheeseburger","c":"Fast-food","kcal":840,"prot":48,"carbs":40,"fat":55,"portion":"1 burger","a":"Five Guys Cheeseburger livraison uber eats deliveroo just eat","h":8},{"n":"Five Guys Bacon Cheeseburger","c":"Fast-food","kcal":960,"prot":55,"carbs":42,"fat":64,"portion":"1 burger","a":"Five Guys Bacon Cheeseburger livraison uber eats deliveroo just eat","h":6},{"n":"Five Guys Little Cheeseburger","c":"Fast-food","kcal":610,"prot":34,"carbs":36,"fat":38,"portion":"1 burger","a":"Five Guys Little Cheeseburger livraison uber eats deliveroo just eat","h":12},{"n":"Five Guys Cajun Fries","c":"Fast-food","kcal":520,"prot":7,"carbs":70,"fat":24,"portion":"1 portion","a":"Five Guys Cajun Fries livraison uber eats deliveroo just eat","h":8},{"n":"Five Guys Milkshake","c":"Fast-food","kcal":670,"prot":14,"carbs":86,"fat":30,"portion":"1 milkshake","a":"Five Guys Milkshake livraison uber eats deliveroo just eat","h":7},{"n":"Subway 15 cm Poulet Teriyaki","c":"Fast-food","kcal":370,"prot":25,"carbs":55,"fat":6,"portion":"1 sandwich 15 cm","a":"Subway 15 cm Poulet Teriyaki livraison uber eats deliveroo just eat","h":28},{"n":"Subway 30 cm Poulet Teriyaki","c":"Fast-food","kcal":740,"prot":50,"carbs":110,"fat":12,"portion":"1 sandwich 30 cm","a":"Subway 30 cm Poulet Teriyaki livraison uber eats deliveroo just eat","h":20},{"n":"Subway 15 cm Italian BMT","c":"Fast-food","kcal":450,"prot":24,"carbs":48,"fat":18,"portion":"1 sandwich 15 cm","a":"Subway 15 cm Italian BMT livraison uber eats deliveroo just eat","h":18},{"n":"Subway 15 cm Steak & Cheese","c":"Fast-food","kcal":420,"prot":28,"carbs":48,"fat":14,"portion":"1 sandwich 15 cm","a":"Subway 15 cm Steak & Cheese livraison uber eats deliveroo just eat","h":20},{"n":"Subway 15 cm Thon","c":"Fast-food","kcal":480,"prot":23,"carbs":46,"fat":24,"portion":"1 sandwich 15 cm","a":"Subway 15 cm Thon livraison uber eats deliveroo just eat","h":16},{"n":"Subway Cookie chocolat","c":"Fast-food","kcal":220,"prot":3,"carbs":30,"fat":10,"portion":"1 cookie","a":"Subway Cookie chocolat livraison uber eats deliveroo just eat","h":12},{"n":"Domino’s Pizza Pepperoni","c":"Fast-food","kcal":280,"prot":12,"carbs":32,"fat":12,"portion":"1 part","a":"Domino’s Pizza Pepperoni livraison uber eats deliveroo just eat","h":16},{"n":"Domino’s Pizza Reine","c":"Fast-food","kcal":260,"prot":13,"carbs":31,"fat":10,"portion":"1 part","a":"Domino’s Pizza Reine livraison uber eats deliveroo just eat","h":18},{"n":"Domino’s Pizza 4 fromages","c":"Fast-food","kcal":310,"prot":14,"carbs":31,"fat":16,"portion":"1 part","a":"Domino’s Pizza 4 fromages livraison uber eats deliveroo just eat","h":12},{"n":"Domino’s Chicken BBQ","c":"Fast-food","kcal":300,"prot":15,"carbs":34,"fat":12,"portion":"1 part","a":"Domino’s Chicken BBQ livraison uber eats deliveroo just eat","h":15},{"n":"Domino’s Cheesy Bread","c":"Fast-food","kcal":520,"prot":20,"carbs":54,"fat":24,"portion":"1 portion","a":"Domino’s Cheesy Bread livraison uber eats deliveroo just eat","h":10},{"n":"Domino’s Box 8 wings","c":"Fast-food","kcal":620,"prot":42,"carbs":20,"fat":44,"portion":"8 wings","a":"Domino’s Box 8 wings livraison uber eats deliveroo just eat","h":9},{"n":"Pizza Hut Pepperoni Lovers","c":"Fast-food","kcal":320,"prot":14,"carbs":34,"fat":16,"portion":"1 part","a":"Pizza Hut Pepperoni Lovers livraison uber eats deliveroo just eat","h":12},{"n":"Pizza Hut Pan Pizza fromage","c":"Fast-food","kcal":300,"prot":13,"carbs":34,"fat":14,"portion":"1 part","a":"Pizza Hut Pan Pizza fromage livraison uber eats deliveroo just eat","h":14},{"n":"Pizza Hut Cheesy Crust","c":"Fast-food","kcal":360,"prot":15,"carbs":38,"fat":18,"portion":"1 part","a":"Pizza Hut Cheesy Crust livraison uber eats deliveroo just eat","h":10},{"n":"Papa Johns Pepperoni","c":"Fast-food","kcal":310,"prot":13,"carbs":36,"fat":14,"portion":"1 part","a":"Papa Johns Pepperoni livraison uber eats deliveroo just eat","h":13},{"n":"Speed Burger bacon cheese","c":"Fast-food","kcal":760,"prot":38,"carbs":70,"fat":39,"portion":"1 burger","a":"Speed Burger bacon cheese livraison uber eats deliveroo just eat","h":9},{"n":"Big Fernand burger classique","c":"Fast-food","kcal":780,"prot":40,"carbs":62,"fat":42,"portion":"1 burger","a":"Big Fernand burger classique livraison uber eats deliveroo just eat","h":10},{"n":"Bagelstein bagel saumon","c":"Fast-food","kcal":560,"prot":28,"carbs":64,"fat":22,"portion":"1 bagel","a":"Bagelstein bagel saumon livraison uber eats deliveroo just eat","h":22},{"n":"Bagelstein bagel pastrami","c":"Fast-food","kcal":620,"prot":34,"carbs":62,"fat":28,"portion":"1 bagel","a":"Bagelstein bagel pastrami livraison uber eats deliveroo just eat","h":18},{"n":"Pokawa bowl saumon","c":"Fast-food","kcal":650,"prot":32,"carbs":80,"fat":22,"portion":"1 bowl","a":"Pokawa bowl saumon livraison uber eats deliveroo just eat","h":48},{"n":"Pokawa bowl poulet","c":"Fast-food","kcal":690,"prot":36,"carbs":86,"fat":22,"portion":"1 bowl","a":"Pokawa bowl poulet livraison uber eats deliveroo just eat","h":48},{"n":"Pitaya Pad Thaï poulet","c":"Fast-food","kcal":850,"prot":42,"carbs":104,"fat":28,"portion":"1 box","a":"Pitaya Pad Thaï poulet livraison uber eats deliveroo just eat","h":28},{"n":"Pitaya Nua Kao bœuf","c":"Fast-food","kcal":820,"prot":42,"carbs":92,"fat":32,"portion":"1 box","a":"Pitaya Nua Kao bœuf livraison uber eats deliveroo just eat","h":28},{"n":"Pitaya Bo Bun poulet","c":"Fast-food","kcal":720,"prot":36,"carbs":92,"fat":22,"portion":"1 bowl","a":"Pitaya Bo Bun poulet livraison uber eats deliveroo just eat","h":38},{"n":"Nachos Burrito bœuf","c":"Fast-food","kcal":820,"prot":42,"carbs":92,"fat":32,"portion":"1 burrito","a":"Nachos Burrito bœuf livraison uber eats deliveroo just eat","h":25},{"n":"Nachos Quesadilla poulet","c":"Fast-food","kcal":760,"prot":40,"carbs":66,"fat":36,"portion":"1 quesadilla","a":"Nachos Quesadilla poulet livraison uber eats deliveroo just eat","h":22},{"n":"Chipotle-style burrito poulet","c":"Fast-food","kcal":780,"prot":42,"carbs":92,"fat":26,"portion":"1 burrito","a":"Chipotle-style burrito poulet livraison uber eats deliveroo just eat","h":28},{"n":"Sushi Shop California saumon avocat x6","c":"Fast-food","kcal":330,"prot":14,"carbs":44,"fat":10,"portion":"6 pièces","a":"Sushi Shop California saumon avocat x6 livraison uber eats deliveroo just eat","h":52},{"n":"Sushi Shop Maki saumon x6","c":"Fast-food","kcal":230,"prot":12,"carbs":34,"fat":5,"portion":"6 pièces","a":"Sushi Shop Maki saumon x6 livraison uber eats deliveroo just eat","h":60},{"n":"Sushi Shop Box mixte","c":"Fast-food","kcal":850,"prot":42,"carbs":120,"fat":20,"portion":"1 box","a":"Sushi Shop Box mixte livraison uber eats deliveroo just eat","h":42},{"n":"Planet Sushi california x6","c":"Fast-food","kcal":340,"prot":14,"carbs":45,"fat":11,"portion":"6 pièces","a":"Planet Sushi california x6 livraison uber eats deliveroo just eat","h":50},{"n":"Matsuri brochettes yakitori x4","c":"Fast-food","kcal":520,"prot":38,"carbs":42,"fat":22,"portion":"4 brochettes","a":"Matsuri brochettes yakitori x4 livraison uber eats deliveroo just eat","h":36},{"n":"Poke thon mayo spicy livraison","c":"Fast-food","kcal":760,"prot":36,"carbs":90,"fat":28,"portion":"1 bowl","a":"Poke thon mayo spicy livraison livraison uber eats deliveroo just eat","h":28},{"n":"Bowl gyros grec","c":"Fast-food","kcal":780,"prot":40,"carbs":76,"fat":36,"portion":"1 bowl","a":"Bowl gyros grec livraison uber eats deliveroo just eat","h":24},{"n":"Burrata focaccia sandwich","c":"Fast-food","kcal":690,"prot":25,"carbs":72,"fat":34,"portion":"1 sandwich","a":"Burrata focaccia sandwich livraison uber eats deliveroo just eat","h":20},{"n":"Brioche Dorée sandwich poulet crudités","c":"Fast-food","kcal":520,"prot":28,"carbs":58,"fat":20,"portion":"1 sandwich","a":"Brioche Dorée sandwich poulet crudités livraison uber eats deliveroo just eat","h":26},{"n":"Paul sandwich jambon beurre","c":"Fast-food","kcal":620,"prot":24,"carbs":72,"fat":26,"portion":"1 sandwich","a":"Paul sandwich jambon beurre livraison uber eats deliveroo just eat","h":18},{"n":"Paul sandwich poulet mayo","c":"Fast-food","kcal":650,"prot":30,"carbs":70,"fat":28,"portion":"1 sandwich","a":"Paul sandwich poulet mayo livraison uber eats deliveroo just eat","h":18},{"n":"La Mie Câline cookies x2","c":"Fast-food","kcal":420,"prot":6,"carbs":58,"fat":18,"portion":"2 cookies","a":"La Mie Câline cookies x2 livraison uber eats deliveroo just eat","h":10},{"n":"La Mie Câline maxi pain chocolat","c":"Fast-food","kcal":430,"prot":7,"carbs":48,"fat":24,"portion":"1 pièce","a":"La Mie Câline maxi pain chocolat livraison uber eats deliveroo just eat","h":10},{"n":"Boulangerie formule sandwich dessert soda","c":"Fast-food","kcal":980,"prot":30,"carbs":142,"fat":34,"portion":"1 formule","a":"Boulangerie formule sandwich dessert soda livraison uber eats deliveroo just eat","h":10},{"n":"Menu kebab boisson frites","c":"Fast-food","kcal":1150,"prot":45,"carbs":130,"fat":48,"portion":"1 menu","a":"Menu kebab boisson frites livraison uber eats deliveroo just eat","h":7},{"n":"Menu tacos M boisson","c":"Fast-food","kcal":980,"prot":38,"carbs":116,"fat":38,"portion":"1 menu","a":"Menu tacos M boisson livraison uber eats deliveroo just eat","h":7},{"n":"Menu burger cheese snack","c":"Fast-food","kcal":900,"prot":35,"carbs":102,"fat":38,"portion":"1 menu","a":"Menu burger cheese snack livraison uber eats deliveroo just eat","h":8},{"n":"Menu tenders frites boisson","c":"Fast-food","kcal":980,"prot":55,"carbs":96,"fat":42,"portion":"1 menu","a":"Menu tenders frites boisson livraison uber eats deliveroo just eat","h":7},{"n":"Chips nature sachet","c":"Snacks","kcal":240,"prot":3,"carbs":24,"fat":15,"portion":"1 petit sachet 45 g","a":"Chips nature sachet snack france supermarché livraison","h":18},{"n":"Chips barbecue sachet","c":"Snacks","kcal":250,"prot":3,"carbs":25,"fat":16,"portion":"1 petit sachet 45 g","a":"Chips barbecue sachet snack france supermarché livraison","h":16},{"n":"Chips paprika sachet","c":"Snacks","kcal":250,"prot":3,"carbs":25,"fat":16,"portion":"1 petit sachet 45 g","a":"Chips paprika sachet snack france supermarché livraison","h":16},{"n":"Chips ondulées fromage","c":"Snacks","kcal":260,"prot":3,"carbs":24,"fat":17,"portion":"1 petit sachet","a":"Chips ondulées fromage snack france supermarché livraison","h":14},{"n":"Pringles original","c":"Snacks","kcal":260,"prot":3,"carbs":26,"fat":16,"portion":"1 portion 50 g","a":"Pringles original snack france supermarché livraison","h":15},{"n":"Pringles sour cream onion","c":"Snacks","kcal":265,"prot":3,"carbs":26,"fat":17,"portion":"1 portion 50 g","a":"Pringles sour cream onion snack france supermarché livraison","h":14},{"n":"Doritos nacho cheese","c":"Snacks","kcal":250,"prot":4,"carbs":30,"fat":13,"portion":"1 portion 50 g","a":"Doritos nacho cheese snack france supermarché livraison","h":15},{"n":"Tortilla chips salsa","c":"Snacks","kcal":240,"prot":4,"carbs":32,"fat":11,"portion":"1 portion 50 g","a":"Tortilla chips salsa snack france supermarché livraison","h":18},{"n":"Cheetos fromage","c":"Snacks","kcal":260,"prot":4,"carbs":30,"fat":14,"portion":"1 portion 50 g","a":"Cheetos fromage snack france supermarché livraison","h":14},{"n":"Curly cacahuète","c":"Snacks","kcal":250,"prot":5,"carbs":28,"fat":13,"portion":"1 portion 50 g","a":"Curly cacahuète snack france supermarché livraison","h":18},{"n":"Monster Munch","c":"Snacks","kcal":245,"prot":4,"carbs":30,"fat":12,"portion":"1 portion 50 g","a":"Monster Munch snack france supermarché livraison","h":17},{"n":"3D Bugles","c":"Snacks","kcal":250,"prot":4,"carbs":30,"fat":13,"portion":"1 portion 50 g","a":"3D Bugles snack france supermarché livraison","h":16},{"n":"Pop-corn sucré","c":"Snacks","kcal":210,"prot":3,"carbs":36,"fat":6,"portion":"1 sachet 50 g","a":"Pop-corn sucré snack france supermarché livraison","h":22},{"n":"Pop-corn salé","c":"Snacks","kcal":190,"prot":4,"carbs":26,"fat":8,"portion":"1 sachet 50 g","a":"Pop-corn salé snack france supermarché livraison","h":26},{"n":"Bretzel apéro","c":"Snacks","kcal":180,"prot":5,"carbs":36,"fat":2,"portion":"1 poignée 50 g","a":"Bretzel apéro snack france supermarché livraison","h":30},{"n":"Crackers Tuc","c":"Snacks","kcal":240,"prot":4,"carbs":34,"fat":10,"portion":"1 portion 50 g","a":"Crackers Tuc snack france supermarché livraison","h":22},{"n":"Monaco Belin","c":"Snacks","kcal":250,"prot":5,"carbs":32,"fat":12,"portion":"1 portion 50 g","a":"Monaco Belin snack france supermarché livraison","h":20},{"n":"Minis pizzas apéro","c":"Snacks","kcal":300,"prot":8,"carbs":34,"fat":15,"portion":"1 portion 70 g","a":"Minis pizzas apéro snack france supermarché livraison","h":14},{"n":"Cacahuètes grillées salées","c":"Snacks","kcal":300,"prot":13,"carbs":8,"fat":25,"portion":"1 poignée 50 g","a":"Cacahuètes grillées salées snack france supermarché livraison","h":35},{"n":"Noix de cajou salées","c":"Snacks","kcal":300,"prot":9,"carbs":15,"fat":24,"portion":"1 poignée 50 g","a":"Noix de cajou salées snack france supermarché livraison","h":36},{"n":"Pistaches salées","c":"Snacks","kcal":285,"prot":10,"carbs":14,"fat":23,"portion":"1 poignée 50 g","a":"Pistaches salées snack france supermarché livraison","h":40},{"n":"Amandes grillées","c":"Snacks","kcal":290,"prot":11,"carbs":10,"fat":25,"portion":"1 poignée 50 g","a":"Amandes grillées snack france supermarché livraison","h":50},{"n":"Olives vertes apéro","c":"Snacks","kcal":80,"prot":1,"carbs":3,"fat":7,"portion":"1 portion 80 g","a":"Olives vertes apéro snack france supermarché livraison","h":48},{"n":"Saucisson sec tranches","c":"Snacks","kcal":230,"prot":13,"carbs":1,"fat":19,"portion":"6 tranches","a":"Saucisson sec tranches snack france supermarché livraison","h":16},{"n":"Mini saucissons apéro","c":"Snacks","kcal":310,"prot":17,"carbs":2,"fat":26,"portion":"1 portion 70 g","a":"Mini saucissons apéro snack france supermarché livraison","h":12},{"n":"Surimi bâtonnets","c":"Snacks","kcal":120,"prot":9,"carbs":12,"fat":4,"portion":"6 bâtonnets","a":"Surimi bâtonnets snack france supermarché livraison","h":45},{"n":"Nuggets apéro surgelés","c":"Snacks","kcal":320,"prot":16,"carbs":24,"fat":18,"portion":"6 pièces","a":"Nuggets apéro surgelés snack france supermarché livraison","h":16},{"n":"Mozzarella sticks","c":"Snacks","kcal":360,"prot":16,"carbs":30,"fat":20,"portion":"5 pièces","a":"Mozzarella sticks snack france supermarché livraison","h":12},{"n":"Onion rings apéro","c":"Snacks","kcal":280,"prot":4,"carbs":34,"fat":14,"portion":"1 portion","a":"Onion rings apéro snack france supermarché livraison","h":14},{"n":"Kinder Bueno","c":"Snacks","kcal":245,"prot":4,"carbs":24,"fat":15,"portion":"1 paquet","a":"Kinder Bueno snack france supermarché livraison","h":9},{"n":"Kinder Bueno White","c":"Snacks","kcal":250,"prot":4,"carbs":25,"fat":15,"portion":"1 paquet","a":"Kinder Bueno White snack france supermarché livraison","h":9},{"n":"Kinder Maxi","c":"Snacks","kcal":120,"prot":2,"carbs":12,"fat":7,"portion":"1 barre","a":"Kinder Maxi snack france supermarché livraison","h":12},{"n":"Kinder Country","c":"Snacks","kcal":130,"prot":2,"carbs":15,"fat":7,"portion":"1 barre","a":"Kinder Country snack france supermarché livraison","h":12},{"n":"Kinder Pingui","c":"Snacks","kcal":135,"prot":3,"carbs":13,"fat":8,"portion":"1 pièce","a":"Kinder Pingui snack france supermarché livraison","h":12},{"n":"Nutella B-ready","c":"Snacks","kcal":115,"prot":2,"carbs":16,"fat":5,"portion":"1 barre","a":"Nutella B-ready snack france supermarché livraison","h":12},{"n":"Nutella Biscuits","c":"Snacks","kcal":150,"prot":2,"carbs":19,"fat":8,"portion":"3 biscuits","a":"Nutella Biscuits snack france supermarché livraison","h":10},{"n":"Ferrero Rocher","c":"Snacks","kcal":220,"prot":3,"carbs":19,"fat":15,"portion":"3 pièces","a":"Ferrero Rocher snack france supermarché livraison","h":10},{"n":"Twix","c":"Snacks","kcal":250,"prot":3,"carbs":34,"fat":12,"portion":"1 barre","a":"Twix snack france supermarché livraison","h":9},{"n":"Snickers","c":"Snacks","kcal":250,"prot":5,"carbs":30,"fat":12,"portion":"1 barre","a":"Snickers snack france supermarché livraison","h":10},{"n":"Mars","c":"Snacks","kcal":230,"prot":4,"carbs":35,"fat":8,"portion":"1 barre","a":"Mars snack france supermarché livraison","h":10},{"n":"Bounty","c":"Snacks","kcal":280,"prot":3,"carbs":34,"fat":15,"portion":"1 paquet","a":"Bounty snack france supermarché livraison","h":9},{"n":"KitKat","c":"Snacks","kcal":210,"prot":3,"carbs":27,"fat":10,"portion":"1 paquet","a":"KitKat snack france supermarché livraison","h":10},{"n":"Lion","c":"Snacks","kcal":255,"prot":4,"carbs":34,"fat":12,"portion":"1 barre","a":"Lion snack france supermarché livraison","h":9},{"n":"M&M’s cacahuète","c":"Snacks","kcal":250,"prot":5,"carbs":28,"fat":13,"portion":"1 sachet 45 g","a":"M&M’s cacahuète snack france supermarché livraison","h":10},{"n":"Daim barre","c":"Snacks","kcal":150,"prot":2,"carbs":18,"fat":8,"portion":"1 barre","a":"Daim barre snack france supermarché livraison","h":9},{"n":"Milka chocolat lait","c":"Snacks","kcal":265,"prot":4,"carbs":29,"fat":15,"portion":"1 rangée 50 g","a":"Milka chocolat lait snack france supermarché livraison","h":10},{"n":"Côte d’Or chocolat noir","c":"Snacks","kcal":270,"prot":4,"carbs":24,"fat":18,"portion":"1 rangée 50 g","a":"Côte d’Or chocolat noir snack france supermarché livraison","h":16},{"n":"Toblerone","c":"Snacks","kcal":260,"prot":4,"carbs":30,"fat":14,"portion":"1 portion 50 g","a":"Toblerone snack france supermarché livraison","h":10},{"n":"Prince chocolat","c":"Snacks","kcal":150,"prot":2,"carbs":22,"fat":6,"portion":"2 biscuits","a":"Prince chocolat snack france supermarché livraison","h":13},{"n":"BN chocolat","c":"Snacks","kcal":160,"prot":3,"carbs":23,"fat":6,"portion":"2 biscuits","a":"BN chocolat snack france supermarché livraison","h":13},{"n":"Pépito chocolat","c":"Snacks","kcal":155,"prot":2,"carbs":21,"fat":7,"portion":"2 biscuits","a":"Pépito chocolat snack france supermarché livraison","h":12},{"n":"Granola chocolat","c":"Snacks","kcal":170,"prot":2,"carbs":22,"fat":8,"portion":"2 biscuits","a":"Granola chocolat snack france supermarché livraison","h":12},{"n":"Petit Écolier","c":"Snacks","kcal":165,"prot":2,"carbs":21,"fat":8,"portion":"2 biscuits","a":"Petit Écolier snack france supermarché livraison","h":12},{"n":"Mikado chocolat","c":"Snacks","kcal":150,"prot":3,"carbs":24,"fat":5,"portion":"1 petit paquet","a":"Mikado chocolat snack france supermarché livraison","h":13},{"n":"Oreo","c":"Snacks","kcal":160,"prot":2,"carbs":25,"fat":7,"portion":"4 biscuits","a":"Oreo snack france supermarché livraison","h":11},{"n":"Speculoos Lotus","c":"Snacks","kcal":150,"prot":2,"carbs":23,"fat":6,"portion":"4 biscuits","a":"Speculoos Lotus snack france supermarché livraison","h":14},{"n":"Madeleine","c":"Snacks","kcal":130,"prot":2,"carbs":16,"fat":7,"portion":"1 pièce","a":"Madeleine snack france supermarché livraison","h":16},{"n":"Quatre-quarts","c":"Snacks","kcal":250,"prot":4,"carbs":30,"fat":12,"portion":"1 tranche","a":"Quatre-quarts snack france supermarché livraison","h":12},{"n":"Brownie chocolat","c":"Snacks","kcal":320,"prot":5,"carbs":42,"fat":15,"portion":"1 part","a":"Brownie chocolat snack france supermarché livraison","h":9},{"n":"Cookie chocolat","c":"Snacks","kcal":220,"prot":3,"carbs":30,"fat":10,"portion":"1 cookie","a":"Cookie chocolat snack france supermarché livraison","h":11},{"n":"Palets bretons","c":"Snacks","kcal":180,"prot":2,"carbs":20,"fat":10,"portion":"3 biscuits","a":"Palets bretons snack france supermarché livraison","h":12},{"n":"Galettes Saint-Michel","c":"Snacks","kcal":170,"prot":2,"carbs":22,"fat":8,"portion":"3 biscuits","a":"Galettes Saint-Michel snack france supermarché livraison","h":13},{"n":"Chamonix orange","c":"Snacks","kcal":160,"prot":2,"carbs":34,"fat":2,"portion":"2 pièces","a":"Chamonix orange snack france supermarché livraison","h":14},{"n":"Napolitain","c":"Snacks","kcal":190,"prot":2,"carbs":26,"fat":8,"portion":"1 gâteau","a":"Napolitain snack france supermarché livraison","h":10},{"n":"Savane marbré","c":"Snacks","kcal":180,"prot":3,"carbs":24,"fat":8,"portion":"1 tranche","a":"Savane marbré snack france supermarché livraison","h":12},{"n":"Barre céréales chocolat","c":"Snacks","kcal":130,"prot":2,"carbs":22,"fat":4,"portion":"1 barre","a":"Barre céréales chocolat snack france supermarché livraison","h":20},{"n":"Barre protéinée","c":"Snacks","kcal":210,"prot":20,"carbs":20,"fat":7,"portion":"1 barre","a":"Barre protéinée snack france supermarché livraison","h":45},{"n":"Compote gourde pomme","c":"Snacks","kcal":65,"prot":0,"carbs":16,"fat":0,"portion":"1 gourde","a":"Compote gourde pomme snack france supermarché livraison","h":55},{"n":"Pom’Potes fraise","c":"Snacks","kcal":70,"prot":0,"carbs":17,"fat":0,"portion":"1 gourde","a":"Pom’Potes fraise snack france supermarché livraison","h":50},{"n":"Haribo Dragibus","c":"Snacks","kcal":170,"prot":2,"carbs":40,"fat":0,"portion":"1 portion 50 g","a":"Haribo Dragibus snack france supermarché livraison","h":7},{"n":"Haribo Tagada","c":"Snacks","kcal":175,"prot":2,"carbs":40,"fat":0,"portion":"1 portion 50 g","a":"Haribo Tagada snack france supermarché livraison","h":7},{"n":"Haribo Schtroumpfs","c":"Snacks","kcal":170,"prot":2,"carbs":39,"fat":0,"portion":"1 portion 50 g","a":"Haribo Schtroumpfs snack france supermarché livraison","h":7},{"n":"Haribo Croco","c":"Snacks","kcal":170,"prot":2,"carbs":39,"fat":0,"portion":"1 portion 50 g","a":"Haribo Croco snack france supermarché livraison","h":7},{"n":"Carambar caramel","c":"Snacks","kcal":90,"prot":0,"carbs":20,"fat":1,"portion":"1 pièce","a":"Carambar caramel snack france supermarché livraison","h":8},{"n":"Chupa Chups","c":"Snacks","kcal":45,"prot":0,"carbs":11,"fat":0,"portion":"1 sucette","a":"Chupa Chups snack france supermarché livraison","h":8},{"n":"Chewing-gum sucré","c":"Snacks","kcal":25,"prot":0,"carbs":6,"fat":0,"portion":"1 chewing-gum","a":"Chewing-gum sucré snack france supermarché livraison","h":20},{"n":"Croissant","c":"Snacks","kcal":230,"prot":5,"carbs":27,"fat":12,"portion":"1 pièce","a":"Croissant snack france supermarché livraison","h":18},{"n":"Pain au chocolat","c":"Snacks","kcal":300,"prot":6,"carbs":35,"fat":16,"portion":"1 pièce","a":"Pain au chocolat snack france supermarché livraison","h":14},{"n":"Chausson aux pommes","c":"Snacks","kcal":330,"prot":4,"carbs":44,"fat":15,"portion":"1 pièce","a":"Chausson aux pommes snack france supermarché livraison","h":12},{"n":"Muffin chocolat","c":"Snacks","kcal":420,"prot":6,"carbs":55,"fat":20,"portion":"1 muffin","a":"Muffin chocolat snack france supermarché livraison","h":8},{"n":"Donut sucre","c":"Snacks","kcal":280,"prot":4,"carbs":34,"fat":14,"portion":"1 donut","a":"Donut sucre snack france supermarché livraison","h":9},{"n":"Éclair chocolat","c":"Snacks","kcal":260,"prot":6,"carbs":30,"fat":12,"portion":"1 éclair","a":"Éclair chocolat snack france supermarché livraison","h":12},{"n":"Flan pâtissier","c":"Snacks","kcal":320,"prot":8,"carbs":46,"fat":12,"portion":"1 part","a":"Flan pâtissier snack france supermarché livraison","h":14},{"n":"Tartelette citron","c":"Snacks","kcal":360,"prot":5,"carbs":48,"fat":16,"portion":"1 tartelette","a":"Tartelette citron snack france supermarché livraison","h":10},{"n":"Macaron","c":"Snacks","kcal":95,"prot":2,"carbs":11,"fat":5,"portion":"1 macaron","a":"Macaron snack france supermarché livraison","h":14},{"n":"Crêpe Nutella","c":"Snacks","kcal":390,"prot":7,"carbs":54,"fat":16,"portion":"1 crêpe","a":"Crêpe Nutella snack france supermarché livraison","h":10},{"n":"Gaufre sucre","c":"Snacks","kcal":320,"prot":6,"carbs":42,"fat":14,"portion":"1 gaufre","a":"Gaufre sucre snack france supermarché livraison","h":12},{"n":"Gaufre Nutella chantilly","c":"Snacks","kcal":520,"prot":8,"carbs":70,"fat":24,"portion":"1 gaufre","a":"Gaufre Nutella chantilly snack france supermarché livraison","h":7},{"n":"Beignet pomme","c":"Snacks","kcal":330,"prot":5,"carbs":44,"fat":15,"portion":"1 beignet","a":"Beignet pomme snack france supermarché livraison","h":10},{"n":"Magnum amandes","c":"Snacks","kcal":280,"prot":4,"carbs":26,"fat":18,"portion":"1 glace","a":"Magnum amandes snack france supermarché livraison","h":10},{"n":"Magnum classique","c":"Snacks","kcal":260,"prot":4,"carbs":25,"fat":16,"portion":"1 glace","a":"Magnum classique snack france supermarché livraison","h":10},{"n":"Cornetto vanille","c":"Snacks","kcal":220,"prot":4,"carbs":32,"fat":8,"portion":"1 glace","a":"Cornetto vanille snack france supermarché livraison","h":14},{"n":"Ben & Jerry’s cookie dough","c":"Snacks","kcal":270,"prot":5,"carbs":32,"fat":14,"portion":"100 ml","a":"Ben & Jerry’s cookie dough snack france supermarché livraison","h":8},{"n":"Häagen-Dazs vanille","c":"Snacks","kcal":250,"prot":4,"carbs":22,"fat":16,"portion":"100 ml","a":"Häagen-Dazs vanille snack france supermarché livraison","h":10},{"n":"Solero exotique","c":"Snacks","kcal":100,"prot":1,"carbs":23,"fat":1,"portion":"1 glace","a":"Solero exotique snack france supermarché livraison","h":30},{"n":"Yaourt à boire sucré","c":"Snacks","kcal":160,"prot":6,"carbs":26,"fat":4,"portion":"1 bouteille 250 ml","a":"Yaourt à boire sucré snack france supermarché livraison","h":24},{"n":"Dessert lacté chocolat","c":"Snacks","kcal":180,"prot":5,"carbs":28,"fat":5,"portion":"1 pot","a":"Dessert lacté chocolat snack france supermarché livraison","h":20},{"n":"Riz au lait","c":"Snacks","kcal":180,"prot":6,"carbs":30,"fat":4,"portion":"1 pot","a":"Riz au lait snack france supermarché livraison","h":24},{"n":"Semoule au lait","c":"Snacks","kcal":170,"prot":6,"carbs":28,"fat":4,"portion":"1 pot","a":"Semoule au lait snack france supermarché livraison","h":24},{"n":"Milkshake fraise bouteille","c":"Snacks","kcal":280,"prot":9,"carbs":46,"fat":6,"portion":"1 bouteille 330 ml","a":"Milkshake fraise bouteille snack france supermarché livraison","h":14}];
@@ -10749,9 +10744,7 @@ function install(){var D=db();MORE.forEach(addFood);D.forEach(tune);window.GS_NU
  function install(){MORE.forEach(addFood);try{if(window.renderFoodResultsV2)window.renderFoodResultsV2()}catch(e){}}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(install,120);setTimeout(install,700)});else{install();setTimeout(install,700)}
 })();
-;
 
-/* ==== gs-nutri-breakfast-detail-20260504 ==== */
 (function(){
  function E(s){return String(s==null?'':s).replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c})}
  function N(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/œ/g,'oe').replace(/[^a-z0-9]+/g,' ').trim()}
@@ -10865,9 +10858,7 @@ function install(){var D=db();MORE.forEach(addFood);D.forEach(tune);window.GS_NU
  function boot(){install();wrap();}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(boot,90);setTimeout(boot,850);setTimeout(boot,1700)});else{boot();setTimeout(boot,850);setTimeout(boot,1700)}
 })();
-;
 
-/* ==== gs-nutri-real-details-20260504 ==== */
 (function(){
  function E(s){return String(s==null?'':s).replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]})}
  function N(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/œ/g,'oe').replace(/[^a-z0-9]+/g,' ').trim()}
@@ -10940,9 +10931,7 @@ function install(){var D=db();MORE.forEach(addFood);D.forEach(tune);window.GS_NU
  function boot(){enrich();window.renderFoodResultsV2=render;try{render()}catch(e){}}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(boot,120);setTimeout(boot,1100);setTimeout(boot,2100);setTimeout(boot,3200)});else{boot();setTimeout(boot,1100);setTimeout(boot,2100);setTimeout(boot,3200)}
 })();
-;
 
-/* ==== gs-nutri-recipe-truth-click-fix-20260504 ==== */
 (function(){
  function E(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c})}
  function N(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/œ/g,'oe').replace(/[^a-z0-9]+/g,' ').trim()}
@@ -10975,9 +10964,7 @@ function install(){var D=db();MORE.forEach(addFood);D.forEach(tune);window.GS_NU
  function boot(){enrich();window.renderFoodResultsV2=renderFinal;window.setNutriFoodCatV2=setCat;try{renderFinal()}catch(e){}}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(boot,60);setTimeout(boot,500);setTimeout(boot,1300);setTimeout(boot,2600)});else{boot();setTimeout(boot,500);setTimeout(boot,1300);setTimeout(boot,2600)}
 })();
-;
 
-/* ==== gs-nutri-recipe-truth-extra-20260504 ==== */
 (function(){
  function E(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c})}
  function N(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/œ/g,'oe').replace(/[^a-z0-9]+/g,' ').trim()}
@@ -10998,9 +10985,7 @@ function install(){var D=db();MORE.forEach(addFood);D.forEach(tune);window.GS_NU
  function boot(){enrich();try{if(window.renderFoodResultsV2)window.renderFoodResultsV2()}catch(e){}}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(boot,80);setTimeout(boot,900);setTimeout(boot,2200)});else{boot();setTimeout(boot,900);setTimeout(boot,2200)}
 })();
-;
 
-/* ==== gs-profile-identity-v3-js ==== */
 (function(){
  function $(id){return document.getElementById(id)}
  function S(){window.state=window.state||{};return window.state}
@@ -11036,9 +11021,9 @@ function install(){var D=db();MORE.forEach(addFood);D.forEach(tune);window.GS_NU
  /* LIGNE 3 horizontale : badges (emoji) + format + salles */
  function stripHtml(){
   var p=P(),items=[],badges=unlockedBadges().slice(0,4);
-  badges.forEach(function(b){items.push('<button type="button" class="gs-prof4-pill badge" onclick="openBadges&&openBadges(\''+E(b._type||'xp')+'\')"><i>'+E(b.ico||'◆')+'</i><span>'+E(b.name||'Badge')+'</span></button>')});
+  badges.forEach(function(b){items.push('<button type="button" class="gs-prof4-pill badge" data-type="'+E(b._type||'xp')+'"><i>'+E(b.ico||'◆')+'</i><span>'+E(b.name||'Badge')+'</span></button>')});
   var fmt=formatProgram();
-  if(fmt) items.push('<button type="button" class="gs-prof4-pill format" onclick="openFL&&openFL(\'programme\')"><i>'+E(fmt)+'</i><span>Programme</span></button>');
+  if(fmt) items.push('<button type="button" class="gs-prof4-pill format"><i>'+E(fmt)+'</i><span>Programme</span></button>');
   var gyms=(p.gyms||[]);
   gyms.forEach(function(g){
    var d=(window.GS_GYMS&&window.GS_GYMS[g])||{name:g,color:'#CDA8FF',txt:String(g).slice(0,2).toUpperCase()};
@@ -11078,11 +11063,27 @@ function install(){var D=db();MORE.forEach(addFood);D.forEach(tune);window.GS_NU
    '<div class="gs-moments-grid">'+renderGallery()+'</div>'+
   '</div>';
  }
- window.openProfil=function(){var ov=$('profil-ov');if(!ov)return;ov.innerHTML=profileHtml();ov.classList.add('open');setTimeout(function(){try{renderProfilSocialCounts&&renderProfilSocialCounts()}catch(e){}},80)};
+ window.openProfil=function(){
+  var ov=document.getElementById('profil-ov');if(!ov)return;
+  ov.innerHTML=profileHtml();
+  ov.classList.add('open');
+  var bind=function(sel,fn){var el=ov.querySelector(sel);if(el)el.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();try{fn(ev,el)}catch(e){console.error('[profile click]',e)}})};
+  bind('.gs-prof4-back',function(){if(typeof window.closeProfil==='function')window.closeProfil()});
+  bind('.gs-prof4-settings',function(){if(typeof window.openProfilSettings==='function')window.openProfilSettings()});
+  bind('.gs-prof4-avatar',function(){if(typeof window.changeAvatar==='function')window.changeAvatar()});
+  bind('.gs-prof4-username',function(){if(typeof window.openProfilSettings==='function')window.openProfilSettings()});
+  bind('.gs-prof4-rank',function(){if(typeof window.openLeaderboard==='function')window.openLeaderboard()});
+  bind('.gs-prof4-add',function(){if(typeof window.openMomentUpload==='function')window.openMomentUpload('photo')});
+  ov.querySelectorAll('.gs-prof4-pill.badge').forEach(function(b){b.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();if(typeof window.openBadges==='function')window.openBadges(b.getAttribute('data-type')||'xp')})});
+  ov.querySelectorAll('.gs-prof4-pill.format').forEach(function(b){b.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();if(typeof window.openFL==='function')window.openFL('programme')})});
+  ov.querySelectorAll('.gs-moment-tile').forEach(function(b,i){b.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();if(typeof window.openMomentViewer==='function')window.openMomentViewer(i)})});
+  setTimeout(function(){
+   try{if(typeof window.renderProfilSocialCounts==='function')window.renderProfilSocialCounts()}catch(e){}
+   try{if(typeof window.decorateAll==='function')window.decorateAll()}catch(e){}
+  },80);
+ };
 })();
-;
 
-/* ==== gs-boot-overlay-dismiss ==== */
 /* Retire l'overlay une fois que tous les patches DOMContentLoaded + setTimeout(0) ont terminé */
 (function(){
  var done=false;
@@ -11106,4 +11107,418 @@ function install(){var D=db();MORE.forEach(addFood);D.forEach(tune);window.GS_NU
  /* Fallback: si "load" se déclenche jamais (rare mais possible), force après 5s */
  setTimeout(hide, 5000);
 })();
-;
+
+(function(){
+ var R=[{"k":["omelette"],"i":["2-3 œufs","Sel, poivre","1 noisette de beurre ou filet d'huile"],"s":["Casse les œufs dans un bol, sale et poivre.","Bats à la fourchette jusqu'à mélange homogène (pas de mousse).","Chauffe la poêle à feu moyen avec le beurre.","Verse les œufs, laisse prendre 30 secondes sans toucher.","Ramène les bords vers le centre avec une spatule, incline la poêle.","Plie en deux quand le dessus est encore légèrement baveux. Sers tout de suite."]},{"k":["omelette","jambon","fromage"],"i":["3 œufs","2 tranches de jambon coupées","40 g de fromage râpé","Sel, poivre, beurre"],"s":["Bats les œufs avec sel et poivre.","Chauffe la poêle avec le beurre.","Verse les œufs, laisse prendre 30 secondes.","Dépose le jambon et le fromage sur une moitié.","Plie l'omelette en deux, laisse 1 minute pour fondre le fromage.","Sers chaud."]},{"k":["shakshuka"],"i":["4 œufs","1 oignon","2 poivrons","400 g tomates concassées","Cumin, paprika, ail, sel"],"s":["Émince oignon et poivrons. Fais revenir 8 min dans un peu d'huile.","Ajoute ail, cumin, paprika. Cuis 1 min.","Ajoute les tomates. Mijote 10 min, sale.","Creuse 4 puits dans la sauce, casse un œuf dans chaque.","Couvre, cuis 5-7 min jusqu'à ce que les blancs soient pris.","Sers avec du pain pour saucer."]},{"k":["pancakes"],"i":["200 g farine","2 œufs","300 ml lait","2 cs sucre","1 sachet levure","Sel, beurre"],"s":["Mélange farine, sucre, levure, sel dans un saladier.","Ajoute œufs et lait. Fouette jusqu'à pâte lisse.","Laisse reposer 10 min.","Chauffe une poêle avec un peu de beurre.","Verse une louche de pâte. Cuis 2 min jusqu'aux bulles, retourne, 1 min.","Sers avec sirop d'érable, fruits ou confiture."]},{"k":["pancakes","banane"],"i":["2 bananes mûres","2 œufs","60 g flocons d'avoine","1 cc levure","Cannelle"],"s":["Écrase les bananes à la fourchette.","Ajoute œufs, avoine, levure et cannelle. Mélange.","Chauffe une poêle anti-adhésive sec ou avec un voile d'huile.","Verse de petites portions. Cuis 2 min, retourne, 1 min.","Sers chaud avec du yaourt ou des fruits."]},{"k":["crêpe"],"i":["250 g farine","4 œufs","500 ml lait","50 g beurre fondu","Sel, sucre"],"s":["Mélange farine et sel dans un saladier. Creuse un puits.","Ajoute les œufs, fouette en intégrant la farine.","Verse le lait progressivement, puis le beurre fondu.","Laisse reposer 1 h au frais.","Chauffe une poêle, beurre légèrement, verse une louche fine.","Cuis 1 min, retourne, 30 sec. Garnis selon envie."]},{"k":["avocado","toast"],"i":["1 tranche pain complet","1/2 avocat mûr","1 œuf","Citron, sel, poivre, piment"],"s":["Toaste le pain.","Écrase l'avocat à la fourchette avec citron, sel, poivre.","Étale sur le toast.","Cuis l'œuf au plat ou poché.","Pose-le sur l'avocat. Saupoudre de piment ou graines."]},{"k":["porridge","avoine"],"i":["60 g flocons d'avoine","300 ml lait ou eau","Miel, fruits, cannelle"],"s":["Verse l'avoine et le lait dans une casserole.","Porte à ébullition à feu moyen en remuant.","Baisse le feu, cuis 5 min en remuant régulièrement.","Verse dans un bol. Ajoute miel, cannelle.","Garnis de fruits, noix ou beurre de cacahuète."]},{"k":["overnight","oats"],"i":["60 g flocons d'avoine","150 ml lait","100 g yaourt grec","1 cc miel","Fruits"],"s":["Mets l'avoine, le lait, le yaourt et le miel dans un bocal.","Mélange bien.","Couvre et place au frigo une nuit (ou 4 h minimum).","Le matin, ajoute des fruits frais et des noix.","Mange direct, c'est prêt."]},{"k":["pain","perdu"],"i":["4 tranches pain rassis","2 œufs","200 ml lait","2 cs sucre","Vanille, beurre"],"s":["Bats œufs, lait, sucre, vanille.","Trempe chaque tranche de pain 30 sec dans le mélange.","Chauffe une poêle avec du beurre.","Cuis chaque tranche 2 min de chaque côté jusqu'à dorure.","Sers chaud avec sirop, fruits ou sucre glace."]},{"k":["pates","carbo"],"i":["200 g spaghettis","100 g lardons ou pancetta","2 jaunes d'œufs + 1 entier","50 g parmesan","Poivre"],"s":["Cuis les pâtes al dente dans l'eau bouillante salée.","Pendant ce temps, fais dorer les lardons à sec dans une poêle.","Bats les œufs avec le parmesan et beaucoup de poivre.","Réserve une louche d'eau de cuisson. Égoutte les pâtes.","Hors du feu, mélange les pâtes aux lardons.","Ajoute le mélange œufs-parmesan en remuant vite. Détend avec l'eau de cuisson.","Sers immédiatement. Pas de crème, jamais."]},{"k":["bolognaise"],"i":["200 g pâtes","300 g viande hachée","1 oignon","2 carottes","400 g tomates concassées","Ail, herbes"],"s":["Émince oignon, carottes, ail. Fais revenir 5 min dans l'huile.","Ajoute la viande hachée, fais dorer 5 min.","Verse les tomates, herbes (thym, laurier, basilic). Sale, poivre.","Mijote à feu doux 30-45 min minimum.","Cuis les pâtes al dente.","Mélange pâtes et sauce. Parmesan râpé dessus."]},{"k":["lasagne"],"i":["12 plaques lasagne","500 g viande hachée","Sauce tomate","Béchamel maison","150 g parmesan"],"s":["Prépare la sauce bolognaise (voir recette).","Prépare la béchamel : 50 g beurre + 50 g farine + 500 ml lait, sel muscade.","Beurre un plat. Pose une fine couche de bolognaise.","Alterne : plaques, bolognaise, béchamel, parmesan. Répète 3-4 fois.","Termine par béchamel + parmesan.","Four 180°C, 35-40 min jusqu'à dorure. Repose 10 min avant de servir."]},{"k":["pates","thon","tomate"],"i":["200 g pâtes","1 boîte thon (140 g)","400 g sauce tomate","Ail, oignon, basilic"],"s":["Émince ail et oignon. Fais revenir 3 min.","Ajoute la sauce tomate, mijote 10 min.","Émiette le thon dans la sauce, chauffe 2 min.","Cuis les pâtes al dente.","Mélange. Sers avec basilic frais."]},{"k":["gnocchi","pesto"],"i":["500 g gnocchis","4 cs pesto","50 g parmesan","Pignons (option)"],"s":["Plonge les gnocchis dans l'eau bouillante salée.","Sors-les dès qu'ils remontent (2-3 min).","Réserve 1 louche d'eau de cuisson.","Mélange gnocchis et pesto, détends avec l'eau si besoin.","Parmesan + pignons grillés. Sers immédiatement."]},{"k":["penne","arrabbiata"],"i":["200 g penne","400 g tomates concassées","3 gousses d'ail","1 piment","Persil"],"s":["Émince ail finement et le piment.","Fais revenir 2 min dans l'huile d'olive (sans brûler).","Ajoute les tomates, sel. Mijote 15 min.","Cuis les penne al dente.","Mélange pâtes et sauce, persil ciselé. Sers chaud."]},{"k":["ramen"],"i":["200 g nouilles ramen","1 L bouillon poulet","2 cs miso ou sauce soja","1 œuf","Légumes"],"s":["Prépare l'œuf mollet : 6 min dans l'eau bouillante, glaçons, écale.","Chauffe le bouillon, ajoute miso/soja, ail, gingembre râpé.","Cuis les nouilles selon le paquet.","Dans un bol : nouilles, bouillon par-dessus.","Ajoute œuf coupé en deux, ciboule, légumes (bok choy, champignons).","Sers chaud avec quelques gouttes d'huile sésame."]},{"k":["pad","thai"],"i":["200 g nouilles riz","200 g crevettes ou poulet","2 œufs","Sauce poisson, citron, sucre, cacahuètes"],"s":["Trempe les nouilles 10 min dans l'eau chaude.","Mélange sauce : 3 cs sauce poisson + 2 cs sucre + jus citron + tamarin.","Wok bien chaud, fais sauter crevettes 2 min.","Ajoute œufs battus, brouille.","Ajoute nouilles égouttées et la sauce. Saute 2 min.","Sers avec cacahuètes pilées, citron, coriandre."]},{"k":["pho"],"i":["200 g nouilles de riz","200 g bœuf cru tranché fin","1 L bouillon bœuf","Anis, cannelle, gingembre, oignon"],"s":["Bouillon : fais infuser 1 h le bouillon avec gingembre brûlé, oignon, anis étoilé, cannelle. Filtre.","Sale, ajoute un peu de sauce poisson.","Cuis les nouilles selon paquet, place dans un bol.","Pose les tranches de bœuf cru sur les nouilles.","Verse le bouillon brûlant : il cuit le bœuf instantanément.","Garnis : coriandre, basilic thaï, citron vert, piment, pousses de soja."]},{"k":["nasi","goreng"],"i":["300 g riz cuit froid","2 œufs","200 g poulet ou crevettes","Sauce soja, kecap manis, ail, oignon"],"s":["Émince ail, oignon, piment.","Wok bien chaud, fais dorer le poulet 4 min, retire.","Refais chauffer, jette ail/oignon, fais sauter.","Ajoute le riz, casse-le avec la spatule.","Verse sauce soja, kecap manis (sucrée). Mélange bien.","Pousse sur le côté, casse les œufs, brouille puis mélange tout.","Sers avec œuf au plat, concombre, krupuk."]},{"k":["bibimbap"],"i":["200 g riz cuit","200 g bœuf haché ou émincé","Carottes, courgette, épinards, champignons","1 œuf","Gochujang"],"s":["Cuis chaque légume séparément avec un peu d'huile, sel, ail (épinards à part avec sésame).","Marine le bœuf : sauce soja, ail, sucre, sésame. Fais sauter 4 min.","Cuis l'œuf au plat (jaune coulant).","Dans un bol : riz au fond.","Dispose les légumes et le bœuf en sections sur le riz.","Pose l'œuf au centre. Une cuillère de gochujang à côté.","Mélange tout au moment de manger."]},{"k":["curry","thai","vert"],"i":["400 ml lait coco","2 cs pâte curry vert","300 g poulet","Aubergines thaï, basilic thaï, sauce poisson"],"s":["Fais revenir 2 min la pâte de curry dans 2 cs de crème de coco épaisse.","Ajoute le poulet en morceaux, dore 3 min.","Verse le reste du lait coco. Mijote 10 min.","Ajoute aubergines, sauce poisson, sucre. Cuis 8 min.","Hors du feu, ajoute basilic thaï, citron vert.","Sers avec du riz jasmin."]},{"k":["butter","chicken"],"i":["500 g poulet","200 ml crème","400 g tomates","50 g beurre","Garam masala, gingembre, ail, fenugrec"],"s":["Marine le poulet 30 min : yaourt, ail, gingembre, garam masala, sel.","Fais griller le poulet en poêle 6 min, réserve.","Dans la même poêle : beurre, oignons, ail, gingembre. 5 min.","Ajoute tomates mixées, épices. Mijote 15 min.","Mixe la sauce, ajoute crème et fenugrec.","Remets le poulet, mijote 5 min. Sers avec riz basmati ou naan."]},{"k":["biryani"],"i":["400 g riz basmati","500 g poulet ou agneau","Yaourt, oignons frits, safran, garam masala","Coriandre, menthe"],"s":["Marine la viande 1 h : yaourt, gingembre, ail, garam masala, citron.","Cuis le riz à 70% (al dente).","Dans une cocotte épaisse : viande marinée au fond.","Couvre avec le riz, oignons frits, safran délayé dans lait, herbes.","Couvre hermétiquement (pâte ou papier alu).","Cuis 30 min à feu doux. Ne soulève pas le couvercle avant.","Mélange délicatement avant de servir."]},{"k":["couscous"],"i":["300 g semoule","500 g viande (poulet ou agneau)","Carottes, courgettes, navets, pois chiches","Cumin, ras el hanout"],"s":["Fais dorer la viande dans une cocotte avec oignons, épices.","Couvre d'eau, ajoute pois chiches trempés. Mijote 1 h.","Ajoute carottes et navets. 20 min.","Ajoute courgettes. 15 min.","Prépare la semoule : verse l'eau bouillante salée, attends 5 min, gratte avec une fourchette, ajoute beurre.","Sers semoule, viande, légumes, bouillon à part. Harissa pour relever."]},{"k":["tajine","poulet","olive"],"i":["1 poulet en morceaux","200 g olives vertes","1 citron confit","2 oignons","Gingembre, safran, coriandre"],"s":["Fais dorer le poulet dans la cocotte 5 min.","Ajoute oignons émincés, gingembre, safran, sel, poivre.","Couvre d'eau à mi-hauteur. Mijote 30 min.","Ajoute olives dénoyautées et citron confit en quartiers.","Mijote 15 min. La sauce doit réduire.","Parsème de coriandre. Sers avec semoule ou pain."]},{"k":["tajine","agneau"],"i":["800 g agneau","200 g pruneaux","Amandes","2 oignons","Cannelle, gingembre, miel, eau de fleur d'oranger"],"s":["Fais dorer l'agneau dans la cocotte avec oignons, épices.","Couvre d'eau. Mijote 1h30 jusqu'à viande tendre.","Trempe les pruneaux 10 min, ajoute-les avec miel et cannelle.","Mijote 15 min : la sauce doit napper.","Fais griller les amandes à sec.","Sers parsemé d'amandes, eau de fleur d'oranger."]},{"k":["risotto"],"i":["300 g riz arborio","1 L bouillon chaud","1 oignon","100 ml vin blanc","50 g parmesan","50 g beurre"],"s":["Émince l'oignon, fais revenir doucement dans le beurre 3 min.","Ajoute le riz, nacre 2 min (devient translucide).","Déglace au vin blanc, laisse évaporer.","Ajoute le bouillon louche par louche, en remuant. Attends absorption avant la suivante.","Continue 18 min jusqu'à riz al dente et crémeux.","Hors du feu : beurre froid + parmesan. Couvre 2 min, sers."]},{"k":["paella"],"i":["400 g riz rond","300 g poulet","200 g crevettes","200 g moules","Safran, paprika, oignon, poivron, tomate"],"s":["Fais dorer le poulet en morceaux dans la paella, retire.","Sue oignon, poivron, tomate.","Ajoute le riz, nacre 1 min, paprika et safran.","Verse le bouillon chaud (2 fois le volume du riz).","Remets le poulet, ne mélange plus.","À mi-cuisson, dispose crevettes et moules. Cuis 18 min total.","Repose 5 min couvert avant de servir."]},{"k":["poulet","roti"],"i":["1 poulet entier (1.5 kg)","Beurre mou","Citron, ail, thym, romarin","Sel, poivre"],"s":["Préchauffe le four à 200°C.","Sale, poivre, masse le poulet de beurre mou avec ail haché et thym.","Glisse un demi-citron et de l'ail dans la cavité.","Pose dans un plat avec un fond d'eau ou bouillon.","Cuis 1h-1h15. Arrose toutes les 15 min.","Repose 10 min couvert avant de découper."]},{"k":["poulet","creme","champignons"],"i":["4 escalopes poulet","300 g champignons","200 ml crème","1 oignon","Ail, thym, vin blanc"],"s":["Fais dorer les escalopes 4 min de chaque côté, réserve.","Dans la même poêle : oignon, ail, champignons. 8 min.","Déglace au vin blanc.","Ajoute la crème, thym, sel, poivre.","Remets le poulet, mijote 5 min couvert.","Sers avec pâtes ou riz."]},{"k":["poulet","tikka","masala"],"i":["500 g poulet","Yaourt, garam masala, gingembre, ail","400 g tomates","200 ml crème"],"s":["Marine le poulet 1 h : yaourt, gingembre, ail, garam masala, citron.","Fais griller le poulet en poêle ou four 8 min.","Dans une cocotte : oignons, ail, gingembre fondre 5 min.","Ajoute épices (cumin, coriandre, paprika), tomates mixées.","Mijote 15 min. Ajoute crème et le poulet.","Mijote 5 min. Coriandre fraîche. Riz basmati."]},{"k":["fajitas"],"i":["400 g poulet ou bœuf","2 poivrons","1 oignon rouge","8 tortillas","Cumin, paprika fumé, citron vert"],"s":["Tranche viande et légumes en lanières.","Marine la viande : huile, cumin, paprika, ail, citron vert. 20 min.","Poêle très chaude, saute la viande 4 min, retire.","Refais chauffer, saute les légumes 5 min al dente.","Remets la viande, mélange.","Réchauffe les tortillas. Sers avec guacamole, crème, salsa, fromage."]},{"k":["burrito","bowl"],"i":["200 g riz cuit","150 g haricots noirs","200 g poulet ou bœuf","Maïs, salsa, avocat, crème, fromage"],"s":["Cuis le riz, ajoute citron vert et coriandre.","Fais sauter la viande avec cumin, paprika, ail, sel.","Réchauffe les haricots avec un peu de cumin.","Dans un bol : riz au fond, viande, haricots, maïs.","Ajoute avocat, salsa, crème, fromage.","Mélange en mangeant."]},{"k":["tacos"],"i":["8 tortillas maïs","400 g viande hachée ou poulet","Oignon, coriandre, citron vert","Salsa, fromage"],"s":["Fais sauter la viande avec cumin, paprika, ail. 6 min.","Réchauffe les tortillas.","Dispose viande, oignon cru, coriandre.","Citron vert pressé, salsa.","Plie en deux. Mange à la main."]},{"k":["enchiladas"],"i":["8 tortillas","400 g poulet effiloché","Sauce tomate épicée","200 g fromage","Crème, oignon"],"s":["Cuis le poulet, effiloche-le, mélange avec un peu de sauce.","Trempe chaque tortilla dans la sauce 2 sec.","Garnis de poulet, roule.","Aligne dans un plat. Couvre du reste de sauce.","Couvre de fromage râpé.","Four 200°C, 15 min jusqu'à fromage doré."]},{"k":["quesadilla"],"i":["2 tortillas","100 g fromage râpé","Garniture (poulet, légumes)","Beurre"],"s":["Chauffe une poêle à feu moyen.","Pose une tortilla, étale fromage et garniture.","Couvre de la 2e tortilla.","Cuis 2-3 min jusqu'à dorure.","Retourne avec une assiette, cuis 2 min.","Coupe en parts. Sers avec crème et salsa."]},{"k":["burger"],"i":["1 steak haché 150 g","1 pain burger","Salade, tomate, oignon, cornichon","Cheddar, sauce"],"s":["Forme un steak épais, sale et poivre des deux côtés.","Poêle très chaude, cuis 3 min de chaque côté (saignant) ou 5 (à point).","Pose le fromage la dernière minute pour le faire fondre.","Toaste les pains 30 sec dans la poêle.","Monte : pain, sauce, salade, steak, tomate, oignon, cornichon.","Couvre, presse légèrement. Mange chaud."]},{"k":["steak","frite"],"i":["1 steak 200 g","300 g pommes de terre","Beurre, ail, thym","Sel, poivre"],"s":["Coupe les pommes de terre en frites, trempe 30 min dans l'eau.","Sèche-les. Première friture 160°C, 6 min. Refroidis.","Sors le steak du frigo 30 min avant.","Poêle très chaude, sel, cuis 2 min de chaque côté.","Beurre, ail écrasé, thym dans la poêle. Arrose 1 min.","Repose le steak 5 min couvert. Refais frire les frites 2 min à 180°C. Sale."]},{"k":["hachis","parmentier"],"i":["600 g viande hachée","1 kg pommes de terre","1 oignon","200 ml lait","Beurre, fromage râpé"],"s":["Cuis les pommes de terre dans l'eau salée 25 min. Égoutte.","Écrase, ajoute lait chaud, beurre, sel. Lisse.","Fais revenir oignon, ajoute viande, dore 5 min. Sale, poivre, herbes.","Étale viande dans un plat. Couvre de purée.","Saupoudre de fromage râpé.","Four 200°C, 25 min jusqu'à dorure."]},{"k":["quiche","lorraine"],"i":["1 pâte brisée","200 g lardons","4 œufs","300 ml crème","Sel, poivre, muscade"],"s":["Étale la pâte dans un moule, pique le fond.","Fais dorer les lardons à sec, égoutte.","Bats œufs, crème, sel, poivre, muscade.","Étale les lardons sur la pâte, verse l'appareil.","Four 180°C, 35-40 min jusqu'à doré.","Repose 5 min avant de découper."]},{"k":["boeuf","bourguignon"],"i":["1 kg bœuf à mijoter","750 ml vin rouge","Lardons, oignons grelots, champignons","Carottes, ail, bouquet garni"],"s":["Marine le bœuf 4 h dans le vin avec carottes, ail, bouquet garni.","Égoutte, sèche la viande. Fais dorer dans une cocotte.","Ajoute lardons, oignons grelots, dore.","Saupoudre de farine, mélange.","Verse la marinade filtrée et chauffée. Mijote 2h30 à 3h à feu doux.","Ajoute champignons sautés 30 min avant la fin.","Sers avec pommes vapeur ou tagliatelles."]},{"k":["rougail","saucisse"],"i":["6 saucisses fumées","2 oignons","6 tomates","Gingembre, ail, curcuma, piment"],"s":["Pique les saucisses, blanchis-les 10 min dans l'eau bouillante.","Égoutte, coupe en rondelles. Fais dorer dans la cocotte.","Émince oignons, fais revenir 5 min.","Ajoute ail, gingembre, curcuma, tomates concassées, piment.","Remets les saucisses. Mijote 30 min.","Sers avec du riz."]},{"k":["saumon","teriyaki"],"i":["2 pavés saumon","4 cs sauce soja","2 cs mirin","2 cs sucre","Gingembre, sésame"],"s":["Mélange sauce soja, mirin, sucre, gingembre râpé.","Poêle chaude avec un filet d'huile, pose le saumon peau dessous.","Cuis 4 min sans bouger.","Retourne, cuis 2 min.","Verse la sauce, laisse réduire et caraméliser 2 min en arrosant.","Sers sur du riz, sésame grillé, ciboule."]},{"k":["sushi"],"i":["Riz à sushi","Vinaigre de riz, sucre, sel","Saumon ou thon cru","Algue nori, avocat, concombre"],"s":["Cuis le riz à sushi selon paquet. Assaisonne chaud avec vinaigre/sucre/sel.","Tranche le poisson en lamelles fines.","Étale le riz tiède sur une feuille de nori.","Pose poisson, avocat, concombre en lignes.","Roule serré avec un tapis. Coupe avec couteau humide.","Sers avec sauce soja, wasabi, gingembre mariné."]},{"k":["poke","bowl"],"i":["200 g riz","150 g saumon ou thon cru","Avocat, mangue, concombre, edamame","Sauce soja, sésame, mayo épicée"],"s":["Cuis le riz, laisse refroidir.","Coupe le poisson en cubes, marine 10 min : soja, sésame, gingembre.","Coupe avocat, mangue, concombre.","Dans un bol : riz, poisson, légumes en sections.","Ajoute edamame, oignon frit, algues.","Garnis de sésame, mayo épicée, sauce soja."]},{"k":["ceviche"],"i":["400 g poisson blanc cru","6 citrons verts","1 oignon rouge","Coriandre, piment, patate douce"],"s":["Coupe le poisson en cubes de 1.5 cm.","Émince très finement l'oignon rouge.","Mélange poisson, oignon, jus de citron vert, sel, piment.","Laisse mariner 10-15 min : le poisson blanchit.","Égoutte le surplus de jus.","Sers avec patate douce vapeur, maïs, coriandre."]},{"k":["fish","and","chips"],"i":["4 filets de cabillaud","200 g farine","300 ml bière","Pommes de terre","Huile friture"],"s":["Coupe pommes de terre en frites épaisses, trempe 30 min eau froide.","Pâte à beignets : farine, bière, sel, blanc d'œuf monté en neige.","Fais frire les frites 8 min à 160°C, réserve.","Trempe le poisson dans la pâte, fais frire 4 min à 180°C.","Refais frire les frites 2 min à 180°C.","Sale tout. Sers avec sauce tartare et citron."]},{"k":["saumon","epinards"],"i":["2 pavés saumon","300 g épinards frais","1 gousse ail","Citron, beurre"],"s":["Pose le saumon peau dessous dans une poêle avec filet d'huile.","Cuis 5 min sans bouger.","Retourne 2 min. Réserve.","Dans la même poêle : ail haché, beurre, épinards. 3 min.","Sale, poivre, citron.","Sers le saumon sur les épinards."]},{"k":["buddha","bowl"],"i":["100 g quinoa","150 g tofu","Patate douce rôtie, brocolis, avocat","Sauce tahini-citron"],"s":["Cuis le quinoa selon paquet.","Coupe la patate douce en cubes, four 200°C 25 min avec huile/sel.","Cuis brocolis 4 min vapeur.","Marine et fais dorer le tofu : sauce soja, sésame, ail.","Sauce : tahini + citron + ail + eau + sel.","Bol : quinoa, légumes en sections, tofu, avocat. Sauce dessus."]},{"k":["salade","cesar"],"i":["1 cœur romaine","2 escalopes poulet","Croûtons, parmesan","Sauce : œuf, anchois, ail, citron, parmesan, huile"],"s":["Sauce : mixe 1 jaune + 2 anchois + 1 ail + jus citron + 30 g parmesan + 100 ml huile.","Cuis le poulet 5 min de chaque côté, tranche.","Fais des croûtons : pain en cubes + huile + ail, four 10 min 180°C.","Lave et essore la salade.","Mélange salade et sauce.","Ajoute poulet, croûtons, copeaux de parmesan."]},{"k":["salade","composee"],"i":["Salade verte","1 boîte thon","2 œufs durs","Tomates, concombre, oignon rouge","Vinaigrette"],"s":["Cuis les œufs 9 min, écale, coupe en quartiers.","Lave la salade.","Coupe tomates, concombre, oignon.","Vinaigrette : 3 cs huile, 1 cs vinaigre, moutarde, sel, poivre.","Mélange salade, légumes, thon, œufs.","Verse la vinaigrette au moment de servir."]},{"k":["poulet","riz","legumes"],"i":["200 g escalope de poulet","80 g riz","200 g légumes (brocolis, courgettes...)","Ail, herbes, huile olive"],"s":["Cuis le riz selon paquet (env. 12 min).","Coupe le poulet en lanières, sale, poivre.","Poêle bien chaude avec huile, fais dorer 5-7 min en remuant.","Cuis les légumes vapeur ou poêle 5-8 min al dente.","Termine le poulet avec ail haché, herbes (thym, romarin).","Assemble dans une assiette : riz + poulet + légumes."]},{"k":["dahl","lentille"],"i":["200 g lentilles corail","400 ml lait coco","1 oignon, ail, gingembre","Curcuma, cumin, garam masala, tomate"],"s":["Émince oignon, ail, gingembre. Fais revenir 5 min.","Ajoute épices, cuis 1 min.","Ajoute lentilles rincées, tomate, lait coco, 500 ml eau. Sale.","Mijote 20 min jusqu'à crémeux.","Coriandre fraîche, citron vert.","Sers avec riz basmati ou naan."]},{"k":["chili","con","carne"],"i":["400 g viande hachée","400 g haricots rouges cuits","400 g tomates concassées","Oignon, ail, cumin, paprika, piment"],"s":["Fais revenir oignon, ail. Ajoute la viande, dore 5 min.","Ajoute épices : cumin, paprika fumé, piment. 1 min.","Verse tomates et haricots. Sale.","Mijote 30 min minimum.","Sers avec riz, fromage râpé, crème, coriandre."]},{"k":["mafe"],"i":["600 g viande (poulet ou bœuf)","4 cs pâte d'arachide","2 oignons, ail, gingembre","Tomate concentrée, légumes (carottes, chou, manioc)"],"s":["Fais dorer la viande dans l'huile.","Ajoute oignons, ail, gingembre. 5 min.","Ajoute concentré de tomate, cuis 3 min.","Délaye la pâte d'arachide dans 500 ml d'eau chaude. Verse.","Ajoute légumes coupés. Mijote 45 min en remuant souvent.","La sauce doit être épaisse. Sers avec du riz blanc."]},{"k":["yassa","poulet"],"i":["1 poulet en morceaux","5 gros oignons","4 citrons jaunes","Moutarde, ail, piment, bouillon"],"s":["Marine le poulet 2 h : jus citron, ail, oignons émincés, moutarde, piment.","Égoutte (garde la marinade), fais griller le poulet (poêle ou four).","Dans une cocotte, fais fondre les oignons de la marinade 30 min à feu doux.","Ajoute le reste de marinade, cube de bouillon, eau.","Remets le poulet. Mijote 30 min.","Sers avec du riz blanc."]},{"k":["thieboudienne"],"i":["600 g poisson (mérou, dorade)","300 g riz brisé","Manioc, carottes, chou, aubergine","Tomate, oignon, persil, ail, piment"],"s":["Farce du poisson : mixe persil, ail, piment, sel. Incise et garnis.","Fais frire le poisson, réserve.","Dans la même huile : oignon, tomate, concentré. 10 min.","Ajoute eau, légumes, le poisson. Mijote 30 min.","Retire poisson et légumes. Verse le riz dans le bouillon.","Cuis 25 min couvert. Sers riz, poisson et légumes ensemble."]},{"k":["jollof","rice"],"i":["400 g riz long","4 tomates + 2 poivrons rouges + 1 piment (mixés)","Oignon, gingembre, ail","Bouillon, paprika, thym, laurier, viande/poulet"],"s":["Mixe tomates, poivrons, piment. Réduis à la poêle 15 min.","Fais dorer la viande, retire.","Dans la même huile : oignon, gingembre, ail.","Verse la sauce tomate réduite. Ajoute épices, bouillon.","Ajoute le riz rincé. Mélange.","Couvre, cuis 25-30 min à feu doux sans soulever.","Repose 10 min. Sers avec viande grillée et plantain."]},{"k":["attieke","poisson"],"i":["400 g attiéké","2 poissons entiers (dorade, tilapia)","Tomates, oignon, piment, citron","Huile rouge"],"s":["Marine le poisson : ail, sel, citron, piment. 30 min.","Grille au four ou braise jusqu'à peau croustillante.","Réchauffe l'attiéké à la vapeur 10 min.","Salade ivoirienne : tomates, oignon, piment, sel, citron.","Sers attiéké, poisson dessus, salade à côté.","Pimente avec sauce piment maison."]},{"k":["alloco"],"i":["4 bananes plantain mûres","Huile de friture","Sel","Sauce piment-tomate-oignon (option)"],"s":["Choisis des plantains bien mûrs (peau noire/jaune).","Pèle-les, coupe en rondelles ou losanges 1 cm.","Chauffe l'huile à 170°C.","Plonge les morceaux 4-5 min jusqu'à dorure.","Égoutte sur papier absorbant, sale.","Sers chaud avec sauce piment ou poisson grillé."]},{"k":["kedjenou"],"i":["1 poulet en morceaux","3 tomates, 2 oignons, 1 piment, 2 aubergines","Ail, gingembre, laurier, bouillon"],"s":["Mets tous les ingrédients dans une cocotte fermée (sans eau ajoutée).","Sale, ajoute épices et un cube de bouillon.","Cuis à feu doux 1 h sans ouvrir.","Secoue la cocotte de temps en temps.","Le poulet cuit dans son jus avec les légumes.","Sers avec attiéké ou riz."]},{"k":["poulet","dg"],"i":["1 poulet en morceaux","4 plantains mûrs","Carottes, haricots verts, poivrons","Oignon, ail, gingembre, tomate, bouillon"],"s":["Marine le poulet 30 min : ail, gingembre, sel, bouillon.","Fais frire le poulet jusqu'à dorure.","Coupe les plantains en cubes, fais frire jusqu'à doré.","Dans une cocotte : oignon, ail, tomate, gingembre. 5 min.","Ajoute légumes coupés (carottes, haricots, poivrons). 10 min.","Remets poulet et plantain. Mélange délicatement. Mijote 5 min.","Sers chaud, plat principal complet."]},{"k":["ndole"],"i":["500 g feuilles de ndolé (ou épinards + amers)","300 g viande ou poisson fumé","200 g pâte d'arachide","Oignon, ail, crevettes séchées, huile"],"s":["Lave et hache les feuilles de ndolé. Blanchis 10 min, égoutte, presse.","Cuis la viande dans bouillon avec oignons. Réserve viande.","Délaye la pâte d'arachide dans le bouillon chaud.","Pile crevettes séchées, ail, oignon. Ajoute à la sauce.","Ajoute les feuilles. Mijote 20 min.","Remets la viande. Mijote 10 min.","Sers avec plantain bouilli ou riz."]},{"k":["eru"],"i":["400 g feuilles d'eru (ou kale + waterleaf)","300 g viande, poisson fumé, peau de bœuf","Huile de palme, crevettes séchées, piment"],"s":["Cuis viande, peau de bœuf et poisson fumé jusqu'à tendres.","Lave et hache les feuilles très finement.","Dans une grande marmite : huile de palme, crevettes séchées pilées, piment.","Ajoute waterleaf et eru. Mélange.","Ajoute viandes et bouillon. Mijote 30 min.","Sers avec gari ou plantain bouilli."]},{"k":["nkwui"],"i":["1 poulet ou 600 g viande","Poudre de nkwui","Oignon, ail, gingembre","Crevettes séchées, citron, herbes"],"s":["Coupe la viande en morceaux, marine ail/gingembre/sel.","Fais cuire dans 1.5 L d'eau avec oignon, bouillon. 30 min.","Délaye la poudre de nkwui dans un peu de bouillon chaud.","Verse dans la marmite, mélange bien.","Ajoute crevettes séchées, herbes (basilic africain).","Mijote 15 min. Goûte, ajuste sel et piment.","Sers avec foufou de manioc ou plantain."]},{"k":["mbongo","tchobi"],"i":["600 g poisson ou viande","3 cs poudre mbongo (épices noires)","Tomate, oignon, ail, gingembre","Bouillon"],"s":["Marine la viande/poisson : ail, gingembre, sel.","Délaye la poudre mbongo dans un peu d'eau.","Fais revenir oignon, ail, gingembre.","Ajoute tomate écrasée, cuis 5 min.","Verse la pâte mbongo, le bouillon. Sale.","Ajoute la viande/poisson. Mijote 30 min.","Sers avec plantain bouilli ou bobolo."]},{"k":["kondre"],"i":["1 kg plantain pas trop mûr","500 g viande de bœuf ou chèvre","Huile palme, oignon, ail, gingembre","Bâton de manioc, épices Kondrè"],"s":["Cuis la viande dans eau salée 45 min jusqu'à tendre.","Pèle plantains, coupe en gros tronçons.","Dans une marmite : huile de palme, oignon, ail, gingembre.","Ajoute épices Kondrè, plantain, viande et son bouillon.","Couvre, mijote 30 min : le plantain s'imprègne.","Le plat doit être épais et parfumé. Sers chaud."]},{"k":["achu"],"i":["Taro pilé (achu)","Viande, peau, queue de bœuf","Huile de palme, kanwa (sel végétal)","Épices, écorces, écorces aromatiques"],"s":["Cuis la viande variée dans bouillon épicé 1h30.","Mélange l'huile de palme avec kanwa et un peu d'eau jusqu'à émulsion jaune (yellow soup).","Ajoute le bouillon de viande filtré. Mijote 10 min.","Ajoute épices traditionnelles broyées.","Pile le taro cuit ou utilise pâte achu prête.","Sers : pâte achu au centre, sauce jaune autour, viandes dessus."]},{"k":["pondu","saka"],"i":["500 g feuilles de manioc (saka-saka)","200 g poisson fumé","Pâte d'arachide ou huile de palme","Oignon, ail, piment"],"s":["Fais bouillir les feuilles 30-45 min jusqu'à tendre.","Égoutte, presse pour enlever l'eau.","Dans une marmite : oignon, ail, piment dans huile palme.","Ajoute poisson fumé émietté.","Ajoute les feuilles. Mélange.","Délaye pâte d'arachide dans bouillon, ajoute. Mijote 20 min.","Sers avec chikwangue ou riz."]},{"k":["mwambe","moambe"],"i":["1 poulet en morceaux","500 g sauce moambé (noix de palme)","Oignon, ail, gingembre, piment","Sel, bouillon"],"s":["Fais dorer le poulet à l'huile dans une cocotte.","Ajoute oignon, ail, gingembre. 5 min.","Verse la sauce moambé (pulpe de noix de palme).","Ajoute eau ou bouillon pour atteindre une sauce épaisse.","Sale, piment. Mijote 45 min.","La sauce doit être rouge et onctueuse.","Sers avec riz ou chikwangue."]},{"k":["liboke"],"i":["Poisson entier ou viande","Feuilles de bananier ou papier alu","Oignon, ail, gingembre, citron, piment, herbes"],"s":["Marine le poisson : ail haché, gingembre, citron, sel, piment, persil. 30 min.","Étale une feuille de bananier (passée à la flamme pour assouplir).","Pose le poisson, ajoute oignon émincé, tomate.","Plie la feuille en papillote.","Fais cuire 30 min sur braises ou four 200°C.","Ouvre la papillote au moment de servir.","Accompagne de plantain ou riz."]},{"k":["sauce","graine"],"i":["500 g pulpe de noix de palme (graine)","500 g viande ou poisson","Oignon, ail, gingembre, piment","Crevettes séchées (option)"],"s":["Cuis la viande avec ail, gingembre, oignon. 30 min.","Délaye la pulpe de palme dans 1 L d'eau chaude.","Filtre pour ôter les résidus durs.","Verse le jus de palme dans la marmite avec la viande.","Mijote 45 min : la sauce épaissit et devient huileuse.","Ajoute piment, crevettes séchées, sel.","Sers avec foutou banane ou riz."]},{"k":["foutou","banane"],"i":["6 bananes plantain pas trop mûres","1 igname (option)","Eau"],"s":["Pèle les plantains et l'igname.","Cuis dans l'eau bouillante 20 min jusqu'à tendres.","Égoutte, garde un peu d'eau de cuisson.","Pile au mortier (ou robot puissant) en ajoutant un peu d'eau.","Continue jusqu'à pâte lisse et élastique.","Forme des boules, sers avec sauce graine ou arachide."]},{"k":["placali"],"i":["500 g semoule de manioc fermenté","Eau bouillante","Sel"],"s":["Porte 1.5 L d'eau salée à ébullition.","Verse la semoule de manioc en pluie en remuant fort.","Continue à remuer énergiquement à feu doux.","La pâte devient compacte et translucide.","Travaille 10 min jusqu'à élasticité.","Forme une boule au creux d'une cuillère mouillée.","Sers avec sauce graine ou claire."]},{"k":["garba"],"i":["Attiéké","Thon frais","Tomate, oignon, piment fort","Citron, sel, bouillon"],"s":["Fais frire le thon en morceaux dans huile chaude.","Salade : tomates, oignon, piment haché, sel, citron.","Réchauffe l'attiéké à la vapeur.","Dans un plat ou un papier : attiéké au fond.","Pose thon frit dessus, salade par-dessus.","Pimenté à fond. Mange bien chaud."]},{"k":["choukouya"],"i":["1 kg viande de bœuf","2 oignons","Piment, gingembre, ail","Bouillon, citron, huile"],"s":["Coupe la viande en cubes 3 cm. Marine 1 h : ail, gingembre, piment, citron, bouillon.","Enfile sur des brochettes en alternant avec oignon.","Grille 8-10 min en retournant souvent.","Garnis : oignon cru, tomate, piment.","Sers chaud avec attiéké ou pain."]},{"k":["accras","morue"],"i":["300 g morue dessalée","200 g farine","1 sachet levure","Oignon, persil, piment, ail"],"s":["Dessale la morue (24 h dans l'eau, change l'eau).","Émiette la morue cuite.","Mélange farine, levure, eau jusqu'à pâte lisse.","Ajoute morue, oignon haché, ail, persil, piment.","Chauffe l'huile à 180°C.","Plonge à la cuillère, fais frire 3 min jusqu'à dorure.","Égoutte. Sers chaud à l'apéro."]},{"k":["colombo","poulet"],"i":["1 poulet en morceaux","Poudre colombo","Oignon, ail, gingembre, tomate","Pommes de terre, courgettes, citron"],"s":["Marine le poulet 1 h : ail, gingembre, citron, poudre colombo.","Fais dorer le poulet, retire.","Sue oignons, ajoute tomates, gingembre.","Ajoute eau ou bouillon, légumes, poulet.","Mijote 40 min jusqu'à viande tendre.","La sauce doit être jaune et parfumée.","Sers avec riz blanc."]},{"k":["poulet","boucane"],"i":["1 poulet en morceaux","Marinade : ail, oignon, citron vert, thym, piment, rhum","Sucre roux pour fumage"],"s":["Marine le poulet 4 h dans la marinade.","Allume un feu de bois ou barbecue, mets du sucre roux dans le foyer.","Place le poulet à fumée indirecte, couvre.","Fume-cuit 1 h en retournant.","Termine 10 min à feu direct pour croustiller.","Sers avec riz et haricots rouges."]},{"k":["shawarma"],"i":["500 g poulet ou bœuf","Yaourt, ail, citron, paprika, cumin","4 pains pita","Sauce blanche, légumes croquants"],"s":["Marine la viande 4 h : yaourt, ail, citron, épices.","Fais griller en lanières dans une poêle bien chaude.","Réchauffe le pita.","Sauce : yaourt + ail + citron + sel.","Garnis le pita : viande, sauce, salade, tomate, oignon, cornichons.","Roule serré, mange chaud."]},{"k":["falafel"],"i":["250 g pois chiches secs trempés 12 h","Oignon, ail, persil, coriandre","Cumin, coriandre moulue, sel"],"s":["Trempe les pois chiches 12 h (ne cuis pas !).","Mixe avec oignon, ail, herbes, épices jusqu'à pâte épaisse.","Laisse reposer 30 min au frais.","Forme des boulettes ou galettes.","Fais frire 4 min dans huile à 180°C.","Sers en pita avec houmous, salade, tahini."]},{"k":["houmous"],"i":["400 g pois chiches cuits","3 cs tahini","Citron, ail","Huile olive, cumin, sel"],"s":["Mixe pois chiches égouttés (garde un peu de jus).","Ajoute tahini, citron, ail, sel, cumin.","Mixe en versant le jus pour obtenir crémeux.","Sers dans un plat creux.","Verse de l'huile d'olive dessus, paprika.","Mange avec du pita ou des crudités."]},{"k":["couscous","royal"],"i":["Semoule","Poulet, agneau, merguez","Carottes, courgettes, navets, pois chiches","Ras el hanout, harissa"],"s":["Cuis viandes dans bouillon avec oignons, épices 1 h.","Ajoute les légumes durs (carottes, navets) 20 min.","Ajoute courgettes 15 min.","Grille les merguez à part.","Prépare la semoule : eau bouillante, repos, fourchette, beurre.","Sers : semoule, viandes dessus, légumes, bouillon à part.","Harissa pour pimenter."]},{"k":["harira"],"i":["200 g pois chiches trempés","200 g lentilles","300 g agneau ou bœuf","Tomates, oignon, céleri, coriandre, persil"],"s":["Coupe la viande en cubes. Fais revenir avec oignon.","Ajoute tomates, céleri, herbes hachées, épices.","Verse 2 L d'eau et pois chiches. Mijote 1 h.","Ajoute lentilles. Cuis 30 min.","Termine avec un mélange farine + eau pour épaissir (tedouira).","Sers avec dattes et chebakia."]},{"k":["gyros"],"i":["500 g poulet ou agneau","Yaourt, ail, citron, origan, paprika","4 pains pita","Sauce tzatziki, oignon, tomate"],"s":["Marine la viande 4 h : yaourt + épices grecques.","Grille en lanières.","Tzatziki : yaourt grec + concombre râpé + ail + menthe.","Réchauffe le pita.","Garnis : viande, tzatziki, oignon, tomate, frites (oui, dans le pita !).","Roule. Mange chaud."]},{"k":["moussaka"],"i":["3 aubergines","500 g viande hachée","Tomate, oignon, ail, cannelle","Béchamel, fromage"],"s":["Tranche aubergines, sale, attends 30 min, sèche.","Fais griller les tranches au four ou poêle.","Cuis la viande : oignon, ail, tomates, cannelle, vin rouge.","Béchamel épaisse : 50 g beurre + 50 g farine + 500 ml lait, jaune d'œuf, fromage.","Plat : couches aubergines / viande / aubergines / béchamel.","Four 180°C, 40 min jusqu'à doré.","Repose 15 min avant de couper."]},{"k":["feijoada"],"i":["500 g haricots noirs","300 g porc fumé","200 g viande de bœuf séchée","Oignon, ail, laurier"],"s":["Trempe les haricots 12 h.","Cuis viandes salées dans eau pour dessaler 30 min.","Fais revenir oignon, ail dans saindoux ou huile.","Ajoute haricots, viandes, laurier, eau à couvrir.","Mijote 2 h jusqu'à crémeux.","Écrase quelques haricots pour épaissir.","Sers avec riz, farofa, chou cavalier, orange."]},{"k":["tartiflette"],"i":["1 kg pommes de terre","200 g lardons","1 reblochon","2 oignons","Vin blanc, crème"],"s":["Cuis les pommes de terre en chemise 20 min, pèle, tranche.","Fais dorer lardons et oignons.","Déglace au vin blanc.","Plat : pommes de terre, mélange lardons-oignons, crème.","Coupe le reblochon en deux dans l'épaisseur, pose croûte vers le haut.","Four 200°C, 25 min jusqu'à fromage doré."]},{"k":["raclette"],"i":["200 g raclette par personne","Pommes de terre vapeur","Charcuterie variée","Cornichons, oignons grelots"],"s":["Cuis les pommes de terre en chemise 25 min vapeur.","Dispose charcuterie sur un plateau (jambon, viande des grisons, rosette).","Allume l'appareil à raclette.","Chacun fait fondre son fromage dans le coupelle.","Verse sur les pommes de terre.","Mange avec charcuterie, cornichons, oignons."]},{"k":["poutine"],"i":["600 g frites maison","300 g cheese curds","500 ml sauce brune"],"s":["Sauce : roux beurre+farine, mouille avec bouillon de bœuf et poulet, sel, poivre, sauce Worcestershire.","Mijote la sauce 15 min jusqu'à napper.","Cuis les frites en double cuisson, croustillantes.","Dispose les frites dans un plat creux.","Parsème de cheese curds.","Verse la sauce brûlante dessus : le fromage commence à fondre.","Mange immédiatement."]},{"k":["cordon","bleu"],"i":["2 escalopes poulet","2 tranches jambon","2 tranches fromage","Œuf, farine, chapelure"],"s":["Aplatis les escalopes au rouleau (entre 2 films plastique).","Pose jambon et fromage au centre.","Plie l'escalope en deux, scelle les bords.","Trempe dans farine, puis œuf battu, puis chapelure.","Refais œuf + chapelure pour double panure.","Cuis 4 min de chaque côté à feu moyen avec beurre et huile.","Sers avec frites ou salade."]},{"k":["gratin","dauphinois"],"i":["1 kg pommes de terre","500 ml crème","300 ml lait","Ail, muscade, beurre"],"s":["Pèle et tranche les pommes de terre fines (mandoline).","Frotte un plat avec ail, beurre.","Mélange crème, lait, sel, poivre, muscade.","Dispose les rondelles en couches dans le plat.","Verse le mélange crème.","Four 180°C, 1 h - 1h15. Couvre les 30 premières min.","Repose 10 min avant de servir."]},{"k":["croque","monsieur"],"i":["4 tranches de pain de mie","2 tranches jambon","2 tranches fromage","Beurre, béchamel (option)"],"s":["Beurre les tranches de pain (face extérieure).","Tartine l'intérieur de béchamel si tu veux.","Garnis : pain, jambon, fromage, pain.","Cuis en poêle 3 min de chaque côté à feu moyen.","Ou four 200°C, 8 min.","Le fromage doit être fondu, le pain doré."]},{"k":["skyr","avoine"],"i":["200 g skyr nature","40 g flocons d'avoine","1 banane","Miel, fruits rouges, noix"],"s":["Mets le skyr dans un bol.","Ajoute les flocons d'avoine crus (ou la veille).","Tranche la banane dessus.","Ajoute fruits rouges et noix.","Filet de miel pour sucrer.","Mange direct."]},{"k":["smoothie"],"i":["1 banane","200 g fruits rouges","200 ml lait ou yaourt","1 cs miel","Glaçons (option)"],"s":["Mets tous les ingrédients dans le mixeur.","Ajoute glaçons si tu veux frais.","Mixe 30 sec jusqu'à crémeux.","Goûte, ajuste sucré.","Verse dans un grand verre. Bois immédiatement."]},{"k":["smoothie","whey"],"i":["1 dose whey (30 g)","1 banane","250 ml lait","1 cs beurre cacahuète","Glaçons"],"s":["Mets banane, whey, lait dans le shaker ou mixeur.","Ajoute beurre de cacahuète.","Mixe 30 sec.","Ajoute glaçons.","Bois post-entraînement, idéal pour la récup."]},{"k":["fumbwa"],"i":["400 g feuilles de fumbwa (koko)","300 g poisson fumé","Pâte d'arachide ou huile palme","Oignon, ail, piment"],"s":["Lave et hache finement les feuilles de fumbwa.","Fais bouillir 30 min jusqu'à tendres.","Égoutte. Émiette le poisson fumé.","Dans une marmite : oignon, ail, piment dans huile palme.","Ajoute poisson, feuilles, pâte d'arachide délayée.","Mijote 25 min. Sers avec foufou ou riz."]},{"k":["madesu"],"i":["400 g haricots rouges","Oignon, ail, tomate","Huile palme, piment, sel"],"s":["Trempe les haricots 12 h.","Cuis 1h jusqu'à tendres.","Fais revenir oignon, ail, tomate.","Verse les haricots avec leur eau.","Mijote 30 min. Sale, pimente.","Sers avec riz blanc ou plantain."]},{"k":["chikwangue","bobolo"],"i":["Pâte de manioc fermentée","Feuilles de manioc fraîches","Sel"],"s":["Mélange la pâte de manioc avec un peu de sel.","Pétris jusqu'à consistance lisse.","Forme des cylindres.","Enveloppe dans des feuilles de manioc fraîches.","Cuis à la vapeur 1 h ou plus.","Conserve au frais. Mange avec sauces ou poisson."]},{"k":["maboke"],"i":["1 poisson entier","Feuilles de bananier","Oignon, ail, citron, piment, persil"],"s":["Vide et écaille le poisson, lave-le.","Marine : ail, citron, piment, sel, persil. 30 min.","Étale la feuille de bananier (passe à la flamme pour assouplir).","Pose le poisson, garnis avec oignon émincé.","Ferme la papillote bien serrée.","Cuis 30 min sur braise ou four 200°C."]},{"k":["mikate"],"i":["250 g farine","50 g sucre","1 sachet levure boulangère","200 ml eau tiède","Huile friture"],"s":["Mélange farine, sucre, levure.","Ajoute l'eau tiède en remuant pour pâte épaisse.","Couvre, laisse lever 1 h jusqu'à doubler.","Chauffe l'huile à 170°C.","Plonge à la cuillère, fais frire 3 min jusqu'à dorure.","Égoutte, mange chaud avec du thé."]},{"k":["lituma"],"i":["6 plantains pas mûrs","Eau, sel"],"s":["Pèle les plantains.","Râpe-les finement.","Sale légèrement.","Forme des boules au creux d'une feuille de bananier.","Cuis à la vapeur 30 min.","Sers avec poisson ou sauce."]},{"k":["sombe"],"i":["500 g feuilles de manioc","500 g viande","Oignon, ail, gingembre, piment","Huile palme, crevettes séchées"],"s":["Bouillis les feuilles 30 min, presse-les.","Cuis la viande dans bouillon 30 min.","Fais revenir oignon, ail, gingembre.","Ajoute crevettes séchées pilées.","Mélange feuilles, viande, bouillon. Mijote 30 min.","Sers avec foufou ou riz."]},{"k":["sauce","arachide"],"i":["500 g viande ou poulet","5 cs pâte d'arachide","Tomate, oignon, ail, gingembre","Bouillon, piment"],"s":["Fais dorer la viande dans la cocotte.","Ajoute oignon, ail, gingembre. 5 min.","Tomate concentrée, cuis 3 min.","Délaye la pâte d'arachide dans bouillon chaud, verse.","Ajoute eau pour sauce épaisse.","Mijote 40 min en remuant régulièrement.","Sers avec riz, foutou ou attiéké."]},{"k":["sauce","gombo"],"i":["400 g gombos frais","300 g viande ou poisson","Oignon, tomate, piment","Huile palme, crevettes séchées"],"s":["Coupe les gombos en rondelles fines.","Cuis la viande dans bouillon avec oignon.","Ajoute tomate concentrée et huile palme.","Verse les gombos. Cuis 15 min : ça devient gluant.","Ajoute crevettes séchées pilées, piment.","Mijote 10 min. Sers avec foutou ou riz."]},{"k":["kabato"],"i":["500 g semoule de maïs","Eau, sel"],"s":["Porte 1.2 L d'eau salée à ébullition.","Verse la semoule de maïs en pluie en remuant fort.","Continue à remuer 5 min : épaississement.","Baisse le feu, couvre, cuis 10 min.","Forme une boule.","Sers avec sauce arachide ou gombo."]},{"k":["to"],"i":["400 g farine de mil ou sorgho","Eau, sel"],"s":["Porte 1 L d'eau salée à ébullition.","Verse la farine en pluie en remuant énergiquement.","Continue 8-10 min sans arrêter de remuer.","La pâte devient compacte et lisse.","Travaille jusqu'à élasticité.","Forme des boules. Sers avec sauce gombo ou arachide."]},{"k":["poisson","braise"],"i":["1 poisson entier (dorade, tilapia)","Ail, gingembre, citron, piment","Persil, oignon","Sel, huile"],"s":["Vide et écaille le poisson, fais 3 incisions sur chaque flanc.","Marine : ail haché, gingembre, citron, sel, piment. 30 min.","Badigeonne d'huile.","Grille au barbecue ou plancha 7 min de chaque côté.","Garniture : oignon cru, persil, citron.","Sers avec attiéké, plantain ou riz."]},{"k":["saka","saka"],"i":["500 g feuilles de manioc fraîches ou surgelées","300 g poisson fumé ou viande","Pâte d'arachide, oignon, huile palme"],"s":["Hache finement les feuilles de manioc.","Bouillis 30-45 min jusqu'à tendres. Égoutte.","Fais revenir oignon dans huile palme.","Ajoute poisson fumé émietté.","Délaye la pâte d'arachide dans bouillon chaud, verse.","Ajoute les feuilles. Mijote 25 min.","Sers avec chikwangue ou riz."]},{"k":["suya"],"i":["500 g bœuf en lanières","4 cs poudre suya (yaji)","Sel, huile arachide"],"s":["Mélange suya : cacahuètes pilées + paprika + poivre + ail + gingembre + cube + piment.","Tranche le bœuf en lanières fines.","Enrobe les lanières de suya bien généreusement.","Enfile sur des brochettes.","Grille au barbecue 5-7 min en arrosant d'huile arachide.","Sers avec oignon cru, tomate, plus de suya à part."]},{"k":["poulet","jerk"],"i":["1 poulet en morceaux","Marinade jerk : oignon, ail, piment scotch bonnet, thym, gingembre, cannelle, muscade, sauce soja, citron"],"s":["Mixe tous les ingrédients de la marinade.","Marine le poulet 4 h minimum (idéalement la nuit).","Allume un feu de bois (idéalement bois pimento).","Grille à fumée indirecte 45 min en retournant.","Termine à feu direct pour caraméliser.","Sers avec riz aux pois, plantain frit."]},{"k":["curry","goat"],"i":["1 kg chèvre en morceaux","Poudre curry jamaïcain","Pommes de terre, carottes","Oignon, ail, piment, gingembre"],"s":["Marine la chèvre 4 h : curry, ail, gingembre, citron.","Fais dorer la viande dans une cocotte.","Ajoute oignon, ail, piment, gingembre.","Couvre d'eau. Mijote 1h30.","Ajoute légumes 30 min avant la fin.","Sers avec riz aux pois (haricots)."]},{"k":["pelau"],"i":["400 g riz","500 g poulet","Haricots noirs","Lait de coco, oignon, ail, sucre roux, herbes"],"s":["Brunis le sucre dans la cocotte jusqu'à caramel foncé.","Ajoute le poulet, fais dorer (la couleur vient du caramel).","Ajoute oignon, ail, herbes.","Verse riz, haricots cuits, lait coco, eau.","Sale, pimente. Couvre, cuis 25 min.","Ne mélange pas. Repose 5 min puis aère."]},{"k":["oxtail"],"i":["1 kg queue de bœuf","Haricots butter beans","Oignon, ail, piment scotch bonnet, thym, sauce soja"],"s":["Marine la queue de bœuf 2 h : ail, sauce soja, thym.","Fais dorer la viande, retire.","Sue oignon, ail, piment.","Remets la viande, couvre d'eau, mijote 2h-2h30.","Ajoute haricots cuits 20 min avant la fin.","La sauce doit être épaisse, la viande tomber des os.","Sers avec riz aux pois."]},{"k":["ackee","saltfish"],"i":["400 g ackee en boîte","300 g morue dessalée","Oignon, poivron, tomate, thym, piment"],"s":["Dessale et émiette la morue.","Fais revenir oignon, poivron, tomate. 5 min.","Ajoute thym, piment, ail.","Ajoute la morue émiettée. Cuis 5 min.","Égoutte les ackee, ajoute délicatement.","Mijote 5 min sans casser les ackee.","Sers avec banane plantain frite et bammy."]},{"k":["rice","and","peas"],"i":["400 g riz","200 g haricots rouges cuits","400 ml lait coco","Oignon, ail, thym, piment"],"s":["Dans une casserole : haricots, lait coco, oignon, ail, thym, piment.","Sale, porte à ébullition.","Ajoute le riz et de l'eau (1.5x volume riz).","Couvre, cuis 25 min à feu doux.","Ne mélange pas pendant la cuisson.","Repose 5 min. Aère à la fourchette.","Accompagnement classique des plats jamaïcains."]},{"k":["injera"],"i":["Pâte teff fermentée 3 jours","Eau, sel"],"s":["Mélange farine de teff et eau (consistance crêpe).","Laisse fermenter 2-3 jours à température ambiante.","Sale légèrement.","Chauffe une grande poêle (mitad).","Verse une louche, étale en spirale.","Cuis 1 min à couvert. Pas de retournement.","Sers avec wat (ragoûts éthiopiens)."]},{"k":["doro","wat"],"i":["1 poulet en morceaux","6 oignons","Berbere (mélange épices éthiopien)","Œufs durs, beurre niter kibbeh"],"s":["Émince finement les oignons. Cuis à sec 30 min en remuant.","Ajoute beurre clarifié, ail, gingembre.","Ajoute le berbere, cuis 5 min.","Ajoute le poulet citronné, mélange.","Verse de l'eau, mijote 45 min.","Ajoute œufs durs entiers (incisés).","Mijote 15 min. Sers sur injera."]},{"k":["poulet","tandoori"],"i":["1 poulet en morceaux","Yaourt, garam masala, paprika, gingembre, ail, citron"],"s":["Marine le poulet 4 h : yaourt + épices + jus citron.","Préchauffe le four à 220°C (ou utilise un grill/four tandoor).","Pose les morceaux sur grille avec lèchefrite.","Cuis 25 min en retournant à mi-cuisson.","Termine 5 min en grill pour la couleur.","Sers avec riz basmati, naan, raita."]},{"k":["naan"],"i":["500 g farine","1 yaourt","1 cc levure","1 cs sucre","Eau, sel, beurre fondu"],"s":["Mélange farine, levure, sucre, sel.","Ajoute yaourt et eau tiède pour pâte souple.","Pétris 8 min, laisse lever 1 h.","Forme des boules, étale en ovales.","Cuis sur poêle très chaude 1 min de chaque côté.","Badigeonne de beurre fondu, ail, coriandre."]},{"k":["samosa"],"i":["Pâte à samosa ou feuilles de brick","Pommes de terre cuites + petits pois","Cumin, coriandre, garam masala, gingembre, piment"],"s":["Écrase les pommes de terre cuites avec petits pois.","Assaisonne : cumin, coriandre, garam masala, gingembre, piment, sel.","Coupe la pâte en bandes.","Forme des cônes, garnis, ferme avec eau-farine.","Fais frire 3 min à 180°C jusqu'à doré.","Sers avec chutney à la menthe ou tamarin."]},{"k":["chana","masala"],"i":["400 g pois chiches cuits","Tomates, oignon, ail, gingembre","Garam masala, cumin, coriandre, paprika"],"s":["Émince oignon, fais revenir 5 min.","Ajoute ail, gingembre. 1 min.","Épices : cumin, coriandre, paprika, garam masala. 1 min.","Tomates mixées, cuis 10 min.","Ajoute pois chiches et un peu d'eau.","Mijote 20 min. Coriandre fraîche.","Sers avec riz basmati ou naan."]},{"k":["palak","paneer"],"i":["400 g épinards","200 g paneer (ou tofu ferme)","Oignon, ail, gingembre, garam masala, crème"],"s":["Blanchis les épinards 2 min, plonge dans glaçons.","Mixe en purée fine.","Coupe le paneer en cubes, fais dorer en poêle.","Sue oignon, ail, gingembre. Épices.","Ajoute la purée d'épinards, mijote 10 min.","Ajoute crème et paneer. Mijote 5 min.","Sers avec riz ou naan."]},{"k":["tikka"],"i":["500 g poulet en cubes","Yaourt, gingembre, ail, garam masala, paprika, citron"],"s":["Marine le poulet 2 h : yaourt + épices + citron + huile.","Enfile sur brochettes.","Préchauffe four à 220°C ou grill très chaud.","Cuis 12-15 min en retournant.","Doit être doré et juteux.","Sers en entrée avec sauce menthe, ou en wrap."]},{"k":["poulet","general","tao"],"i":["500 g poulet en cubes","Sauce : soja, sucre, vinaigre, ail, gingembre, piment","Maïzena, œuf, huile friture"],"s":["Marine le poulet : œuf + maïzena + sauce soja. 30 min.","Fais frire jusqu'à doré, réserve.","Sauce : ail, gingembre, sauce soja, sucre, vinaigre, piment, maïzena.","Réduis la sauce 3 min.","Ajoute le poulet, enrobe.","Sers avec riz blanc, parsemé de sésame."]},{"k":["mapo","tofu"],"i":["400 g tofu mou","150 g porc haché","Doubanjiang (pâte fève), gingembre, ail","Sauce soja, poivre Sichuan"],"s":["Coupe le tofu en cubes, blanchis dans eau salée.","Wok chaud : huile, porc haché. Dore.","Ajoute doubanjiang, gingembre, ail. 1 min.","Verse bouillon, sauce soja, sucre.","Ajoute tofu, mijote 5 min sans casser.","Lie avec maïzena délayée.","Poivre Sichuan + ciboule. Sers avec riz."]},{"k":["canard","laque"],"i":["1 canard entier","Miel, sauce soja, vinaigre riz, 5 épices","Crêpes mandarin, sauce hoisin, ciboule, concombre"],"s":["Ébouillante le canard pour tendre la peau. Sèche.","Glaçage : miel + soja + vinaigre + 5 épices.","Badigeonne, sèche au frigo 24 h.","Four 180°C, 1h30, en arrosant.","Termine 200°C 10 min pour croustiller.","Tranche fin. Sers avec crêpes, hoisin, ciboule, concombre."]},{"k":["banh","mi"],"i":["1 baguette","200 g porc grillé ou pâté","Carotte/daikon marinés","Concombre, coriandre, piment, mayo","Sauce maggi"],"s":["Pickles : carotte+daikon+vinaigre+sucre+sel. 30 min.","Grille la viande marinée (sauce poisson, ail, sucre, citronnelle).","Coupe la baguette en deux, toaste légèrement.","Tartine mayo, ajoute pâté si tu veux.","Garnis : viande, pickles, concombre, coriandre, piment.","Quelques gouttes de sauce maggi.","Mange chaud."]},{"k":["bun","bo"],"i":["200 g vermicelles riz","200 g bœuf grillé","Carotte/daikon marinés, concombre, salade","Nuoc cham : sauce poisson, citron, sucre, ail, piment"],"s":["Cuis les vermicelles selon paquet, refroidis.","Marine le bœuf : sauce poisson, ail, sucre, citronnelle. Grille.","Pickles : carotte+daikon+vinaigre+sucre.","Sauce nuoc cham : sauce poisson + eau + sucre + citron + ail + piment.","Bol : salade, vermicelles, bœuf, pickles, herbes.","Verse la sauce dessus. Mélange en mangeant."]},{"k":["gado"],"i":["Tofu, tempeh, œufs durs","Légumes (haricots, chou, concombre, pousses soja)","Sauce arachide : cacahuètes, lait coco, citron vert, piment, sucre"],"s":["Fais frire tofu et tempeh.","Cuis légumes vapeur (sauf concombre cru).","Sauce : mixe cacahuètes grillées + ail + piment + sucre + citron + sauce soja + eau.","Coupe œufs durs en quartiers.","Dispose tout sur un plat.","Verse la sauce arachide chaude par-dessus."]},{"k":["rendang"],"i":["1 kg bœuf en cubes","600 ml lait coco","Pâte épices : ail, gingembre, galanga, citronnelle, piments, curcuma"],"s":["Mixe la pâte d'épices.","Dans une cocotte : pâte + lait coco. Mijote 15 min.","Ajoute le bœuf, feuilles citron-kaffir.","Mijote 3-4 h en remuant régulièrement.","Le liquide réduit progressivement, devient brun.","À la fin, la viande est presque sèche, très parfumée.","Sers avec riz jasmin."]},{"k":["adobo"],"i":["1 kg poulet en morceaux","Sauce soja, vinaigre, ail, laurier, poivre","Riz"],"s":["Marine le poulet 1 h : sauce soja + vinaigre + ail.","Verse tout dans une cocotte avec laurier.","Couvre, mijote 30 min.","Découvre, augmente le feu pour réduire la sauce.","Tu peux faire dorer le poulet à la fin.","Sers avec du riz blanc."]},{"k":["arepa"],"i":["400 g harina P.A.N. (maïs précuit)","500 ml eau","Sel","Garniture : poulet, fromage, avocat"],"s":["Mélange farine, eau, sel jusqu'à pâte lisse.","Laisse reposer 5 min.","Forme des galettes épaisses (1 cm).","Cuis poêle sec 5 min de chaque côté.","Termine 10 min au four pour gonfler.","Coupe en deux, garnis."]},{"k":["empanada"],"i":["Pâte à empanada","300 g viande hachée","Oignon, raisins, olives, œuf dur, paprika, cumin"],"s":["Cuis viande avec oignon, épices. Refroidis.","Ajoute raisins, olives, œuf dur haché.","Découpe ronds de pâte.","Garnis, ferme en demi-lune, scelle.","Four 200°C, 20 min jusqu'à dorure.","Ou frites 4 min à 180°C."]},{"k":["lomo","saltado"],"i":["400 g bœuf","2 oignons rouges","2 tomates","Frites maison","Sauce soja, vinaigre, coriandre"],"s":["Coupe le bœuf en lanières, sale.","Wok bien chaud : bœuf 2 min, retire.","Saute oignons et tomates en quartiers.","Remets le bœuf, sauce soja, vinaigre, coriandre.","Ajoute les frites en dernier, mélange.","Sers immédiatement avec du riz."]},{"k":["asado"],"i":["1 kg bœuf à griller (entrecôte, bavette)","Gros sel","Chimichurri"],"s":["Sors la viande 1 h avant cuisson.","Allume un feu de bois, attends braises rouges.","Sale au gros sel juste avant de griller.","Pose sur grille à 20 cm des braises.","Cuis 8-12 min selon épaisseur, retourne une seule fois.","Repose 10 min couvert.","Sers avec chimichurri (persil + ail + huile + vinaigre + piment)."]},{"k":["tacos","al","pastor"],"i":["500 g porc","Marinade : achiote, vinaigre, ail, ananas, cumin","Tortillas maïs, oignon, coriandre, ananas grillé"],"s":["Marine le porc 4 h dans la pâte achiote + ananas mixé.","Empile la viande sur une broche verticale ou cuis en lanières.","Tranche fin.","Réchauffe les tortillas.","Garnis : viande, oignon cru, coriandre, ananas grillé.","Citron vert + sauce verte. Mange chaud."]},{"k":["pozole"],"i":["500 g porc ou poulet","500 g maïs hominy","Pâte de piment ancho/guajillo","Garniture : laitue, radis, oignon, citron, origan"],"s":["Cuis la viande dans bouillon avec oignon, ail. 1 h.","Trempe les piments séchés, mixe en pâte.","Ajoute la pâte au bouillon.","Ajoute le hominy, mijote 30 min.","Sers en bol bien chaud.","Chacun garnit : laitue, radis, oignon, citron, origan, tortillas."]},{"k":["curry","japonais"],"i":["500 g poulet","Tablette curry japonais","2 oignons, 2 carottes, 2 pommes de terre","Riz japonais"],"s":["Coupe légumes en cubes.","Fais dorer le poulet, retire.","Sue oignons 8 min jusqu'à dorure.","Ajoute carottes et pommes de terre, eau à couvrir.","Mijote 15 min, ajoute le poulet.","Hors du feu, dissous les tablettes de curry.","Mijote 10 min. Sers sur riz."]},{"k":["katsu"],"i":["2 escalopes porc ou poulet","Farine, œuf, panko","Sauce katsu : ketchup, Worcestershire, sucre, soja"],"s":["Aplatis les escalopes.","Sale, poivre. Trempe dans farine, œuf, panko.","Friture 5 min à 170°C jusqu'à doré.","Égoutte, tranche.","Sauce : mélange ketchup + Worcestershire + sucre + soja.","Sers sur riz avec sauce et chou râpé."]},{"k":["onigiri"],"i":["400 g riz japonais cuit","Garniture : umeboshi, thon mayo, saumon grillé","Algue nori, sel"],"s":["Cuis le riz japonais.","Mouille tes mains, sale légèrement.","Prends une poignée de riz tiède.","Creuse au centre, ajoute la garniture.","Referme et forme un triangle (ou boule).","Entoure d'une bande de nori."]},{"k":["bulgogi"],"i":["500 g bœuf (entrecôte) tranché fin","Sauce : soja, sucre, ail, gingembre, sésame, poire","Riz, légumes"],"s":["Marine le bœuf 2 h : sauce soja + sucre + poire râpée + ail + gingembre + sésame.","Wok ou grill très chaud.","Cuis le bœuf 3-4 min en remuant.","Ajoute oignon en lamelles à la fin.","Sers sur riz avec kimchi et légumes."]},{"k":["kimchi","fried","rice"],"i":["400 g riz cuit (idéalement froid)","200 g kimchi","100 g porc ou bacon","2 œufs","Sauce soja, sésame"],"s":["Hache le kimchi.","Wok chaud : porc/bacon, dore.","Ajoute kimchi avec son jus. Cuis 3 min.","Ajoute le riz, casse les grumeaux.","Sauce soja, sésame.","Pousse sur le côté, fais 2 œufs au plat.","Sers riz garni de l'œuf, ciboule, gochugaru."]},{"k":["bao"],"i":["Pâte à bao prête","Garniture : porc braisé, concombre, sauce hoisin, ciboule"],"s":["Cuis le bao à la vapeur 10 min.","Prépare le porc : braise au soja + sucre + 5 épices.","Ouvre le bao en deux comme un sandwich.","Garnis : sauce hoisin, porc, concombre, ciboule.","Mange immédiatement."]},{"k":["bibimbap"],"i":["200 g riz","200 g bœuf","Carottes, courgette, épinards, champignons, pousses","1 œuf","Gochujang"],"s":["Cuis chaque légume séparément avec sésame et ail.","Marine et saute le bœuf : soja, sucre, ail.","Cuis l'œuf au plat.","Bol : riz au fond, légumes en sections, bœuf, œuf au centre.","Cuillère de gochujang.","Mélange tout en mangeant."]},{"k":["fish","pie"],"i":["400 g saumon + cabillaud","Béchamel, fromage, épinards","700 g pommes de terre purée"],"s":["Cuis le poisson dans le lait 8 min, émiette.","Béchamel avec le lait du poisson + fromage.","Mélange poisson, béchamel, épinards cuits.","Verse dans un plat.","Couvre de purée à la cuillère.","Four 200°C, 25 min jusqu'à doré."]},{"k":["shepherd"],"i":["600 g agneau haché","1 kg pommes de terre","Oignon, carotte, sauce Worcestershire, vin rouge"],"s":["Fais revenir oignon, carotte hachés.","Ajoute l'agneau, dore.","Vin rouge, Worcestershire, bouillon. Mijote 30 min.","Purée : pommes de terre + beurre + lait.","Plat : viande, couvre de purée, raye à la fourchette.","Four 200°C, 25 min."]},{"k":["poulet","sandwich"],"i":["1 escalope poulet","1 pain burger ou ciabatta","Salade, tomate, oignon","Mayo ou sauce"],"s":["Sale, poivre l'escalope.","Cuis 5 min de chaque côté à la poêle.","Toaste le pain.","Tartine de mayo ou sauce.","Garnis : salade, tomate, escalope, oignon.","Mange chaud."]},{"k":["wrap"],"i":["1 grande tortilla","150 g garniture (poulet, thon, crudités)","Sauce, fromage"],"s":["Réchauffe légèrement la tortilla 30 sec.","Tartine de sauce au centre.","Pose la garniture au tiers inférieur.","Plie les côtés vers le centre.","Roule serré du bas vers le haut.","Coupe en deux en biais."]},{"k":["cobb","salad"],"i":["Salade romaine","Poulet grillé, bacon, œuf dur, avocat, tomate","Bleu ou roquefort, vinaigrette"],"s":["Cuis le poulet, le bacon, l'œuf dur.","Coupe tout en cubes ou tranches.","Lave et essore la salade.","Dispose en bandes parallèles : chaque ingrédient une bande.","Vinaigrette à part ou versée au centre.","Mélange au moment de manger."]},{"k":["mac","and","cheese"],"i":["400 g macaronis","400 g cheddar","500 ml lait","50 g beurre","50 g farine, moutarde"],"s":["Cuis les macaronis al dente.","Roux : beurre + farine 2 min.","Ajoute lait progressivement en fouettant.","Hors du feu : cheddar râpé, sel, poivre, moutarde.","Mélange aux pâtes.","Verse dans un plat, parsème fromage. Four 200°C 15 min."]},{"k":["bagel"],"i":["1 bagel","50 g cream cheese","80 g saumon fumé","Câpres, oignon rouge, aneth, citron"],"s":["Coupe le bagel en deux, toaste.","Tartine de cream cheese.","Pose le saumon fumé.","Ajoute oignon rouge fin, câpres, aneth.","Filet de citron.","Referme ou mange ouvert."]},{"k":["pulled","pork"],"i":["1 kg épaule de porc","Rub : paprika, cassonade, ail, oignon, piment","Sauce BBQ","Pain brioché, coleslaw"],"s":["Frotte le porc avec le rub. Repose 4 h au frigo.","Four 130°C, 6-8 h jusqu'à effiloche facile.","Sors, repose 30 min.","Effiloche à la fourchette.","Mélange avec sauce BBQ.","Sers dans pain avec coleslaw."]},{"k":["poke","mangue"],"i":["200 g riz sushi","150 g saumon ou thon cru","1 mangue","Avocat, edamame, sésame, sauce soja"],"s":["Cuis le riz à sushi assaisonné.","Coupe poisson en cubes, marine 5 min : soja + sésame.","Coupe mangue, avocat en cubes.","Bol : riz, poisson, mangue, avocat, edamame.","Sésame, sauce soja, mayo épicée.","Mélange en mangeant."]},{"k":["hash","parmentier"],"i":["600 g viande hachée","1 kg pommes de terre","1 oignon","Gruyère, beurre, lait"],"s":["Cuis pommes de terre 25 min, écrase avec lait+beurre.","Sue oignon, ajoute viande, dore 6 min, sale.","Plat beurré : viande étalée.","Couvre de purée, raye à la fourchette.","Parsème de gruyère.","Four 200°C, 25 min jusqu'à doré."]},{"k":["salade","quinoa"],"i":["200 g quinoa cuit","200 g poulet grillé","Concombre, tomate cerise, feta, oignon rouge","Citron, huile olive, menthe"],"s":["Cuis le quinoa et refroidis.","Cuis le poulet, tranche.","Coupe les légumes en petits cubes.","Mélange quinoa, légumes, feta émiettée.","Vinaigrette : citron + huile + sel + menthe.","Ajoute le poulet par-dessus. Sers frais."]},{"k":["salade","grecque"],"i":["Tomates, concombre, oignon rouge, poivron","200 g feta","Olives kalamata, origan, huile olive"],"s":["Coupe tomates, concombre, oignon, poivron en gros morceaux.","Mélange dans un saladier avec olives.","Pose un bloc de feta entier dessus (pas émietté).","Origan séché, huile d'olive, sel.","Sers immédiatement avec du pain."]},{"k":["salade","lentille"],"i":["200 g lentilles vertes cuites","2 œufs durs","Oignon rouge, tomate, persil","Vinaigrette moutarde"],"s":["Cuis lentilles 25 min al dente, refroidis.","Œufs durs en quartiers.","Coupe oignon et tomate.","Vinaigrette : moutarde + vinaigre + huile + sel.","Mélange lentilles, légumes, persil.","Pose œufs dessus, vinaigrette."]},{"k":["kebab"],"i":["Pain pita ou galette","200 g viande de kebab","Salade, tomate, oignon","Sauce blanche, harissa","Frites (option)"],"s":["Réchauffe la viande de kebab à la poêle.","Réchauffe le pain.","Ouvre le pain, tartine de sauce blanche.","Garnis : salade, tomate, oignon.","Ajoute la viande, frites si tu veux.","Pimente avec harissa. Roule ou plie."]},{"k":["durum"],"i":["1 grande galette dürüm","200 g viande kebab","Tomate, oignon, salade","Sauce blanche, harissa"],"s":["Réchauffe la galette.","Tartine sauce blanche.","Garnis : viande, salade, tomate, oignon.","Pimente.","Roule serré.","Coupe en deux. Mange chaud."]},{"k":["tacos","francais"],"i":["Galette tortilla XL","200 g viande (kebab, escalope, nuggets)","Frites","Sauce fromagère, sauces","Salade, oignon"],"s":["Cuis viande et frites.","Étale la galette à plat.","Pose frites au centre, viande, sauces.","Couvre de sauce fromagère chaude.","Plie les côtés et le bas, roule.","Grille au panini-press 3 min.","Coupe en deux. Mange brûlant."]}];
+ function norm(s){return String(s||'').toLowerCase().replace(/[éèêë]/g,'e').replace(/[àâä]/g,'a').replace(/[ïî]/g,'i').replace(/[ôö]/g,'o').replace(/[ùûü]/g,'u').replace(/ç/g,'c').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim()}
+ function findRecipe(name){
+  var n=norm(name);
+  /* On cherche la recette dont TOUS les mots-clés sont présents dans le nom du plat */
+  var best=null,bestScore=0;
+  for(var i=0;i<R.length;i++){
+   var keys=R[i].k;
+   var allFound=true,score=0;
+   for(var j=0;j<keys.length;j++){
+    var k=norm(keys[j]);
+    if(n.indexOf(k)===-1){allFound=false;break}
+    score+=k.length;
+   }
+   if(allFound && score>bestScore){best=R[i];bestScore=score}
+  }
+  return best;
+ }
+ window.gsHasRecipe=function(name){return !!findRecipe(name)};
+ window.gsGetRecipe=function(name){return findRecipe(name)};
+
+ function E(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+
+ window.gsShowRecipe=function(name){
+  var rec=findRecipe(name);
+  if(!rec)return;
+  var old=document.getElementById('gs-recipe-modal');if(old)old.remove();
+  var html='<div id="gs-recipe-modal" class="gs-recipe-modal-ov" onclick="if(event.target===this)gsCloseRecipe()">'+
+   '<div class="gs-recipe-modal">'+
+    '<div class="gs-recipe-head"><div><div class="kicker">Recette</div><h2>'+E(name)+'</h2></div><button class="gs-recipe-close" onclick="gsCloseRecipe()">×</button></div>'+
+    '<div class="gs-recipe-body">'+
+     '<div class="gs-recipe-section"><h3>Ingrédients</h3><ul class="gs-recipe-ingr">'+rec.i.map(function(x){return '<li>'+E(x)+'</li>'}).join('')+'</ul></div>'+
+     '<div class="gs-recipe-section"><h3>Étapes</h3><ol class="gs-recipe-steps">'+rec.s.map(function(x){return '<li><span>'+E(x)+'</span></li>'}).join('')+'</ol></div>'+
+    '</div>'+
+    '<div class="gs-recipe-foot">Recette de base — adapte les quantités selon ton appétit et tes objectifs.</div>'+
+   '</div>'+
+  '</div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+ };
+ window.gsCloseRecipe=function(){var m=document.getElementById('gs-recipe-modal');if(m)m.remove()};
+
+ /* INJECTION DU BOUTON dans la liste de résultats nutrition */
+ function injectRecipeButtons(){
+  var el=document.getElementById('food-results-v2');
+  if(!el)return;
+  var items=el.querySelectorAll('.gs-food-item:not([data-gs-recipe-wrapped])');
+  items.forEach(function(btn){
+   btn.setAttribute('data-gs-recipe-wrapped','1');
+   /* Récupérer le nom du plat dans le <b> */
+   var nameEl=btn.querySelector('b');
+   if(!nameEl)return;
+   var name=nameEl.textContent.trim();
+   /* Vérifier si une recette existe ET si c'est dans la catégorie Recettes */
+   var cat=btn.getAttribute('data-cat')||'';
+   if(cat!=='Recettes' && cat!=='Petit-déjeuner')return;
+   if(!findRecipe(name))return;
+   /* Ajouter un bouton à côté du "Ajouter" */
+   var actionBlock=btn.querySelector('.gs-food-action');
+   if(!actionBlock){
+    /* Cas du bouton sans score (basique) */
+    var i=btn.querySelector('i');
+    if(!i)return;
+    actionBlock=document.createElement('div');
+    actionBlock.className='gs-food-action';
+    i.parentNode.insertBefore(actionBlock,i);
+    actionBlock.appendChild(i);
+   }
+   var recipeBtn=document.createElement('button');
+   recipeBtn.type='button';
+   recipeBtn.className='gs-food-recipe-btn';
+   recipeBtn.innerHTML='<i>📖</i> Voir la recette';
+   recipeBtn.setAttribute('data-recipe-name',name);
+   recipeBtn.addEventListener('click',function(ev){
+    ev.stopPropagation();
+    ev.preventDefault();
+    gsShowRecipe(name);
+   });
+   actionBlock.insertBefore(recipeBtn,actionBlock.firstChild);
+  });
+ }
+
+ /* Observer la zone des résultats — quand elle change, on réinjecte */
+ function startObserver(){
+  var target=document.body;
+  if(window.__gsRecipeObs)return;
+  var obs=new MutationObserver(function(){injectRecipeButtons()});
+  obs.observe(target,{childList:true,subtree:true});
+  window.__gsRecipeObs=obs;
+  injectRecipeButtons();
+ }
+
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startObserver);
+ else startObserver();
+ setTimeout(injectRecipeButtons,500);
+ setTimeout(injectRecipeButtons,1500);
+})();
+
+(function(){
+ var pending=null;
+ function $(id){return document.getElementById(id)}
+ function snapshot(){
+  try{
+   var p=(window.state&&window.state.profil)||{};
+   var cd=(window.state&&window.state.customDays)||{};
+   return JSON.stringify({split:p.split||p.programme||p.program||'',freq:p.frequency||p.frequence||0,obj:p.objectif||'',cd:cd});
+  }catch(e){return ''}
+ }
+ var lastApplied=snapshot();
+ function ensureBar(){
+  var panel=$('fl-programme'); if(!panel) return null;
+  var bar=$('gs-validate-program-bar');
+  if(!bar){
+   bar=document.createElement('div');
+   bar.id='gs-validate-program-bar';
+   bar.style.cssText='position:absolute;left:0;right:0;bottom:0;padding:12px 14px calc(env(safe-area-inset-bottom,12px) + 12px);background:linear-gradient(180deg,rgba(7,10,14,0),rgba(7,10,14,.96) 35%);z-index:30;display:none;pointer-events:none';
+   bar.innerHTML='<button type="button" id="gs-validate-program-btn" style="width:100%;padding:16px;border-radius:20px;border:0;background:var(--acc,#e8ff47);color:#071018;font-weight:1000;font-size:15px;letter-spacing:-.02em;box-shadow:0 14px 40px rgba(0,0,0,.35);pointer-events:auto;font-family:inherit">Valider ce programme</button><div id="gs-validate-program-hint" style="text-align:center;margin-top:8px;font-size:11px;color:var(--mut,#3a3a3a);font-weight:800;pointer-events:auto">Modifications en attente, confirme pour les appliquer</div>';
+   panel.appendChild(bar);
+   $('gs-validate-program-btn').addEventListener('click',commit);
+  }
+  return bar;
+ }
+ function showBar(){var b=ensureBar();if(b)b.style.display='block'}
+ function hideBar(){var b=$('gs-validate-program-bar');if(b)b.style.display='none'}
+ function commit(){
+  if(!pending)return;
+  pending=null;
+  lastApplied=snapshot();
+  hideBar();
+  try{ if(typeof window.notify==='function')window.notify('Programme validé') }catch(e){}
+ }
+ function wrap(name){
+  var orig=window[name]; if(typeof orig!=='function')return;
+  if(orig.__gsValidateWrapped)return;
+  var wrapped=function(){
+   var args=Array.prototype.slice.call(arguments);
+   try{ orig.apply(this,args) }catch(e){}
+   var snap=snapshot();
+   if(snap===lastApplied){ pending=null; hideBar(); return }
+   pending={fn:orig,args:args};
+   showBar();
+  };
+  wrapped.__gsValidateWrapped=true;
+  window[name]=wrapped;
+ }
+ function init(){
+  wrap('applyProgramCalculator');
+  wrap('gsProgramSetFormat');
+  setTimeout(function(){wrap('applyProgramCalculator');wrap('gsProgramSetFormat')},800);
+  setTimeout(function(){wrap('applyProgramCalculator');wrap('gsProgramSetFormat')},2000);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
+ else init();
+})();
+
+(function(){
+ function ensureNavVisible(){
+  var nav=document.getElementById('main-nav')||document.querySelector('.nav');
+  if(nav){nav.style.display='';nav.style.zIndex='1500';nav.style.position='fixed'}
+ }
+ setInterval(ensureNavVisible,800);
+ setTimeout(ensureNavVisible,200);
+ setTimeout(ensureNavVisible,1500);
+})();
+(function(){
+ function cleanupSettingsV2(){
+  var s=document.getElementById('profile-settings-v2');
+  if(!s)return;
+  s.querySelectorAll('button').forEach(function(b){
+   var t=(b.textContent||'').trim().toLowerCase();
+   if(t==='se déconnecter'||t==='deconnexion'||t==='déconnexion'||t==='logout'||t==='log out'){
+    var section=b.closest('.gs-settings-section,.gs-settings-block2');
+    if(section){
+     var otherBtns=Array.prototype.filter.call(section.querySelectorAll('button'),function(x){return x!==b});
+     if(otherBtns.length===0){section.remove();return}
+    }
+    b.remove();
+   }
+  });
+ }
+ try{var obs=new MutationObserver(function(){cleanupSettingsV2()});obs.observe(document.body,{childList:true,subtree:true})}catch(e){}
+ setInterval(cleanupSettingsV2,500);
+ setTimeout(cleanupSettingsV2,200);
+})();
+
+(function(){
+ function S(){window.state=window.state||{};return window.state}
+ function squads(){var s=S();s.privateSquads=Array.isArray(s.privateSquads)?s.privateSquads:[];return s.privateSquads}
+ function save(){try{if(typeof window.sv==='function')window.sv();else if(typeof window.save==='function')window.save();else localStorage.setItem('gs-state',JSON.stringify(S()))}catch(e){}}
+ function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+ function close(){var m=document.getElementById('gs-sq-modal');if(m)m.remove()}
+
+ window.gsOpenPrivateSquads=function(){
+  close();
+  var arr=squads();
+  var html='<div id="gs-sq-modal" class="gs-sq-modal-ov" onclick="if(event.target===this)gsClosePrivateSquads()">'+
+   '<div class="gs-sq-modal">'+
+    '<div class="gs-sq-head"><div><div class="kicker">Mes Squads privées</div><h2>Squads privées</h2></div><button class="gs-sq-close" onclick="gsClosePrivateSquads()">×</button></div>'+
+    '<div class="gs-sq-body">';
+  if(!arr.length){
+   html+='<div class="gs-sq-empty"><span>👥</span>Aucune squad privée.<br>Crée-en une pour comparer tes performances avec un cercle restreint.</div>';
+  }else{
+   html+='<div class="gs-sq-list">';
+   arr.forEach(function(sq){
+    html+='<div class="gs-sq-card" onclick="gsOpenSquadDetail(\''+E(sq.id)+'\')">'+
+     '<div class="gs-sq-card-ico">👥</div>'+
+     '<div style="flex:1;min-width:0"><div class="gs-sq-card-name">'+E(sq.name||'Squad')+'</div><div class="gs-sq-card-meta">'+(sq.members||[]).length+' membre'+((sq.members||[]).length>1?'s':'')+'</div></div>'+
+    '</div>';
+   });
+   html+='</div>';
+  }
+  html+='<button class="gs-sq-cta" onclick="gsCreatePrivateSquad()">+ Nouvelle squad privée</button>';
+  html+='</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+ };
+ window.gsClosePrivateSquads=close;
+
+ window.gsCreatePrivateSquad=function(){
+  close();
+  var html='<div id="gs-sq-modal" class="gs-sq-modal-ov" onclick="if(event.target===this)gsClosePrivateSquads()">'+
+   '<div class="gs-sq-modal">'+
+    '<div class="gs-sq-head"><div><div class="kicker">Nouvelle squad</div><h2>Créer une squad privée</h2></div><button class="gs-sq-close" onclick="gsClosePrivateSquads()">×</button></div>'+
+    '<div class="gs-sq-body">'+
+     '<div class="gs-sq-section">Nom du groupe</div>'+
+     '<input id="gs-sq-name-input" class="gs-sq-input" placeholder="Ex : SQUAD-CHAMPIONS" maxlength="40">'+
+     '<div class="gs-sq-section">Ajouter des amis</div>'+
+     '<div id="gs-sq-friends-list">'+renderFriendPicker([])+'</div>'+
+     '<button class="gs-sq-cta" onclick="gsConfirmCreateSquad()">Créer la squad</button>'+
+     '<button class="gs-sq-cta ghost" onclick="gsClosePrivateSquads()" style="margin-top:6px">Annuler</button>'+
+    '</div>'+
+   '</div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+ };
+
+ function renderFriendPicker(currentMembers){
+  var s=S();
+  var friends=s.friends||[];
+  if(!friends.length)return '<div class="gs-sq-empty" style="padding:20px"><span>👋</span>Tu n\u2019as pas encore d\u2019amis.<br>Ajoute des amis dans la Squad pour créer une squad privée.</div>';
+  return friends.map(function(f){
+   var id=f.id||f.user_id||f.username||'';
+   var sel=currentMembers.indexOf(id)>-1;
+   var av=f.avatar?'<img src="'+E(f.avatar)+'">':E((f.name||'?').charAt(0).toUpperCase());
+   /* sel = déjà dans la squad → classe 'sel' + bouton "Retirer"
+      non sel → classe 'add' + bouton "Ajouter" */
+   return '<div class="gs-sq-friend-row" data-fid="'+E(id)+'">'+
+    '<div class="gs-sq-friend-av">'+av+'</div>'+
+    '<div class="gs-sq-friend-name">'+E(f.name||f.display_name||'Ami')+'</div>'+
+    '<button type="button" class="gs-sq-friend-toggle '+(sel?'sel':'add')+'" onclick="gsTogglePickFriend(this,\''+E(id)+'\')">'+(sel?'Retirer':'Ajouter')+'</button>'+
+   '</div>';
+  }).join('');
+ }
+
+ window.gsTogglePickFriend=function(btn,fid){
+  /* classList.toggle('sel') retourne true si la classe est AJOUTÉE.
+     On utilise 'sel' pour les sélectionnés (état actif = dans la squad). */
+  var nowSel=btn.classList.toggle('sel');
+  btn.textContent=nowSel?'Retirer':'Ajouter';
+  btn.classList.toggle('add',!nowSel);
+ };
+
+ window.gsConfirmCreateSquad=function(){
+  var nameEl=document.getElementById('gs-sq-name-input');
+  var rawName=(nameEl&&nameEl.value||'').trim();
+  if(!rawName){if(typeof window.notify==='function')window.notify('Donne un nom à ta squad');return}
+  /* Force le suffixe -SQUAD en majuscules, peu importe ce que l'user a tapé */
+  var base=rawName.replace(/[-_]?SQUAD$/i,'').replace(/[-_]?Squad$/,'').trim()||rawName;
+  var name=base.toUpperCase()+'-SQUAD';
+  var selected=[];
+  document.querySelectorAll('#gs-sq-friends-list .gs-sq-friend-row').forEach(function(row){
+   var btn=row.querySelector('.gs-sq-friend-toggle');
+   /* Sélectionné = a la classe 'sel' */
+   if(btn && btn.classList.contains('sel'))selected.push(row.getAttribute('data-fid'));
+  });
+  var arr=squads();
+  arr.push({id:'sq_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),name:name,members:selected,createdAt:Date.now()});
+  save();
+  if(typeof window.notify==='function')window.notify('Squad "'+name+'" créée');
+  gsOpenPrivateSquads();
+ };
+
+ window.gsOpenSquadDetail=function(squadId){
+  var arr=squads();
+  var sq=arr.filter(function(s){return s.id===squadId})[0];
+  if(!sq)return;
+  close();
+  var s=S();
+  var friends=s.friends||[];
+  var members=[{id:'me',name:(s.profil&&s.profil.name)||'Toi',xp:Number(s.xp||0),me:true,avatar:(s.profil&&s.profil.avatar)||''}];
+  (sq.members||[]).forEach(function(fid){
+   var f=friends.filter(function(x){return (x.id||x.user_id||x.username)===fid})[0];
+   if(f)members.push({id:fid,name:f.name||f.display_name||'Ami',xp:Number(f.xp||(f.data&&f.data.xp)||0),avatar:f.avatar||''});
+  });
+  members.sort(function(a,b){return b.xp-a.xp});
+  var totalXp=members.reduce(function(a,b){return a+b.xp},0);
+  var avgXp=members.length?Math.round(totalXp/members.length):0;
+
+  var html='<div id="gs-sq-modal" class="gs-sq-modal-ov" onclick="if(event.target===this)gsClosePrivateSquads()">'+
+   '<div class="gs-sq-modal">'+
+    '<div class="gs-sq-head"><div><div class="kicker">Squad privée</div><h2>'+E(sq.name)+'</h2></div><button class="gs-sq-close" onclick="gsClosePrivateSquads()">×</button></div>'+
+    '<div class="gs-sq-body">'+
+     '<div class="gs-sq-stats">'+
+      '<div class="gs-sq-stat"><b>'+members.length+'</b><span>Membres</span></div>'+
+      '<div class="gs-sq-stat"><b>'+totalXp+'</b><span>XP cumulé</span></div>'+
+      '<div class="gs-sq-stat"><b>'+avgXp+'</b><span>XP moyen</span></div>'+
+     '</div>'+
+     '<div class="gs-sq-section">Classement de la squad</div>'+
+     members.map(function(m,i){
+      var av=m.avatar?'<img src="'+E(m.avatar)+'">':E((m.name||'?').charAt(0).toUpperCase());
+      return '<div class="gs-sq-rank-row '+(m.me?'me':'')+'">'+
+       '<div class="gs-sq-rank-pos">#'+(i+1)+'</div>'+
+       '<div class="gs-sq-friend-av">'+av+'</div>'+
+       '<div class="gs-sq-friend-name">'+E(m.name)+(m.me?' (toi)':'')+'</div>'+
+       '<div style="font-weight:1000;color:#52D3FF;font-size:13px">'+m.xp+' XP</div>'+
+      '</div>';
+     }).join('')+
+     '<div class="gs-sq-section">Gérer</div>'+
+     '<button class="gs-sq-cta ghost" onclick="gsRenameSquad(\''+E(squadId)+'\')">Renommer</button>'+
+     '<button class="gs-sq-cta ghost" onclick="gsManageSquadMembers(\''+E(squadId)+'\')" style="margin-top:6px">Gérer les membres</button>'+
+     '<button class="gs-sq-cta ghost" onclick="gsDeleteSquad(\''+E(squadId)+'\')" style="margin-top:6px;color:#ff6b7a">Supprimer la squad</button>'+
+    '</div>'+
+   '</div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+ };
+
+ window.gsRenameSquad=function(squadId){
+  var sq=squads().filter(function(s){return s.id===squadId})[0];
+  if(!sq)return;
+  var n=prompt('Nouveau nom de la squad :',sq.name);
+  if(n===null)return;
+  n=n.trim();
+  if(!n){if(typeof window.notify==='function')window.notify('Nom vide refusé');return}
+  sq.name=n;
+  save();
+  gsOpenSquadDetail(squadId);
+ };
+
+ window.gsDeleteSquad=function(squadId){
+  if(!confirm('Supprimer cette squad ? Cette action est définitive.'))return;
+  var arr=squads();
+  var idx=arr.findIndex(function(s){return s.id===squadId});
+  if(idx>-1){arr.splice(idx,1);save()}
+  gsOpenPrivateSquads();
+ };
+
+ window.gsManageSquadMembers=function(squadId){
+  var sq=squads().filter(function(s){return s.id===squadId})[0];
+  if(!sq)return;
+  close();
+  var html='<div id="gs-sq-modal" class="gs-sq-modal-ov" onclick="if(event.target===this)gsClosePrivateSquads()">'+
+   '<div class="gs-sq-modal">'+
+    '<div class="gs-sq-head"><div><div class="kicker">'+E(sq.name)+'</div><h2>Membres</h2></div><button class="gs-sq-close" onclick="gsClosePrivateSquads()">×</button></div>'+
+    '<div class="gs-sq-body">'+
+     '<div id="gs-sq-friends-list">'+renderFriendPicker(sq.members||[])+'</div>'+
+     '<button class="gs-sq-cta" onclick="gsSaveSquadMembers(\''+E(squadId)+'\')">Sauvegarder</button>'+
+     '<button class="gs-sq-cta ghost" onclick="gsOpenSquadDetail(\''+E(squadId)+'\')" style="margin-top:6px">Annuler</button>'+
+    '</div>'+
+   '</div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+ };
+
+ window.gsSaveSquadMembers=function(squadId){
+  var sq=squads().filter(function(s){return s.id===squadId})[0];
+  if(!sq)return;
+  var selected=[];
+  document.querySelectorAll('#gs-sq-friends-list .gs-sq-friend-row').forEach(function(row){
+   var btn=row.querySelector('.gs-sq-friend-toggle');
+   /* Sélectionné = a la classe 'sel' */
+   if(btn && btn.classList.contains('sel'))selected.push(row.getAttribute('data-fid'));
+  });
+  sq.members=selected;
+  save();
+  if(typeof window.notify==='function')window.notify('Membres mis à jour');
+  gsOpenSquadDetail(squadId);
+ };
+
+ function injectMenuButton(){
+  var sh=document.getElementById('more-sh');
+  if(!sh)return;
+  if(sh.querySelector('[data-gs-private-squad-btn]'))return;
+  var sections=sh.querySelectorAll('.gs-r-menu-section');
+  var navSection=null;
+  sections.forEach(function(sec){if((sec.textContent||'').toLowerCase().indexOf('navig')>-1)navSection=sec});
+  var btnHtml='<button class="gs-menu-btn" data-gs-private-squad-btn type="button" onclick="closeHamburger();setTimeout(gsOpenPrivateSquads,150)" style="margin-top:6px"><span class="gs-menu-logo" style="background:rgba(82,211,255,.16);color:#52D3FF;font-size:18px">👥</span><span><span class="gs-menu-title">Squads privées</span><span class="gs-menu-sub">Crée des cercles restreints, compare votre progression</span></span></button>';
+  if(navSection && navSection.nextElementSibling && navSection.nextElementSibling.classList.contains('gs-r-menu-list')){
+   navSection.nextElementSibling.insertAdjacentHTML('beforeend',btnHtml);
+  }else{
+   sh.insertAdjacentHTML('beforeend',btnHtml);
+  }
+ }
+ try{var obs2=new MutationObserver(function(){injectMenuButton()});obs2.observe(document.body,{childList:true,subtree:true})}catch(e){}
+ setTimeout(injectMenuButton,1000);
+})();
+
+/* JS patch : .profil-ov scrolle sur la racine — on force padding-bottom
+   après chaque ouverture via MutationObserver */
+(function(){
+  function fixProfilScroll(){
+    var ov=document.getElementById('profil-ov');
+    if(!ov||!ov.classList.contains('open'))return;
+    var navH=90;
+    var safe=parseInt(getComputedStyle(document.documentElement)
+      .getPropertyValue('--sat')||'0')||0;
+    ov.style.paddingBottom=(navH+safe)+'px';
+  }
+  try{
+    var obs=new MutationObserver(function(muts){
+      muts.forEach(function(m){
+        if(m.attributeName==='class'){fixProfilScroll();}
+      });
+    });
+    obs.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});
+  }catch(e){}
+  document.addEventListener('click',function(){setTimeout(fixProfilScroll,80);});
+})();
