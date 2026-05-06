@@ -3199,11 +3199,27 @@ function saveAPIKey(){
 // SUPABASE CONFIG
 // ============================================================
 var SUPABASE_URL = 'https://wtaalaenhthcvcztsqjb.supabase.co';
-var SUPABASE_KEY = 'sb_publishable_-NIiFXvur7ktZCe2nfkl9g_u1urf6t-';
-var _supa = window.supabase? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY): null;
+// Remplacer cette valeur par la vraie anon public key Supabase (JWT qui commence par eyJ...).
+var SUPABASE_KEY = 'PASTE_SUPABASE_ANON_KEY_HERE';
+function gsIsValidSupabaseKey(k){return typeof k==='string' && /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+=*$/.test(k.trim());}
+var _supa = null;
+try{
+ _supa = (window.supabase && gsIsValidSupabaseKey(SUPABASE_KEY)) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY.trim()) : null;
+ if(!_supa && SUPABASE_KEY && SUPABASE_KEY.indexOf('PASTE_')!==0){console.warn('Supabase désactivé: anon key invalide.');}
+}catch(e){console.warn('Supabase init désactivé:', e);_supa=null;}
 var _supaUser = null;
 var _svTimeout = null;
 var _pendingUsername = '';
+
+function gsSafeSupabaseState(src){
+ var safe={};
+ try{safe=JSON.parse(JSON.stringify(src||{}));}catch(e){safe={};}
+ if(safe.avatar){safe.avatar='';}
+ if(safe.profil && safe.profil.avatar){safe.profil.avatar='';}
+ if(Array.isArray(safe.galerie)){safe.galerie=[];}
+ return safe;
+}
+try{window.gsSafeSupabaseState=gsSafeSupabaseState;}catch(e){}
 
 // ============================================================
 // STATE INIT (localStorage fallback pendant le chargement)
@@ -3226,17 +3242,18 @@ if (!state.customDays) state.customDays = {};
 var cDay = state.cDay || 0;
 var cEx = state.cEx || 0;
 
-// sv() - sauvegarde local + Supabase avec debounce 1.5s
+// sv() - sauvegarde local + Supabase optimisée avec debounce 1.5s
 function sv() {
  state.cDay = cDay; state.cEx = cEx;
  try { localStorage.setItem('ath7', JSON.stringify(state)); } catch(e) {}
  if (_supaUser && _supa) {
  clearTimeout(_svTimeout);
  _svTimeout = setTimeout(function() {
+ var safeState = gsSafeSupabaseState(state);
  var upsertPayload = {
  id: _supaUser.id,
  email: _supaUser.email,
- data: state,
+ data: safeState,
  updated_at: new Date().toISOString()
  };
  if (state.profil && state.profil.username) upsertPayload.username = state.profil.username;
@@ -3386,7 +3403,7 @@ async function afterAuth(user) {
  id: user.id,
  email: user.email,
  username: _pendingUsername,
- data: state,
+ data: gsSafeSupabaseState(state),
  updated_at: new Date().toISOString()
  });
  }
@@ -5939,7 +5956,7 @@ async function syncProfileToSupabase() {
  id: _supaUser.id,
  display_name: p.name || '',
  username: p.username || '',
- data: state
+ data: gsSafeSupabaseState(state)
  }, { onConflict: 'id' });
  } catch(e) { console.warn('syncProfile error:', e); }
 }
@@ -8163,7 +8180,13 @@ document.addEventListener('DOMContentLoaded',function(){
 
  document.addEventListener('DOMContentLoaded',function(){
  injectAll();
- try{ new MutationObserver(injectAll).observe(document.body,{childList:true,subtree:true}); }catch(e){}
+ try{
+ var gsInjectObs=new MutationObserver(function(){
+  try{gsInjectObs.disconnect();}catch(e){}
+  try{injectAll();}finally{try{gsInjectObs.observe(document.body,{childList:true,subtree:true});}catch(e){}}
+ });
+ gsInjectObs.observe(document.body,{childList:true,subtree:true});
+ }catch(e){}
  });
  setTimeout(injectAll,500);
  setTimeout(injectAll,1500);
@@ -8185,7 +8208,7 @@ document.addEventListener('DOMContentLoaded',function(){
  window.gsTogglePassword=function(id,btn){var input=$(id);if(!input)return;var hidden=input.getAttribute('type')==='password';input.setAttribute('type',hidden?'text':'password');if(btn)btn.textContent=hidden?'🙈':'👁️';};
  window.gsAddPasswordEye=function(id){var input=$(id);if(!input||input.dataset.gsEyeReady==='1')return;var type=(input.getAttribute('type')||'').toLowerCase();if(type!=='password'&&input.dataset.gsPassword!=='1')return;input.dataset.gsEyeReady='1';var wrap=document.createElement('div');wrap.className='gs-password-wrap';input.parentNode.insertBefore(wrap,input);wrap.appendChild(input);var btn=document.createElement('button');btn.type='button';btn.className='gs-eye-btn';btn.textContent='👁️';btn.setAttribute('aria-label','Afficher / masquer le mot de passe');btn.onclick=function(){window.gsTogglePassword(id,btn)};wrap.appendChild(btn);};
  function enhancePasswords(){['auth-password','auth-password2','gs-ob-main-input','gs-current-password','gs-new-password','gs-confirm-password'].forEach(window.gsAddPasswordEye)}
- document.addEventListener('DOMContentLoaded',function(){setTimeout(enhancePasswords,50);setTimeout(enhancePasswords,500)});try{new MutationObserver(function(){enhancePasswords()}).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
+ document.addEventListener('DOMContentLoaded',function(){setTimeout(enhancePasswords,50);setTimeout(enhancePasswords,500)});try{var gsPassObs=new MutationObserver(function(){try{gsPassObs.disconnect();}catch(e){}try{enhancePasswords()}finally{try{gsPassObs.observe(document.documentElement,{childList:true,subtree:true});}catch(e){}}});gsPassObs.observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
  window.gsEnhancePasswords=enhancePasswords;
 
  var STEPS=['email','password','username','name','height','weight','bmi','goal','nutrition','program','start'];
@@ -8369,7 +8392,7 @@ document.addEventListener('DOMContentLoaded',function(){
  window.authShowView=function(){var r=oldAuthView.apply(this,arguments);setTimeout(function(){wrapPasswordInputs($('auth-screen')||document);},0);return r;};
  }
  function refreshAll(){wrapPasswordInputs(document);applyLogos(document);}
- document.addEventListener('DOMContentLoaded',function(){refreshAll();try{new MutationObserver(function(){refreshAll();}).observe(document.body,{childList:true,subtree:true});}catch(e){}});
+ document.addEventListener('DOMContentLoaded',function(){refreshAll();try{var gsRefreshObs=new MutationObserver(function(){try{gsRefreshObs.disconnect();}catch(e){}try{refreshAll();}finally{try{gsRefreshObs.observe(document.body,{childList:true,subtree:true});}catch(e){}}});gsRefreshObs.observe(document.body,{childList:true,subtree:true});}catch(e){}});
  setTimeout(refreshAll,250);setTimeout(refreshAll,1000);setTimeout(refreshAll,2200);
 })();
 </script>
@@ -8858,7 +8881,7 @@ document.addEventListener('DOMContentLoaded',function(){
  window.ob11Pick=function(k,v){setP(k,v);renderOb11()};
  window.ob11SaveNutrition=function(){var m=macro();var p=prof();p.kcal=m.kcal;p.protein=m.prot;p.prot=m.prot;p.carbs=m.carbs;p.fat=m.fat;save();toast('Base nutrition sauvegardée')};
  window.ob11SaveProgram=function(){setP('programProposal',proposal());toast('Programme conseillé sauvegardé')};
- async function maybeCreateAccount(){var p=prof(),email=(p.email||'').trim(),pass=window.OB11.password||'';if(!email||!pass||!window._supa||window._supaUser)return true;try{var res=await window._supa.auth.signUp({email:email,password:pass});if(res.error){toast('Compte non créé: '+res.error.message+'. Tu continues en mode local.');return true}window._supaUser=res.data&&res.data.user?res.data.user:window._supaUser;try{if(window._supaUser){await window._supa.from('profiles').upsert({id:window._supaUser.id,email:email,username:p.username||null,display_name:p.name||null,data:p,updated_at:new Date().toISOString()})}}catch(e){}return true}catch(e){toast('Compte non créé. Tu continues en mode local.');return true}}
+ async function maybeCreateAccount(){var p=prof(),email=(p.email||'').trim(),pass=window.OB11.password||'';if(!email||!pass||!window._supa||window._supaUser)return true;try{var res=await window._supa.auth.signUp({email:email,password:pass});if(res.error){toast('Compte non créé: '+res.error.message+'. Tu continues en mode local.');return true}window._supaUser=res.data&&res.data.user?res.data.user:window._supaUser;try{if(window._supaUser){await window._supa.from('profiles').upsert({id:window._supaUser.id,email:email,username:p.username||null,display_name:p.name||null,data:gsSafeSupabaseState(p),updated_at:new Date().toISOString()})}}catch(e){}return true}catch(e){toast('Compte non créé. Tu continues en mode local.');return true}}
  window.ob11Next=async function(){readCurrent();if(window.OB11.step<steps.length-1){window.OB11.step++;renderOb11();return}await maybeCreateAccount();var s=safeState();s.onboarded=true;s.onboardingComplete=true;save();closeOb11();try{if(typeof hideGates==='function')hideGates()}catch(e){}try{if(typeof bootApp==='function')bootApp()}catch(e){}toast('Bienvenue sur G-SQUAD')};
  window.ob11Prev=function(){readCurrent();if(window.OB11.step>0){window.OB11.step--;renderOb11()}};
  window.ob11Skip=function(){var s=safeState();s.onboarded=true;save();closeOb11();try{if(typeof hideGates==='function')hideGates()}catch(e){}try{if(typeof bootApp==='function')bootApp()}catch(e){}toast('Tu peux compléter ça dans Profil')};
@@ -9398,7 +9421,7 @@ document.addEventListener('DOMContentLoaded',function(){
  st.profil=p;
  try{
  if(window._supa&&window._supa.from){
- await window._supa.from('profiles').upsert({id:user.id,email:user.email||p.email||null,username:p.username||null,display_name:p.name||p.display_name||null,data:st,updated_at:new Date().toISOString()},{onConflict:'id'});
+ await window._supa.from('profiles').upsert({id:user.id,email:user.email||p.email||null,username:p.username||null,display_name:p.name||p.display_name||null,data:gsSafeSupabaseState(st),updated_at:new Date().toISOString()},{onConflict:'id'});
  }
  }catch(e){console.warn('profile upsert failed',e)}
  save();
@@ -9790,7 +9813,7 @@ document.addEventListener('DOMContentLoaded',function(){
  window.ob11SetFrequency=function(v){P().frequency=clamp(v,2,6);P().frequence=P().frequency;save();window.renderOb11()};
  window.ob11SaveNutrition=function(){var m=macroSmart(P()),p=P();p.kcal=m.kcal;p.protein=m.prot;p.prot=m.prot;p.carbs=m.carbs;p.fat=m.fat;S().nutritionTarget={kcal:m.kcal,prot:m.prot,glucides:m.carbs,lipides:m.fat};save();toast('Base nutrition sauvegardée')};
  window.ob11SaveProgram=function(){var plan=smartProgram(P());P().programProposal=plan.name+' - '+plan.split;P().programRecommendation=plan;S().smartProgram=plan;save();toast('Proposition sauvegardée')};
- async function maybeCreateAccount(){var p=P(),email=(p.email||'').trim(),pass=(window.OB11&&window.OB11.password)||'';if(!email||!pass||!window._supa||window._supaUser)return true;try{var res=await window._supa.auth.signUp({email:email,password:pass,options:{data:{username:p.username||'',display_name:p.name||''}}});if(res.error){toast('Compte non créé: '+res.error.message+'. Tu continues en local.');return true}window._supaUser=res.data&&res.data.user?res.data.user:window._supaUser;try{if(window._supaUser){await window._supa.from('profiles').upsert({id:window._supaUser.id,email:email,username:p.username||null,display_name:p.name||null,data:S(),updated_at:new Date().toISOString()},{onConflict:'id'})}}catch(e){}return true}catch(e){toast('Compte non créé. Tu continues en local.');return true}}
+ async function maybeCreateAccount(){var p=P(),email=(p.email||'').trim(),pass=(window.OB11&&window.OB11.password)||'';if(!email||!pass||!window._supa||window._supaUser)return true;try{var res=await window._supa.auth.signUp({email:email,password:pass,options:{data:{username:p.username||'',display_name:p.name||''}}});if(res.error){toast('Compte non créé: '+res.error.message+'. Tu continues en local.');return true}window._supaUser=res.data&&res.data.user?res.data.user:window._supaUser;try{if(window._supaUser){await window._supa.from('profiles').upsert({id:window._supaUser.id,email:email,username:p.username||null,display_name:p.name||null,data:gsSafeSupabaseState(S()),updated_at:new Date().toISOString()},{onConflict:'id'})}}catch(e){}return true}catch(e){toast('Compte non créé. Tu continues en local.');return true}}
 
  window.ob11Next=async function(){readCurrent();var idx=window.OB11.step||0;if(STEP_IDS[idx]==='nutrition')window.ob11SaveNutrition();if(STEP_IDS[idx]==='program')window.ob11SaveProgram();if(idx<10){window.OB11.step=idx+1;window.renderOb11();return}await maybeCreateAccount();S().onboarded=true;S().onboardingComplete=true;save();closeOb11();try{if(typeof window.bootApp==='function')window.bootApp()}catch(e){}toast('Bienvenue sur G-SQUAD')};
  window.ob11Prev=function(){readCurrent();if((window.OB11.step||0)>0){window.OB11.step--;window.renderOb11()}};
@@ -10063,7 +10086,7 @@ document.addEventListener('DOMContentLoaded',function(){
  window.ob11SetFrequency=function(v){P().frequency=clamp(v,2,6);P().frequence=P().frequency;save();window.renderOb11()};
  window.ob11SaveNutrition=function(){var m=macro3(P());var st=S();st.nutritionTarget={kcal:m.kcal,prot:m.prot,glucides:m.carbs,lipides:m.fat};P().kcal=m.kcal;P().protein=m.prot;P().prot=m.prot;P().carbs=m.carbs;P().fat=m.fat;save();toast('Base nutrition sauvegardée')};
  window.ob11SaveProgram=function(){var plan=buildPlan(P());S().threeMonthProgram=plan;P().programProposal=plan.name+' · '+plan.frequency+' séances/semaine';P().programRecommendation=plan;save();toast('Plan 3 mois sauvegardé')};
- async function maybeCreateAccount(){var p=P(),email=(p.email||'').trim(),pass=window.OB11.password||'';if(!email||!pass||!window._supa||window._supaUser)return true;try{var res=await window._supa.auth.signUp({email:email,password:pass});if(res.error){toast('Compte non créé: '+res.error.message+'. Tu continues en local.');return true}window._supaUser=res.data&&res.data.user?res.data.user:window._supaUser;try{if(window._supaUser){await window._supa.from('profiles').upsert({id:window._supaUser.id,email:email,username:p.username||null,display_name:p.name||null,data:p,updated_at:new Date().toISOString()})}}catch(e){}return true}catch(e){toast('Compte non créé. Tu continues en local.');return true}}
+ async function maybeCreateAccount(){var p=P(),email=(p.email||'').trim(),pass=window.OB11.password||'';if(!email||!pass||!window._supa||window._supaUser)return true;try{var res=await window._supa.auth.signUp({email:email,password:pass});if(res.error){toast('Compte non créé: '+res.error.message+'. Tu continues en local.');return true}window._supaUser=res.data&&res.data.user?res.data.user:window._supaUser;try{if(window._supaUser){await window._supa.from('profiles').upsert({id:window._supaUser.id,email:email,username:p.username||null,display_name:p.name||null,data:gsSafeSupabaseState(p),updated_at:new Date().toISOString()})}}catch(e){}return true}catch(e){toast('Compte non créé. Tu continues en local.');return true}}
  window.ob11Next=async function(){readCurrent();var idx=window.OB11.step||0;if(STEP_IDS[idx]==='nutrition')window.ob11SaveNutrition();if(STEP_IDS[idx]==='program')window.ob11SaveProgram();if(idx<10){window.OB11.step=idx+1;window.renderOb11();return}await maybeCreateAccount();S().onboarded=true;S().onboardingComplete=true;save();closeOb11();try{if(typeof window.bootApp==='function')window.bootApp()}catch(e){}toast('Bienvenue sur G-SQUAD')};
  window.ob11Prev=function(){readCurrent();if((window.OB11.step||0)>0){window.OB11.step--;window.renderOb11()}};
  window.ob11Skip=function(){S().onboarded=true;save();closeOb11();try{if(typeof window.bootApp==='function')window.bootApp()}catch(e){}toast('Tu peux compléter ça dans Profil')};
@@ -10882,7 +10905,13 @@ document.addEventListener('DOMContentLoaded',function(){
     scope.querySelectorAll('#extt,a[href*="tiktok"],button[onclick*="TikTok"],button[onclick*="tiktok"]').forEach(function(a){if(a.dataset.gsVideoLogo==='tt')return;a.classList.add('tt','gs-tiktok-btn');a.innerHTML=ttLogo()+'<span>TikTok</span>';a.dataset.gsVideoLogo='tt'});
     scope.querySelectorAll('a[href^="spotify"],button[onclick*="spotify"],a[href*="open.spotify"]').forEach(function(a){if(a.dataset.gsSpotify==='1')return;a.innerHTML=spotifyLogo()+'<span>Spotify</span>';a.dataset.gsSpotify='1'});
   }
-  var obs=new MutationObserver(function(muts){clearTimeout(window._gsDecoT);window._gsDecoT=setTimeout(decorateAll,40)});
+  var obs=new MutationObserver(function(muts){
+    clearTimeout(window._gsDecoT);
+    try{obs.disconnect();}catch(e){}
+    window._gsDecoT=setTimeout(function(){
+      try{decorateAll();}finally{try{obs.observe(document.documentElement,{childList:true,subtree:true})}catch(e){}}
+    },40);
+  });
   try{obs.observe(document.documentElement,{childList:true,subtree:true})}catch(e){}
   document.addEventListener('DOMContentLoaded',function(){setTimeout(decorateAll,80);setTimeout(decorateAll,600)});
 
@@ -11065,7 +11094,11 @@ document.addEventListener('DOMContentLoaded',function(){
       }
     });
   }
-  var mo=new MutationObserver(function(muts){muts.forEach(function(m){m.addedNodes&&m.addedNodes.forEach(function(n){if(n.nodeType===1)cleanModifierSeriesButtons(n)})})});
+  var mo=new MutationObserver(function(muts){
+    try{mo.disconnect();}catch(e){}
+    try{muts.forEach(function(m){m.addedNodes&&m.addedNodes.forEach(function(n){if(n.nodeType===1)cleanModifierSeriesButtons(n)})})}
+    finally{try{mo.observe(document.body,{childList:true,subtree:true})}catch(e){}}
+  });
   try{mo.observe(document.body,{childList:true,subtree:true})}catch(e){}
   cleanModifierSeriesButtons(document);
 
@@ -12561,7 +12594,7 @@ function renderAccueilFeedBlock(){var feed=$('accueil-feed');if(!feed)return;var
 window.renderAccueil=function(){var panel=$('p-accueil');if(!panel)return;var p=S().profil||{},name=p.name||p.prenom||p.username||'Dany';panel.innerHTML='<div class="wrap gs-r-home"><section class="gs-r-hero"><div class="gs-r-kicker">G-SQUAD</div><h1>Salut '+E(name)+'.<br>Choisis ton action.</h1><p>Tes priorités, ta séance et tes badges. La personnalisation est dans Réglages.</p></section><section class="gs-r-card"><div class="gs-r-card-head"><div><div class="gs-r-kicker" style="margin-bottom:12px">Insignes</div><b style="font-size:21px">Progression</b></div><button type="button" class="gs-r-pill-btn" onclick="window.openBadges?openBadges(\'sess\'):null">Tout voir</button></div><div class="gs-r-badge-grid">'+badgeTiles()+'</div></section><button type="button" class="gs-r-launch" onclick="gsLaunchSessionFromHome()"><span class="gs-r-launch-ico"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 10-13h-7l1-7Z"/></svg></span><span><b>Lancer la séance</b><span>Mode focus, exercice par exercice.</span></span><em>›</em></button><div id="accueil-feed"></div></div>';setTimeout(renderAccueilFeedBlock,0)};
 function header(){var h=$('app-header');if(!h)return;h.innerHTML='<button type="button" class="gs-r-head-btn" onclick="openHamburger()" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><div class="gs-r-logo" id="header-logo">G-SQUAD</div><div class="gs-r-head-actions"><button type="button" class="gs-r-head-btn gs-r-bell" onclick="window.openNotifications?openNotifications():null" aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span class="gs-r-badge">1</span></button><button type="button" class="gs-r-head-btn" onclick="window.openSearchModal?openSearchModal():null" aria-label="Recherche"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button></div>';installHeaderGuard()}
 function cleanHeaderDupes(){var h=$('app-header');if(!h)return;Array.prototype.slice.call(h.children).forEach(function(n){if(n.id==='gs-header-bell-v4'||n.id==='gs-header-search-v4'||n.id==='gs-header-bell'||n.id==='gs-header-search'){try{n.remove()}catch(e){}}})}
-function installHeaderGuard(){var h=$('app-header');if(!h||h.__gsRestoreGuard)return;h.__gsRestoreGuard=true;try{new MutationObserver(function(){cleanHeaderDupes()}).observe(h,{childList:true})}catch(e){}}
+function installHeaderGuard(){var h=$('app-header');if(!h||h.__gsRestoreGuard)return;h.__gsRestoreGuard=true;try{var gsHeaderObs=new MutationObserver(function(){try{gsHeaderObs.disconnect();}catch(e){}try{cleanHeaderDupes()}finally{try{gsHeaderObs.observe(h,{childList:true})}catch(e){}}});gsHeaderObs.observe(h,{childList:true})}catch(e){}}
 window.openGymLink=function(name){var label=gymLabel(name),query=encodeURIComponent(label+' salle de sport près de moi');var scheme='';var k=strip(label).replace(/[^a-z0-9]/g,'');if(k.indexOf('basicfit')>-1)scheme='basicfit://';else if(k.indexOf('fitnesspark')>-1)scheme='fitnesspark://';if(scheme){try{window.location.href=scheme;setTimeout(function(){window.open('https://www.google.com/maps/search/?api=1&query='+query,'_blank')},850);return}catch(e){}}window.open('https://www.google.com/maps/search/?api=1&query='+query,'_blank')};
 window.openGymSearch=function(){var q=selectedGymList().map(gymLabel).join(' ou ')||'salle de sport';window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q+' près de moi'),'_blank')};
 function menuBtn(icon,title,sub,onclick,extra){return '<button type="button" class="gs-r-menu-btn" '+(extra||'')+' onclick="'+onclick+'"><span class="gs-r-menu-ico">'+icon+'</span><span><b>'+E(title)+'</b><span>'+E(sub)+'</span></span></button>'}
@@ -13255,7 +13288,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     refreshNotifBadges();
   }
   var obs=null;
-  function boot(){fixHeaderButtons();refreshNotifBadges();if(!obs){try{obs=new MutationObserver(function(){fixHeaderButtons()});obs.observe(document.body,{childList:true,subtree:true})}catch(e){}}}
+  function boot(){fixHeaderButtons();refreshNotifBadges();if(!obs){try{obs=new MutationObserver(function(){try{obs.disconnect();}catch(e){}try{fixHeaderButtons()}finally{try{obs.observe(document.body,{childList:true,subtree:true})}catch(e){}}});obs.observe(document.body,{childList:true,subtree:true})}catch(e){}}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
   setTimeout(boot,120);setTimeout(boot,700);setTimeout(boot,1600);setInterval(refreshNotifBadges,2500);
 })();
@@ -14071,7 +14104,7 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
  function startObserver(){
   var target=document.body;
   if(window.__gsRecipeObs)return;
-  var obs=new MutationObserver(function(){injectRecipeButtons()});
+  var obs=new MutationObserver(function(){try{obs.disconnect();}catch(e){}try{injectRecipeButtons()}finally{try{obs.observe(target,{childList:true,subtree:true});}catch(e){}}});
   obs.observe(target,{childList:true,subtree:true});
   window.__gsRecipeObs=obs;
   injectRecipeButtons();
@@ -14180,7 +14213,7 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
    }
   });
  }
- try{var obs=new MutationObserver(function(){cleanupSettingsV2()});obs.observe(document.body,{childList:true,subtree:true})}catch(e){}
+ try{var obs=new MutationObserver(function(){try{obs.disconnect();}catch(e){}try{cleanupSettingsV2()}finally{try{obs.observe(document.body,{childList:true,subtree:true})}catch(e){}}});obs.observe(document.body,{childList:true,subtree:true})}catch(e){}
  setInterval(cleanupSettingsV2,500);
  setTimeout(cleanupSettingsV2,200);
 })();
@@ -14426,7 +14459,7 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
    sh.insertAdjacentHTML('beforeend',btnHtml);
   }
  }
- try{var obs2=new MutationObserver(function(){injectMenuButton()});obs2.observe(document.body,{childList:true,subtree:true})}catch(e){}
+ try{var obs2=new MutationObserver(function(){try{obs2.disconnect();}catch(e){}try{injectMenuButton()}finally{try{obs2.observe(document.body,{childList:true,subtree:true})}catch(e){}}});obs2.observe(document.body,{childList:true,subtree:true})}catch(e){}
  setTimeout(injectMenuButton,1000);
 })();
 </script>
@@ -14493,9 +14526,12 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
   }
   try{
     var obs=new MutationObserver(function(muts){
-      muts.forEach(function(m){
-        if(m.attributeName==='class'){fixProfilScroll();}
-      });
+      try{obs.disconnect();}catch(e){}
+      try{
+        muts.forEach(function(m){
+          if(m.attributeName==='class'){fixProfilScroll();}
+        });
+      }finally{try{obs.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});}catch(e){}}
     });
     obs.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});
   }catch(e){}
