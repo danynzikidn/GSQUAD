@@ -7598,60 +7598,28 @@ var coachHistory=[];function saveCoachMemory(){try{state.coachMemory=[]}catch(e)
  var r=new FileReader(); r.onload=function(){ S().profil=S().profil||{}; S().profil.avatar=r.result; save(); nt('Photo de profil ajoutée'); if(typeof openProfil==='function')openProfil();}; r.readAsDataURL(file);
  };
 
- // Robust username login: username -> email, sans modifier l'interface.
- async function gsResolveLoginEmail(input){
-  input=(input||'').trim();
-  if(!input)return '';
-  if(input.indexOf('@')>0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input))return input.toLowerCase();
-  var uname=input.replace(/^@/,'').trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
-  if(!uname||!window._supa)return '';
-
-  // 1) RPC Supabase si installé: fiable même avec RLS.
-  try{
-   var rpc=await window._supa.rpc('resolve_login_email',{login_input:uname});
-   if(rpc&&!rpc.error&&rpc.data){return Array.isArray(rpc.data)?(rpc.data[0]||''):rpc.data;}
-  }catch(e){}
-
-  // 2) Colonne profiles.username.
-  try{
-   var r=await window._supa.from('profiles').select('email,username,data').eq('username',uname).maybeSingle();
-   var row=r&&r.data?r.data:null;
-   if(row&&(row.email||(row.data&&row.data.email)||(row.data&&row.data.profil&&row.data.profil.email)))return row.email||(row.data&&row.data.email)||(row.data&&row.data.profil&&row.data.profil.email);
-  }catch(e){}
-
-  // 3) Anciennes sauvegardes: username parfois stocké dans data.profil.username.
-  try{
-   var r2=await window._supa.from('profiles').select('email,username,data').eq('data->profil->>username',uname).limit(1);
-   var row2=r2&&r2.data&&r2.data[0]?r2.data[0]:null;
-   if(row2&&(row2.email||(row2.data&&row2.data.email)||(row2.data&&row2.data.profil&&row2.data.profil.email)))return row2.email||(row2.data&&row2.data.email)||(row2.data&&row2.data.profil&&row2.data.profil.email);
-  }catch(e){}
-
-  // 4) Fallback client limité: garde la reconnexion possible sur anciennes lignes mal normalisées.
-  try{
-   var r3=await window._supa.from('profiles').select('email,username,data').limit(200);
-   var list=(r3&&r3.data)||[];
-   for(var i=0;i<list.length;i++){
-    var u=list[i]||{},d=u.data||{},pr=d.profil||{};
-    var candidates=[u.username,pr.username,d.username,pr.user,pr.handle].map(function(x){return String(x||'').replace(/^@/,'').trim().toLowerCase()});
-    if(candidates.indexOf(uname)>-1){return u.email||d.email||pr.email||'';}
-   }
-  }catch(e){}
-  return '';
- }
+ // Robust username login: username -> email column OR data.email fallback.
  var oldLogin=window.doLogin;
  window.doLogin=async function(){
-  var input=($('auth-email')||{}).value||'', pass=($('auth-password')||{}).value||''; input=input.trim();
-  if(!input||!pass){try{authShowView('login');authShowErr('Remplis tous les champs.')}catch(e){} return;}
-  try{setAuthLoading(true)}catch(e){}
-  if(!window._supa||!window._supa.auth){try{setAuthLoading(false);authShowErr('Connexion Supabase indisponible.')}catch(e){} return;}
-  try{
-   var email=await gsResolveLoginEmail(input);
-   if(!email){try{setAuthLoading(false);authShowErr('Utilisateur introuvable. Vérifie le @username.')}catch(e){} return;}
-   var res=await window._supa.auth.signInWithPassword({email:email,password:pass});
-   try{setAuthLoading(false)}catch(e){}
-   if(res.error){try{authShowErr('Email / username ou mot de passe incorrect.')}catch(e){} return;}
-   await afterAuth(res.data.user);
-  }catch(e){try{setAuthLoading(false);authShowErr('Erreur connexion: '+(e&&e.message?e.message:e))}catch(_){} }
+ var input=($('auth-email')||{}).value||'', pass=($('auth-password')||{}).value||''; input=input.trim();
+ if(!input||!pass){try{authShowView('login');authShowErr('Remplis tous les champs.')}catch(e){} return;}
+ try{setAuthLoading(true)}catch(e){}
+ var email=input;
+ if(!window._supa||!window._supa.auth){try{setAuthLoading(false);authShowErr('Connexion Supabase indisponible.')}catch(e){} return;}
+ if((!input.includes('@')) || input[0]==='@'){
+ var uname=input.replace(/^@/,'').toLowerCase();
+ try{
+ var lookup=await window._supa.from('profiles').select('email,data').eq('username',uname).maybeSingle();
+ var row=lookup.data||{}; email=row.email || (row.data&&row.data.email) || (row.data&&row.data.auth_email) || '';
+ }catch(e){}
+ if(!email){try{setAuthLoading(false);authShowErr('Utilisateur introuvable ou email non enregistré sur le profil.')}catch(e){} return;}
+ }
+ try{
+ var res=await window._supa.auth.signInWithPassword({email:email,password:pass});
+ try{setAuthLoading(false)}catch(e){}
+ if(res.error){try{authShowErr('Email / username ou mot de passe incorrect.')}catch(e){} return;}
+ await afterAuth(res.data.user);
+ }catch(e){try{setAuthLoading(false);authShowErr('Erreur connexion: '+e.message)}catch(_){} }
  };
 
  // Robust user search modal - fixes undefined index, searches username/display/email if allowed.
@@ -9436,15 +9404,9 @@ var coachHistory=[];function saveCoachMemory(){try{state.coachMemory=[]}catch(e)
  var check=await window._supa.from('profiles').select('id').eq('username',username).maybeSingle();
  if(check&&check.data){try{setAuthLoading(false)}catch(e){};window.authShowView('signup-s3');authShowErr('Ce @username est déjà pris.');return}
  }catch(e){console.warn('username check skipped',e)}
- try{
- var emailCheck=await window._supa.from('profiles').select('id').eq('email',email).maybeSingle();
- if(emailCheck&&emailCheck.data){try{setAuthLoading(false)}catch(e){};window.authShowView('signup-s1');authShowErr('Mail déjà utilisé. Change de mail pour continuer.');return}
- }catch(e){console.warn('email check skipped',e)}
  var res=await window._supa.auth.signUp({email:email,password:pass,options:{data:{username:username,display_name:username}}});
  try{if(typeof setAuthLoading==='function')setAuthLoading(false)}catch(e){}
- if(res.error){window.authShowView('signup-s1');authShowErr(/already|registered|exists|duplicate/i.test(res.error.message||'')?'Mail déjà utilisé. Change de mail pour continuer.':(res.error.message||'Création impossible.'));return}
- var signupUser=res.data&&res.data.user;
- if(signupUser&&Array.isArray(signupUser.identities)&&signupUser.identities.length===0){window.authShowView('signup-s1');authShowErr('Mail déjà utilisé. Change de mail pour continuer.');return}
+ if(res.error){window.authShowView('signup-s3');authShowErr(res.error.message||'Création impossible.');return}
  window._pendingUsername=username;
  ensureState().profil.email=email; ensureState().profil.username=username; save();
  var session=res.data&&res.data.session, user=res.data&&res.data.user;
@@ -11178,11 +11140,13 @@ var coachHistory=[];function saveCoachMemory(){try{state.coachMemory=[]}catch(e)
   function injectSettingsSecurity(){
     var ov=$('profile-settings-v2'); if(!ov || $('gs-security-zone'))return;
     var target=ov.querySelector('.gs-settings-save2');
+    var bodyTarget=ov.querySelector('.gs-set-cyan');
+    var bmrHtml='<div id="gs-bmr-zone" class="gs-security-box"><h3>Nutrition et BMR</h3><p>Recalcule tes calories quand ton poids, ton âge ou ton objectif change.</p><button onclick="gsRecalculateNutritionFromSettings()">Recalculer BMR et calories</button><div id="gs-bmr-preview" class="gs-pass-rules"></div></div>';
     var html='<div id="gs-security-zone">'
-      +'<div class="gs-security-box"><h3>Nutrition et BMR</h3><p>Recalcule tes calories quand ton poids, ton âge ou ton objectif change.</p><button onclick="gsRecalculateNutritionFromSettings()">Recalculer BMR et calories</button><div id="gs-bmr-preview" class="gs-pass-rules"></div></div>'
       +'<div class="gs-security-box"><h3>Mot de passe</h3><p>Confirme ton mot de passe actuel avant de le modifier.</p><input id="gs-current-password" type="password" placeholder="Mot de passe actuel"><input id="gs-new-password" type="password" placeholder="Nouveau mot de passe"><input id="gs-new-password-confirm" type="password" placeholder="Confirmer le nouveau mot de passe"><div class="gs-pass-rules">Le nouveau mot de passe doit contenir au minimum 6 caractères, une majuscule et un caractère spécial.</div><div class="gs-security-actions"><button onclick="gsUpdatePasswordSecure()">Modifier le mot de passe</button></div></div>'
       +'<div class="gs-security-box"><h3>Compte</h3><p>Gère ta session ou supprime ton compte. Une confirmation sera demandée pour la suppression.</p><div class="gs-security-actions"><button data-gs-settings-logout="1" onclick="gsLogout&&gsLogout()">Se déconnecter</button><button class="danger" onclick="gsDeleteAccount()">Supprimer mon compte</button></div></div>'
       +'</div>';
+    if(bodyTarget)bodyTarget.insertAdjacentHTML('afterend',bmrHtml);else if(target)target.insertAdjacentHTML('beforebegin',bmrHtml);else ov.insertAdjacentHTML('beforeend',bmrHtml);
     if(target)target.insertAdjacentHTML('beforebegin',html);else ov.insertAdjacentHTML('beforeend',html);
   }
   var oldOpenSettings=window.openProfilSettings;
@@ -12777,7 +12741,28 @@ window.gsJDates=function(mode,val){if(mode==='semaine'){var mon=weekMondayFromVa
 window.gsJCompareSet=function(side,val){if(!val)return;var m=gsJournalCompare&&gsJournalCompare.mode;if(m==='mois'){if(side==='a')gsJournalCompare.aMonth=val;else gsJournalCompare.bMonth=val}else if(m==='semaine'){if(side==='a')gsJournalCompare.aWeek=val;else gsJournalCompare.bWeek=val}else{if(side==='a')gsJournalCompare.aDate=val;else gsJournalCompare.bDate=val}if(typeof renderJournal==='function')renderJournal()};
 window.gsJCompareCard=function(){var m=gsJournalCompare.mode,av=m==='mois'?gsJournalCompare.aMonth:(m==='semaine'?gsJournalCompare.aWeek:gsJournalCompare.aDate),bv=m==='mois'?gsJournalCompare.bMonth:(m==='semaine'?gsJournalCompare.bWeek:gsJournalCompare.bDate),type=m==='mois'?'month':(m==='semaine'?'week':'date');if(m==='semaine'){av=weekValue(weekMondayFromValue(av));bv=weekValue(weekMondayFromValue(bv));gsJournalCompare.aWeek=av;gsJournalCompare.bWeek=bv}var a=gsJAgg(m,av),b=gsJAgg(m,bv);return '<section class="gs-jr-compare"><span class="gs-jr-label">Comparaison libre</span><b class="gs-jr-title">Jour / Semaine / Mois</b><small class="gs-jr-sub">'+(m==='jour'?'Jour précis':(m==='semaine'?'Semaine complète lundi → dimanche':'Mois complet'))+'</small><div class="gs-jr-tabs"><button type="button" class="'+(m==='jour'?'on':'')+'" onclick="gsJCompareMode(\'jour\')">Jour</button><button type="button" class="'+(m==='semaine'?'on':'')+'" onclick="gsJCompareMode(\'semaine\')">Semaine</button><button type="button" class="'+(m==='mois'?'on':'')+'" onclick="gsJCompareMode(\'mois\')">Mois</button></div><div class="gs-jr-inputs"><label>Période A<input type="'+type+'" value="'+esc(av)+'" onchange="gsJCompareSet(\'a\',this.value)"></label><label>Période B<input type="'+type+'" value="'+esc(bv)+'" onchange="gsJCompareSet(\'b\',this.value)"></label></div><div class="gs-jr-cmp">'+gsJCmpRow('Séances faites',a.session,b.session,'',false,0)+gsJCmpRow('Séances ratées',a.missed,b.missed,'',true,0)+gsJCmpRow('Perfs loggées',a.perf,b.perf,'',false,0)+gsJCmpRow('Charge max',a.maxCharge,b.maxCharge,' kg',false,1)+gsJCmpRow('Volume total',a.volume,b.volume,' kg',false,0)+gsJCmpRow('Eau moyenne',a.water,b.water,' L',false,1)+gsJCmpRow('Protéines moy.',a.prot,b.prot,' g',false,0)+gsJCmpRow('Calories moy.',a.kcal,b.kcal,' kcal',true,0)+gsJCmpRow('Poids moyen',a.poids,b.poids,' kg',true,1)+'</div></section>'};
 var oldRenderJournal=window.renderJournal;
-window.renderJournal=function(){var r=oldRenderJournal?oldRenderJournal.apply(this,arguments):undefined;var root=document.querySelector('#p-journal .gs-jr');if(root&&!root.querySelector('.gs-return-home'))root.insertAdjacentHTML('afterbegin','<button type="button" class="gs-return-home" onclick="gsGoAccueil()">← Accueil</button>');var sub=document.querySelector('#p-journal .gs-jr-cal .gs-jr-sub');if(sub)sub.textContent='Clique une fois pour choisir · deuxième clic pour valider · troisième clic pour reset';return r};
+function gsEnsureJournalPanel(){
+ var p=document.getElementById('p-journal');
+ if(p)return p;
+ var content=document.querySelector('.content');
+ if(!content)return null;
+ p=document.createElement('div');
+ p.id='p-journal';
+ p.className='panel';
+ p.innerHTML='<div class="wrap"></div>';
+ content.appendChild(p);
+ return p;
+}
+window.renderJournal=function(){
+ var p=gsEnsureJournalPanel();
+ if(p&&!document.querySelector('.panel.act'))p.classList.add('act');
+ var r=oldRenderJournal?oldRenderJournal.apply(this,arguments):undefined;
+ var root=document.querySelector('#p-journal .gs-jr');
+ if(root&&!root.querySelector('.gs-return-home'))root.insertAdjacentHTML('afterbegin','<button type="button" class="gs-return-home" onclick="gsGoAccueil()">← Accueil</button>');
+ var sub=document.querySelector('#p-journal .gs-jr-cal .gs-jr-sub');
+ if(sub)sub.textContent='Clique une fois pour choisir · deuxième clic pour valider · troisième clic pour reset';
+ return r;
+};
 
 function currentSplit(){var p=(window.state&&state.profil)||{},s=String(p.split||p.programme||p.program||'fullbody').toLowerCase().replace(/[\s_\-\/]+/g,'');if(s.indexOf('pplul')>-1||s.indexOf('pplupper')>-1)return 'pplul';if(s.indexOf('upper')>-1||s.indexOf('lower')>-1||s==='ul')return 'upperlower';if(s.indexOf('libre')>-1)return 'libre';if(s.indexOf('ppl')>-1)return 'ppl';return 'fullbody'}
 function splitTitle(k){return {libre:'Libre',fullbody:'Full body',ppl:'PPL',upperlower:'Upper / Lower',pplul:'PPL + UL'}[k]||'Full body'}
@@ -14027,7 +14012,7 @@ function install(){var D=db();MORE.forEach(addFood);D.forEach(tune);window.GS_NU
 .gs-prof4-pill span{overflow:hidden;text-overflow:ellipsis;max-width:140px}
 .gs-prof4-pill.badge i{background:rgba(245,214,108,.14);color:#F5D66C}
 .gs-prof4-pill.format{border-color:rgba(205,168,255,.22);background:rgba(205,168,255,.10);color:#EDE5FF}
-.gs-prof4-pill.format i{background:rgba(205,168,255,.16);color:#CDA8FF;font-size:10px;letter-spacing:.04em}
+.gs-prof4-pill.format i{background:rgba(205,168,255,.16);color:#CDA8FF;font-size:10px;letter-spacing:.04em;width:auto;min-width:44px;padding:0 6px;white-space:nowrap}
 .gs-prof4-pill.gym i{font-size:11px;font-weight:1000;letter-spacing:-.02em}
 .gs-prof4-strip-empty{flex:0 0 auto;color:var(--mut);font-size:12px;font-weight:850;padding:9px 12px;border:1px dashed rgba(255,255,255,.12);border-radius:999px}
 
@@ -14111,7 +14096,7 @@ body.gs-theme-light .gs-prof4{background:radial-gradient(circle at 18% -8%,rgba(
    '<div class="gs-prof4-userline">'+
     '<button type="button" class="gs-prof4-username" onclick="openProfilSettings&&openProfilSettings()">'+(p.username?'@'+E(p.username):'@username')+'</button>'+
     '<span class="gs-prof4-userline-sep"></span>'+
-    '<button type="button" class="gs-prof4-rank" onclick="openLeaderboard&&openLeaderboard()"><span>Ranking</span><b>#'+E(ri.rank)+'/'+E(ri.total)+'</b></button>'+
+    '<button type="button" class="gs-prof4-rank" onclick="openLeaderboard&&openLeaderboard()"><span>Ranking</span><b>#'+E(ri.rank)+'</b></button>'+
     '<button type="button" class="gs-prof4-xp-ledger" onclick="window.gsOpenXpLedger&&window.gsOpenXpLedger()">Mes XP</button>'+
    '</div>'+
    /* LIGNE 3 : scroll horizontal badges/format/salles */
@@ -15877,21 +15862,6 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
   }
   function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim())}
   function validPassword(v){v=String(v||'');return v.length>=6&&/[A-ZÀ-ÖØ-Þ]/.test(v)&&/[^A-Za-z0-9]/.test(v)}
-  async function emailAlreadyUsed(email){
-    email=String(email||'').trim().toLowerCase();
-    if(!validEmail(email)||!window._supa)return false;
-    try{
-      if(typeof window._supa.rpc==='function'){
-        var rpc=await window._supa.rpc('gs_email_exists',{email_input:email});
-        if(rpc&&!rpc.error&&rpc.data===true)return true;
-      }
-    }catch(e){console.warn('email rpc check skipped',e)}
-    try{
-      var r=await window._supa.from('profiles').select('id').eq('email',email).maybeSingle();
-      if(r&&r.data)return true;
-    }catch(e){console.warn('email profile check skipped',e)}
-    return false;
-  }
   function setStep(i,msg){try{window.OB11=window.OB11||{step:0,total:12,password:''};window.OB11.total=12;window.OB11.step=i;if(typeof window.renderOb11==='function')window.renderOb11()}catch(e){}if(msg)toast(msg)}
   function finishAdventure(){
     cleanLocalSignupFlags();
@@ -15920,31 +15890,16 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
       var check=await window._supa.from('profiles').select('id').eq('username',username).maybeSingle();
       if(check&&check.data){setStep(2,'Ce @username est déjà pris.');return false}
     }catch(e){console.warn('username check skipped',e)}
-    if(await emailAlreadyUsed(email)){setStep(0,'Mail déjà utilisé. Change de mail pour continuer.');return false}
     try{
       var res=await window._supa.auth.signUp({email:email,password:pass,options:{data:{username:username,display_name:p.name||username}}});
-      if(res&&res.error){if(/already|registered|exists|duplicate/i.test(res.error.message||'')){setStep(0,'Mail déjà utilisé. Change de mail pour continuer.');return false}toast(res.error.message||'Création du compte impossible.');return false}
+      if(res&&res.error){toast(res.error.message||'Création du compte impossible.');return false}
       var user=res&&res.data&&res.data.user?res.data.user:null;
-      if(user&&Array.isArray(user.identities)&&user.identities.length===0){setStep(0,'Mail déjà utilisé. Change de mail pour continuer.');return false}
       if(user){
         window._supaUser=user;try{if(typeof _supaUser!=='undefined')_supaUser=user}catch(e){}
-        try{await window._supa.from('profiles').upsert({id:user.id,email:email,username:username,display_name:p.name||username,data:safeStateForSupabase(),updated_at:new Date().toISOString()},{onConflict:'id'})}catch(e){if(/duplicate|profiles_email|email/i.test(String(e&&e.message||e||''))){setStep(0,'Mail déjà utilisé. Change de mail pour continuer.');return false}console.warn('profile upsert failed',e)}
+        try{await window._supa.from('profiles').upsert({id:user.id,email:email,username:username,display_name:p.name||username,data:safeStateForSupabase(),updated_at:new Date().toISOString()},{onConflict:'id'})}catch(e){console.warn('profile upsert failed',e)}
       }
       return true;
     }catch(e){console.error('signup failed',e);toast('Création du compte impossible. Réessaie.');return false}
-  }
-  var prevOb11NextEmailBlock=window.ob11Next;
-  if(typeof prevOb11NextEmailBlock==='function'&&!prevOb11NextEmailBlock.__gsEmailUsedBlock20260508){
-    window.ob11Next=async function(){
-      if(window.OB11&&window.OB11.mode==='signup'&&Number(window.OB11.step)===0){
-        var inp=$('ob11-main-input')||$('gs-ob-main-input');
-        var email=String((inp&&inp.value)||P().email||'').trim().toLowerCase();
-        P().email=email;save();
-        if(validEmail(email)&&await emailAlreadyUsed(email)){setStep(0,'Mail déjà utilisé. Change de mail pour continuer.');return false}
-      }
-      return prevOb11NextEmailBlock.apply(this,arguments);
-    };
-    window.ob11Next.__gsEmailUsedBlock20260508=true;
   }
   window.gsFinishSignupAdventure=async function(){
     if(window.__gsFinishingSignupAdventure)return;
@@ -15976,37 +15931,59 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
 </script>
 
 
-<script id="gs-signup-back-button-20260508">
+
+<!-- G-SQUAD PATCH - bibliothèque fixe + cartes Battle Squad cliquables -->
+<style id="gs-bib-battle-target-fix-20260508-css">
+#bib-list .gs-bib-v9-summary{position:relative!important;top:auto!important;z-index:1!important;margin:0 0 12px!important;padding:0 0 10px!important;background:transparent!important;border-bottom:0!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.gs-battle-page-card.clickable{cursor:pointer;transition:transform .12s ease,border-color .12s ease,background .12s ease}
+.gs-battle-page-card.clickable:active{transform:scale(.985)}
+.gs-battle-page-card.clickable .gs-battle-bar{margin-top:12px}
+.gs-battle-fill.red{background:#FF5F5F}
+</style>
+<script id="gs-battle-cards-clickable-progress-20260508">
 (function(){
-  function showAuthLanding(){
-    try{if(typeof readOb==='function')readOb()}catch(e){}
-    try{var ob=document.getElementById('gs-onboard-v11');if(ob)ob.remove()}catch(e){}
-    try{window.OB11=window.OB11||{step:0,total:12,password:''};window.OB11.step=0;window.OB11.mode=''}catch(e){}
-    try{var auth=document.getElementById('auth-screen');if(auth){auth.style.display='flex';if(auth.classList)auth.classList.add('open')}}catch(e){}
-    try{if(typeof window.authShowView==='function')window.authShowView('landing')}catch(e){}
-  }
-  window.gsSignupBackToAuth=showAuthLanding;
-  function patchSignupBack(){
-    try{
-      var ob=window.OB11||{},ov=document.getElementById('gs-onboard-v11');
-      if(!ov||ob.mode!=='signup'||Number(ob.step||0)!==0)return;
-      var btn=ov.querySelector('.gs-ob11-actions button:not(.primary)');
-      if(!btn)return;
-      btn.disabled=false;
-      btn.removeAttribute('disabled');
-      btn.style.opacity='';
-      btn.textContent='Retour';
-      btn.setAttribute('onclick','gsSignupBackToAuth()');
-      btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}showAuthLanding();return false};
-    }catch(e){}
-  }
-  var prevRender=window.renderOb11;
-  if(typeof prevRender==='function'&&!prevRender.__gsSignupBackButton){
-    window.renderOb11=function(){var r=prevRender.apply(this,arguments);setTimeout(patchSignupBack,0);setTimeout(patchSignupBack,80);return r};
-    window.renderOb11.__gsSignupBackButton=true;
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(patchSignupBack,120)});else setTimeout(patchSignupBack,120);
+  if(window.__gsBattleCardsClickableProgress20260508)return;
+  window.__gsBattleCardsClickableProgress20260508=true;
+  function S(){window.state=window.state||{};return window.state}
+  function E(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]||c})}
+  function J(v){return JSON.stringify(String(v==null?'':v)).replace(/"/g,'&quot;')}
+  function fid(f){return String(f&&((f.id)||(f.user_id)||(f.username))||'')}
+  function friends(){return S().friends||[]}
+  function squads(){var s=S();s.privateSquads=Array.isArray(s.privateSquads)?s.privateSquads:[];return s.privateSquads}
+  function members(sq){var s=S(),list=[{name:(s.profil&&s.profil.name)||'Toi',xp:Number(s.xp||0),me:true}];(sq.members||[]).forEach(function(id){var f=friends().filter(function(x){return fid(x)===String(id)})[0];if(f)list.push({name:f.name||f.display_name||'Ami',xp:Number(f.xp||(f.data&&f.data.xp)||0),avatar:f.avatar||''})});return list}
+  function xp(sq){return members(sq).reduce(function(a,b){return a+Number(b.xp||0)},0)}
+  function ranked(){return squads().map(function(sq){return {sq:sq,xp:xp(sq),count:(sq.members||[]).length+1}}).sort(function(a,b){return b.xp-a.xp})}
+  function league(v){v=Number(v||0);if(v>=2500)return 'Or';if(v>=1000)return 'Argent';return 'Bronze'}
+  function pct(v,max){v=Number(v||0);max=Number(max||1);return Math.max(0,Math.min(100,Math.round((v/max)*100)))}
+  function bar(v,max,color){return '<div class="gs-battle-bar"><div class="gs-battle-fill '+(color||'amber')+'" style="width:'+pct(v,max)+'%"></div></div>'}
+  function nextTarget(v){v=Number(v||0);var goals=[500,1000,2500,5000,10000];for(var i=0;i<goals.length;i++){if(v<goals[i])return goals[i]}return goals[goals.length-1]}
+  function openCard(sq,page){return 'window.gsOpenBattleSquadPage&&window.gsOpenBattleSquadPage('+J(sq&&sq.id)+','+J(page)+')'}
+  function battleCard(sq,cls,title,txt,value,max,color,page){return '<div class="gs-battle-page-card '+cls+' clickable" role="button" tabindex="0" onclick="'+openCard(sq,page)+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}"><b>'+E(title)+'</b><span>'+E(txt)+'</span>'+bar(value,max,color)+'</div>'}
+  function bestRival(arr,id){for(var i=0;i<arr.length;i++){if(String(arr[i].sq.id)!==String(id))return arr[i]}return null}
+  window.gsRenderBattleSquadPage=function(){
+    var root=document.getElementById('battle-squad-page');if(!root)return;
+    var arr=ranked(),top=arr[0],html='<div class="gs-battle-page">';
+    html+='<section class="gs-battle-page-hero"><div class="gs-battle-kicker">Mode conquête</div><h2>Battle Squad</h2><p>Une page dédiée pour transformer ta squad privée en équipe : objectifs communs, boss, duel, coffre et contribution de chaque membre.</p><div class="gs-battle-hero-actions"><button class="gs-battle-page-btn primary" onclick="window.gsOpenPrivateSquads&&window.gsOpenPrivateSquads()">Gérer ma Squad privée</button><button class="gs-battle-page-btn" onclick="gsToggleBattleHelp()">Battle Squad, c’est quoi ?</button></div></section>';
+    html+='<div class="gs-battle-help" id="gs-battle-help"><b>Le principe est simple.</b>Tu crées une Squad privée, tu ajoutes tes membres, puis vos activités normales alimentent la Battle : XP cumulés, séances, kilomètres, missions collectives et duels. La Squad privée sert à gérer le groupe. Battle Squad sert à combattre, suivre l’avancée et comprendre les objectifs.</div>';
+    if(!top){
+      html+='<div class="gs-battle-page-empty"><b>Aucune Squad privée active.</b>Crée d’abord ton cercle, ajoute tes membres, puis reviens ici pour lancer les missions Battle Squad.<div style="margin-top:13px"><button class="gs-battle-page-btn primary" onclick="window.gsOpenPrivateSquads&&window.gsOpenPrivateSquads()">Créer une Squad privée</button></div></div>';
+    }else{
+      var sq=top.sq,all=members(sq),lead=all.slice().sort(function(a,b){return b.xp-a.xp})[0]||all[0],target=nextTarget(top.xp),bossMax=1000,bossHit=Math.min(bossMax,(top.xp%bossMax)||(top.xp?bossMax:0)),rival=bestRival(arr,sq.id),duelMax=rival?Math.max(top.xp,rival.xp,1):1;
+      html+='<div class="gs-battle-page-stat"><div><strong>'+E(sq.name||'Ta Squad')+'</strong><small>'+top.count+' membre'+(top.count>1?'s':'')+' · Ligue '+league(top.xp)+'</small></div><div class="gs-battle-page-score">'+top.xp+' XP</div></div>';
+      html+='<div class="gs-battle-page-grid">';
+      html+=battleCard(sq,'gold','Mission collective','500 XP en équipe · '+Math.min(top.xp,500)+' / 500 XP',top.xp,500,'amber','missions');
+      html+=battleCard(sq,'red','Boss de Squad',Math.max(0,bossMax-bossHit)+' PV restants · chaque XP retire des PV',bossHit,bossMax,'red','progression');
+      html+=battleCard(sq,'blue','Duel hebdo',rival?('Écart actuel : '+Math.abs(top.xp-rival.xp)+' XP contre '+(rival.sq.name||'Rivale')):'Ajoute une autre squad pour lancer un duel',top.xp,duelMax,'','battle');
+      html+=battleCard(sq,'green','Coffre de Squad',Math.max(0,target-top.xp)+' XP avant le prochain coffre',Math.min(top.xp,target),target,'green','progression');
+      html+='</div>';
+      html+='<div class="gs-battle-page-row"><div><b>Meilleur contributeur</b><span>'+E((lead&&lead.name)||'Toi')+' · '+Number((lead&&lead.xp)||0)+' XP</span></div><button class="gs-battle-page-btn" onclick="window.gsOpenBattleSquad&&window.gsOpenBattleSquad('+J(sq.id||'')+')">Détails</button></div>';
+      html+='<div class="gs-battle-page-row"><div><b>Où gérer les membres ?</b><span>La création, les ajouts et les requêtes restent dans Squad privée.</span></div><button class="gs-battle-page-btn" onclick="window.gsOpenPrivateSquads&&window.gsOpenPrivateSquads()">Squad privée</button></div>';
+    }
+    html+='</div>';root.innerHTML=html;
+  };
+  setTimeout(function(){try{if(document.getElementById('battle-squad-page'))window.gsRenderBattleSquadPage()}catch(e){}},0);
 })();
 </script>
+
 </body>
 </html>
