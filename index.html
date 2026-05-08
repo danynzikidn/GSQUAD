@@ -3270,12 +3270,13 @@ function saveAPIKey(){
 // SUPABASE CONFIG
 // ============================================================
 var SUPABASE_URL = 'https://wtaalaenhthcvcztsqjb.supabase.co';
-// Clé publique Supabase côté client : accepte les nouvelles publishable keys et les anciennes anon keys JWT.
+// Clé publique Supabase côté navigateur : publishable key sb_publishable_... ou ancienne anon key JWT eyJ...
 var SUPABASE_KEY = 'sb_publishable_-NIiFXvur7ktZCe2nfkl9g_u1urf6t-';
 function gsIsValidSupabaseKey(k){k=(k||'').trim();return typeof k==='string' && (/^sb_publishable_[A-Za-z0-9_-]+$/.test(k) || /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+=*$/.test(k));}
 var _supa = null;
 try{
  _supa = (window.supabase && gsIsValidSupabaseKey(SUPABASE_KEY)) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY.trim()) : null;
+ if(_supa) window._supa=_supa;
  if(!_supa && SUPABASE_KEY && SUPABASE_KEY.indexOf('PASTE_')!==0){console.warn('Supabase désactivé: clé publique invalide.');}
 }catch(e){console.warn('Supabase init désactivé:', e);_supa=null;}
 var _supaUser = null;
@@ -3489,14 +3490,7 @@ async function afterAuth(user) {
 }
 
 async function initAuth() {
- if (!_supa) {
- try {
-  document.getElementById('auth-screen').style.display = 'flex';
-  if (typeof authShowView === 'function') authShowView('login');
-  authShowErr('Connexion cloud désactivée : ajoute une clé publique Supabase valide.');
- } catch(e) { console.warn('Supabase non configuré:', e); }
- return;
- }
+ if (!_supa) { bootApp(); return; }
  document.getElementById('auth-screen').style.display = 'flex';
  if (typeof authShowView === 'function') authShowView('landing');
  document.getElementById('onboard').style.display = 'none';
@@ -3884,7 +3878,6 @@ function searchUsersModal(query){
  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);font-size:13px">Recherche...</div>';
  clearTimeout(window._searchModalTimeout);
  window._searchModalTimeout=setTimeout(async function(){
- if((!window._supaUser)&&typeof window.gsEnsureSupaUser==='function')await window.gsEnsureSupaUser();
  if(!_supa||!_supaUser){el.innerHTML='<div style="background:rgba(143,185,255,.08);border:1px solid rgba(143,185,255,.18);border-radius:18px;padding:18px;text-align:center;margin:8px 0"><div style="font-size:15px;font-weight:900;color:var(--txt);margin-bottom:6px">Compte requis</div><div style="font-size:13px;color:var(--mut);margin-bottom:14px">Crée un compte gratuit pour trouver et défier tes amis</div><button type=\"button\" onclick=\"document.getElementById(\'social-ov\').classList.remove(\'open\');document.getElementById(\'auth-screen\').style.display=\'flex\';if(typeof authShowView===\'function\')authShowView(\'signup-s1\')\" style=\"padding:11px 20px;border-radius:99px;background:var(--txt);color:#071018;font-weight:900;font-size:13px;border:none;cursor:pointer;margin-right:8px\">Créer un compte</button><button type=\"button\" onclick=\"document.getElementById(\'social-ov\').classList.remove(\'open\');document.getElementById(\'auth-screen\').style.display=\'flex\';if(typeof authShowView===\'function\')authShowView(\'login\')\" style=\"padding:11px 20px;border-radius:99px;background:none;color:var(--txt);font-weight:900;font-size:13px;border:1px solid rgba(255,255,255,.12);cursor:pointer\">Connexion</button></div>';return;}
  try{
  var qLower=query.replace(/^@/,'').toLowerCase();
@@ -7098,24 +7091,17 @@ document.addEventListener('DOMContentLoaded',function(){
  ensureState();
  try{ gsInstallOnboarding(); }catch(e){ console.error('onboarding install failed:', e); }
  var auth=$('auth-screen'), onboard=$('onboard');
+ if(state.onboarded && state.profil && state.profil.name){ bootSafe(); return; }
  if(auth) auth.style.display='flex'; if(onboard) onboard.style.display='none';
- if(!_supa || !_supa.auth) return;
+ if(!_supa) return;
  try{
- if(!window._gsAuthListenerInstalled){
- _supa.auth.onAuthStateChange(async function(event, session){
- var u=session&&session.user;
- if(u){ window._supaUser=u; try{_supaUser=u}catch(e){} try{state.guestMode=false;sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');}catch(e){} }
- if(event==='SIGNED_OUT'){ state={}; window._supaUser=null; try{_supaUser=null}catch(e){} ensureState(); if(auth)auth.style.display='flex'; if(onboard)onboard.style.display='none'; }
- });
- window._gsAuthListenerInstalled=true;
- }
  var sess=await _supa.auth.getSession();
- var user=sess && sess.data && sess.data.session && sess.data.session.user;
- if(user){ window._supaUser=user; try{_supaUser=user}catch(e){} await afterAuth(user); return; }
- if(sessionStorage.getItem('gs_guest_session')==='1' && state.guestMode===true && state.onboarded && state.profil && state.profil.name){ if(auth)auth.style.display='none'; bootSafe(); return; }
+ if(sess && sess.data && sess.data.session && sess.data.session.user){ await afterAuth(sess.data.session.user); }
+ _supa.auth.onAuthStateChange(async function(event, session){
+ if(event==='SIGNED_OUT'){ state={}; _supaUser=null; ensureState(); if(auth)auth.style.display='flex'; if(onboard)onboard.style.display='none'; }
+ });
  }catch(e){ console.warn('Supabase auth unavailable:', e); }
  };
-
 
  document.addEventListener('DOMContentLoaded', function(){
  setTimeout(function(){
@@ -9595,8 +9581,6 @@ document.addEventListener('DOMContentLoaded',function(){
  return false;
  }
  window._supaUser=user;
- try{_supaUser=user}catch(e){}
- try{state.guestMode=false;sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');}catch(e){}
  hideAppGates();
  try{await loadFromSupabase(user.id)}catch(e){console.warn('loadFromSupabase failed',e)}
  var st=ensureState(),p=st.profil||{};
@@ -10399,7 +10383,7 @@ document.addEventListener('DOMContentLoaded',function(){
  };
 
  async function hasSupabaseSession(){
- try{if(window._supa&&window._supa.auth){var sess=await window._supa.auth.getSession();var u=sess&&sess.data&&sess.data.session&&sess.data.session.user;if(u){window._supaUser=u;try{_supaUser=u}catch(e){}try{S().guestMode=false;sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');save()}catch(e){}return true}}}catch(e){}
+ try{if(window._supa&&window._supa.auth){var sess=await window._supa.auth.getSession();return!!(sess&&sess.data&&sess.data.session&&sess.data.session.user)}}catch(e){}
  return!!window._supaUser;
  }
  async function enforceAuthLanding(){
@@ -15530,75 +15514,80 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
 
 <style id="gs-battle-bottom-page-style-20260508">
 #p-battle .wrap{padding-top:10px}
-.gs-battle-page{display:flex;flex-direction:column;gap:12px;color:var(--txt)}
-.gs-battle-page-hero{position:relative;overflow:hidden;border:1px solid rgba(255,199,92,.30);background:radial-gradient(circle at 92% 4%,rgba(255,199,92,.34),rgba(255,199,92,0) 35%),radial-gradient(circle at 0% 0%,rgba(255,88,88,.22),rgba(255,88,88,0) 38%),linear-gradient(145deg,rgba(18,24,33,.99),rgba(7,10,15,.99));border-radius:28px;padding:19px;box-shadow:0 18px 54px rgba(0,0,0,.44)}
-.gs-battle-page-hero:after{content:'';position:absolute;right:-62px;bottom:-78px;width:198px;height:198px;border-radius:50%;border:1px solid rgba(255,199,92,.20);background:radial-gradient(circle,rgba(255,199,92,.14),rgba(255,199,92,0) 68%);pointer-events:none}
-.gs-battle-kicker{position:relative;z-index:1;color:#FFC75C;font-size:10px;font-weight:1000;letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px}
-.gs-battle-page-hero h2{position:relative;z-index:1;margin:0;color:var(--txt);font-size:35px;line-height:.95;font-weight:1000;letter-spacing:-.055em}
-.gs-battle-page-hero p{position:relative;z-index:1;margin:10px 0 0;color:var(--txt);font-size:14px;font-weight:900;line-height:1.45;max-width:94%}
-.gs-battle-hero-actions{position:relative;z-index:1;display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}
-.gs-battle-page-btn{border:1px solid rgba(255,255,255,.13);border-radius:15px;background:rgba(255,255,255,.065);color:var(--txt);padding:11px 12px;font-size:12px;font-weight:1000;font-family:inherit;cursor:pointer;min-height:40px}
-.gs-battle-page-btn.primary{background:linear-gradient(135deg,#FFE09A,#FFC75C);border:0;color:#080B10;box-shadow:0 12px 32px rgba(255,199,92,.18)}
-.gs-battle-help{display:none;border:1px solid rgba(255,199,92,.20);background:rgba(255,199,92,.08);border-radius:20px;padding:14px;color:var(--txt);font-size:13px;font-weight:850;line-height:1.45}.gs-battle-help.open{display:block}.gs-battle-help b{display:block;color:#FFC75C;margin-bottom:5px;font-size:14px}
-.gs-battle-page-stat{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.032));border-radius:20px;padding:14px}
-.gs-battle-page-stat strong{display:block;color:var(--txt);font-size:17px;font-weight:1000;letter-spacing:-.03em}.gs-battle-page-stat small{display:block;color:var(--txt2);font-size:12px;font-weight:900;margin-top:3px}.gs-battle-page-score{font-family:'Bebas Neue',sans-serif;color:#FFC75C;font-size:34px;line-height:1;letter-spacing:.02em;white-space:nowrap}
-.gs-battle-page-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.gs-battle-page-tab{border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);border-radius:16px;color:var(--txt2);font-size:11px;font-weight:1000;padding:11px 5px;font-family:inherit;cursor:pointer}.gs-battle-page-tab.on{background:linear-gradient(135deg,rgba(255,199,92,.18),rgba(255,95,95,.11));border-color:rgba(255,199,92,.34);color:#FFC75C;box-shadow:0 10px 26px rgba(0,0,0,.22)}
-.gs-battle-page-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.gs-battle-page-card{position:relative;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);border-radius:22px;padding:15px;min-height:100px;cursor:pointer;overflow:hidden}.gs-battle-page-card:active{transform:scale(.985)}.gs-battle-page-card:after{content:'›';position:absolute;right:14px;top:13px;color:rgba(255,255,255,.42);font-size:24px;font-weight:1000}.gs-battle-page-card.gold{border-color:rgba(255,199,92,.30);background:linear-gradient(145deg,rgba(255,199,92,.12),rgba(255,199,92,.05))}.gs-battle-page-card.red{border-color:rgba(255,95,95,.26);background:linear-gradient(145deg,rgba(255,95,95,.10),rgba(255,95,95,.04))}.gs-battle-page-card.blue{border-color:rgba(82,211,255,.26);background:linear-gradient(145deg,rgba(82,211,255,.10),rgba(82,211,255,.04))}.gs-battle-page-card.green{border-color:rgba(115,214,162,.26);background:linear-gradient(145deg,rgba(115,214,162,.10),rgba(115,214,162,.04))}.gs-battle-page-card.purple{border-color:rgba(205,168,255,.26);background:linear-gradient(145deg,rgba(205,168,255,.11),rgba(205,168,255,.04))}.gs-battle-page-card b{display:block;color:var(--txt);font-size:15px;font-weight:1000;letter-spacing:-.02em;padding-right:20px}.gs-battle-page-card span{display:block;color:var(--txt2);font-size:12px;font-weight:900;line-height:1.4;margin-top:6px}.gs-battle-page-card.lock{opacity:.55;filter:saturate(.45)}
-.gs-battle-bar{height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:11px}.gs-battle-fill{height:100%;border-radius:999px;background:#FFC75C}.gs-battle-fill.red{background:#ff6b7a}.gs-battle-fill.blue{background:#52D3FF}.gs-battle-fill.green{background:#73D6A2}.gs-battle-fill.purple{background:#CDA8FF}.gs-battle-fill.amber{background:#FFC75C}
-.gs-battle-section-title{font-size:12px;font-weight:1000;letter-spacing:.14em;text-transform:uppercase;color:#FFC75C;margin:4px 2px -2px}.gs-battle-page-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.04);border-radius:19px;padding:13px}.gs-battle-page-row b{display:block;color:var(--txt);font-size:14px;font-weight:1000}.gs-battle-page-row span{display:block;color:var(--txt2);font-size:12px;font-weight:900;line-height:1.38;margin-top:3px}.gs-battle-page-row strong{color:#FFC75C;font-size:13px;font-weight:1000;white-space:nowrap}.gs-battle-page-row .ok{color:#73D6A2}.gs-battle-page-row .lock{color:rgba(255,255,255,.42)}
-.gs-battle-page-empty{border:1px dashed rgba(255,255,255,.16);background:rgba(255,255,255,.04);border-radius:23px;padding:20px;text-align:center;color:var(--txt2);font-size:13px;font-weight:900;line-height:1.45}.gs-battle-page-empty b{display:block;color:var(--txt);font-size:18px;margin-bottom:5px}.gs-battle-mini-pills{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.gs-battle-mini-pills i{font-style:normal;border-radius:999px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.055);color:var(--txt);font-size:10px;font-weight:1000;padding:6px 8px}
-.social-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 14px 12px;background:var(--sur);border-bottom:1px solid var(--brd);flex-shrink:0}.social-title{font-family:'Bebas Neue',sans-serif;font-size:25px;letter-spacing:1px;color:var(--txt);white-space:nowrap}.social-tabs{display:flex!important;align-items:center;gap:6px;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch}.social-tab{border:1px solid rgba(255,255,255,.10)!important;background:rgba(255,255,255,.055)!important;color:var(--txt2)!important;border-radius:999px!important;padding:9px 12px!important;font-size:12px!important;font-weight:950!important;font-family:inherit!important;white-space:nowrap!important;line-height:1!important}.social-tab.act{background:var(--txt)!important;color:#071018!important;border-color:var(--txt)!important}.social-search-wrap{display:none;padding:12px 14px 8px;background:var(--bg);flex-shrink:0}.social-search-wrap.show{display:block!important}.social-inp-wrap{display:flex;align-items:center;gap:9px;border:1px solid rgba(143,185,255,.42);background:rgba(143,185,255,.06);border-radius:999px;padding:0 14px}.social-inp-ico{font-size:15px;opacity:.85;flex:0 0 auto}.social-inp-wrap .social-inp{border:0!important;background:transparent!important;border-radius:0!important;padding:14px 0!important;font-size:15px!important;font-weight:850!important;color:var(--txt)!important}.social-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px calc(env(safe-area-inset-bottom,0px) + 24px);min-height:240px}.social-ov{overflow:hidden}
-@media(max-width:390px){.gs-battle-page-grid{grid-template-columns:1fr}.gs-battle-page-hero h2{font-size:31px}.gs-battle-page-tabs{grid-template-columns:repeat(2,1fr)}.social-topbar{align-items:flex-start;flex-direction:column}.social-tabs{width:100%}}
+.gs-battle-page{display:flex;flex-direction:column;gap:12px}
+.gs-battle-page-hero{position:relative;overflow:hidden;border:1px solid rgba(255,199,92,.24);background:radial-gradient(circle at 88% 8%,rgba(255,199,92,.26),rgba(255,199,92,0) 34%),radial-gradient(circle at 0% 0%,rgba(255,88,88,.18),rgba(255,88,88,0) 36%),linear-gradient(145deg,rgba(17,23,31,.98),rgba(8,11,16,.98));border-radius:28px;padding:18px;box-shadow:0 18px 54px rgba(0,0,0,.42)}
+.gs-battle-page-hero:after{content:'';position:absolute;right:-58px;bottom:-74px;width:190px;height:190px;border-radius:50%;border:1px solid rgba(255,199,92,.18);background:radial-gradient(circle,rgba(255,199,92,.13),rgba(255,199,92,0) 68%);pointer-events:none}
+.gs-battle-kicker{font-size:10px;text-transform:uppercase;letter-spacing:.18em;color:#FFC75C;font-weight:1000;margin-bottom:7px}
+.gs-battle-page-hero h2{margin:0;color:var(--txt);font-size:34px;line-height:.95;font-weight:1000;letter-spacing:-.055em}
+.gs-battle-page-hero p{margin:9px 0 0;color:var(--txt2);font-size:13px;font-weight:850;line-height:1.42;max-width:94%}
+.gs-battle-hero-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;position:relative;z-index:1}
+.gs-battle-page-btn{border:1px solid rgba(255,255,255,.10);border-radius:15px;background:rgba(255,255,255,.055);color:var(--txt);padding:11px 12px;font-size:12px;font-weight:1000;font-family:inherit;cursor:pointer}
+.gs-battle-page-btn.primary{background:linear-gradient(135deg,#FFE09A,#FFC75C);border:0;color:#080B10;box-shadow:0 12px 32px rgba(255,199,92,.16)}
+.gs-battle-help{display:none;border:1px solid rgba(255,199,92,.18);background:rgba(255,199,92,.06);border-radius:22px;padding:14px;color:var(--txt2);font-size:12px;font-weight:850;line-height:1.45}
+.gs-battle-help.open{display:block}
+.gs-battle-help b{display:block;color:var(--txt);font-size:15px;margin-bottom:7px}
+.gs-battle-page-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.gs-battle-page-card{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);border-radius:21px;padding:14px;min-height:92px}
+.gs-battle-page-card.gold{border-color:rgba(255,199,92,.22);background:rgba(255,199,92,.075)}
+.gs-battle-page-card.red{border-color:rgba(255,95,95,.20);background:rgba(255,95,95,.065)}
+.gs-battle-page-card.blue{border-color:rgba(82,211,255,.20);background:rgba(82,211,255,.065)}
+.gs-battle-page-card.green{border-color:rgba(115,214,162,.20);background:rgba(115,214,162,.065)}
+.gs-battle-page-card b{display:block;color:var(--txt);font-size:14px;font-weight:1000;letter-spacing:-.02em}
+.gs-battle-page-card span{display:block;color:var(--mut);font-size:11px;font-weight:850;line-height:1.35;margin-top:4px}
+.gs-battle-page-stat{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(135deg,rgba(255,255,255,.065),rgba(255,255,255,.025));border-radius:20px;padding:13px}
+.gs-battle-page-stat strong{display:block;color:var(--txt);font-size:16px;font-weight:1000}
+.gs-battle-page-stat small{display:block;color:var(--mut);font-size:11px;font-weight:850;margin-top:2px}
+.gs-battle-page-score{font-family:'Bebas Neue',sans-serif;color:#FFC75C;font-size:30px;line-height:1;letter-spacing:.02em}
+.gs-battle-page-empty{border:1px dashed rgba(255,255,255,.14);background:rgba(255,255,255,.035);border-radius:22px;padding:18px;text-align:center;color:var(--txt2);font-size:13px;font-weight:850;line-height:1.4}
+.gs-battle-page-empty b{display:block;color:var(--txt);font-size:17px;margin-bottom:4px}
+.gs-battle-page-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid rgba(255,255,255,.075);background:rgba(255,255,255,.035);border-radius:18px;padding:12px}
+.gs-battle-page-row b{color:var(--txt);font-size:13px}.gs-battle-page-row span{color:var(--mut);font-size:11px;font-weight:850}
+@media(max-width:390px){.gs-battle-page-grid{grid-template-columns:1fr}.gs-battle-page-hero h2{font-size:30px}}
 </style>
 <script id="gs-battle-bottom-page-20260508">
 (function(){
-  'use strict';
-  function S(){try{return window.state || (typeof state!=='undefined'?state:{})}catch(e){return {}}}
-  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-  function J(v){return JSON.stringify(String(v==null?'':v))}
-  function pct(v,t){v=Number(v||0);t=Number(t||1);return Math.max(0,Math.min(100,Math.round((v/t)*100)))}
-  function bar(v,t,c){return '<div class="gs-battle-bar"><div class="gs-battle-fill '+(c||'amber')+'" style="width:'+pct(v,t)+'%"></div></div>'}
-  function friends(){var s=S(),out=[],seen={};function add(x){if(!x)return;var id=String(x.id||x.user_id||x.follower_id||x.following_id||x.email||x.username||'');if(!id||seen[id])return;seen[id]=1;out.push(x)};(s.friends||[]).forEach(add);(s.squadPeople||[]).forEach(add);return out}
-  function fid(x){return String(x.id||x.user_id||x.follower_id||x.following_id||x.email||x.username||'')}
-  function squads(){var s=S(),arr=Array.isArray(s.privateSquads)?s.privateSquads.slice():[],ps=s.privateSquad;if(ps&&Array.isArray(ps.members)&&ps.members.length){var id=String(ps.id||'legacy_private');if(!arr.some(function(x){return String(x.id)===id})){arr.unshift({id:id,name:((ps.prefix||'G')+'-SQUAD').toUpperCase(),members:ps.members,legacy:true})}}return arr}
-  function members(sq){var s=S(),list=[{name:(s.profil&&s.profil.name)||'Toi',xp:Number(s.xp||0),me:true}];(sq.members||[]).forEach(function(id){var f=friends().filter(function(x){return fid(x)===String(id)})[0];if(f)list.push({name:f.name||f.display_name||f.from_name||'Ami',xp:Number(f.xp||(f.data&&f.data.xp)||0)})});return list}
-  function squadXp(sq){return members(sq).reduce(function(a,b){return a+Number(b.xp||0)},0)}
-  function ranked(){return squads().map(function(sq){return {sq:sq,xp:squadXp(sq),count:(sq.members||[]).length+1}}).sort(function(a,b){return b.xp-a.xp})}
-  function league(v){v=Number(v||0);if(v>=5000)return 'Élite';if(v>=2500)return 'Or';if(v>=1000)return 'Argent';return 'Bronze'}
-  function nextPalier(v){var p=[250,500,1000,2500,5000,10000];for(var i=0;i<p.length;i++){if(v<p[i])return p[i]}return p[p.length-1]}
-  function missionRows(top){var xp=top.xp,count=top.count,active=members(top.sq).filter(function(m){return Number(m.xp||0)>0}).length;return [
-    {id:'xp',name:'Conquête XP',txt:'Cumuler 500 XP en équipe cette semaine.',v:Math.min(xp,500),t:500,c:'amber'},
-    {id:'seances',name:'Assaut séances',txt:'Valider 12 séances avec la squad.',v:Math.min(Math.floor(xp/10),12),t:12,c:'blue'},
-    {id:'km',name:'Territoire km',txt:'Cumuler 40 km de marche, course ou rando.',v:Math.min(Math.floor(xp/6),40),t:40,c:'green'},
-    {id:'regularite',name:'Tous au front',txt:'Chaque membre doit contribuer au moins une fois.',v:active,t:Math.max(1,count),c:'purple'}
-  ]}
-  function bosses(xp){return [
-    {name:'Le Guetteur',hp:500,unlock:0,style:'Dégâts simples : 1 XP = 1 PV retiré.',c:'amber'},
-    {name:'Le Mur',hp:1000,unlock:500,style:'Joué sur la régularité : la squad doit rester active.',c:'purple'},
-    {name:'Le Titan',hp:2500,unlock:1000,style:'Les séances lourdes et les longues sorties comptent plus.',c:'red'},
-    {name:'Le Colosse',hp:5000,unlock:2500,style:'Boss d’endurance : tout le monde doit participer.',c:'blue'},
-    {name:'Le Roi de l’Arène',hp:10000,unlock:5000,style:'Boss final : bataille longue, paliers et badges rares.',c:'green'}
-  ].map(function(b){b.open=xp>=b.unlock;b.left=Math.max(0,b.hp-xp);b.percent=pct(Math.min(xp,b.hp),b.hp);return b})}
-  function badgeRows(top){var xp=top.xp,ms=members(top.sq),active=ms.filter(function(m){return Number(m.xp||0)>0}).length;return [
-    ['Premier combat',xp>0,'Premiers XP gagnés par la squad.'],['Squad lancée',xp>=500,'500 XP cumulés.'],['Tous présents',active>=ms.length&&ms.length>1,'Chaque membre a contribué.'],['Chasseurs de boss',xp>=1000,'Premier gros boss débloqué.'],['Conquête Or',xp>=2500,'Ligue Or atteinte.'],['Machine collective',xp>=5000,'5 000 XP cumulés.']
-  ].map(function(r){return '<div class="gs-battle-page-row"><div><b>'+E(r[0])+'</b><span>'+E(r[2])+'</span></div><strong class="'+(r[1]?'ok':'lock')+'">'+(r[1]?'DÉBLOQUÉ':'BLOQUÉ')+'</strong></div>'}).join('')}
-  function tabs(page){return '<div class="gs-battle-page-tabs"><button class="gs-battle-page-tab '+(page==='progression'?'on':'')+'" onclick="gsBattleBottomOpen(\'progression\')">Progression</button><button class="gs-battle-page-tab '+(page==='missions'?'on':'')+'" onclick="gsBattleBottomOpen(\'missions\')">Missions</button><button class="gs-battle-page-tab '+(page==='battle'?'on':'')+'" onclick="gsBattleBottomOpen(\'battle\')">Battle</button><button class="gs-battle-page-tab '+(page==='contribution'?'on':'')+'" onclick="gsBattleBottomOpen(\'contribution\')">Contribution</button></div>'}
-  function overview(top){return '<div class="gs-battle-page-grid"><div class="gs-battle-page-card gold" onclick="gsBattleBottomOpen(\'missions\')"><b>Missions</b><span>Choisis un objectif commun simple. La squad avance ensemble.</span></div><div class="gs-battle-page-card red" onclick="gsBattleBottomOpen(\'battle\')"><b>Boss</b><span>Plusieurs boss, plus durs à débloquer, avec des règles différentes.</span></div><div class="gs-battle-page-card blue" onclick="gsBattleBottomOpen(\'progression\')"><b>Paliers</b><span>Vois le prochain palier et ce qu’il manque pour monter.</span></div><div class="gs-battle-page-card green" onclick="gsBattleBottomOpen(\'contribution\')"><b>Contribution</b><span>Comprends qui apporte quoi à la squad.</span></div></div>'}
-  function progression(top){var xp=top.xp,next=nextPalier(xp),left=Math.max(0,next-xp);return '<div class="gs-battle-section-title">Progression</div><div class="gs-battle-page-card blue" onclick="gsBattleBottomOpen(\'missions\')"><b>Prochain palier</b><span>'+left+' XP restants avant '+next+' XP.</span>'+bar(xp,next,'blue')+'<div class="gs-battle-mini-pills"><i>Ligue '+league(xp)+'</i><i>'+xp+'/'+next+' XP</i></div></div><div class="gs-battle-section-title">Badges de squad</div>'+badgeRows(top)}
-  function missions(top){var rows=missionRows(top),html='<div class="gs-battle-section-title">Missions</div>';rows.forEach(function(m){html+='<div class="gs-battle-page-card '+(m.c==='amber'?'gold':m.c)+'" onclick="gsBattleBottomOpen(\'missions\')"><b>'+E(m.name)+'</b><span>'+E(m.txt)+'</span>'+bar(m.v,m.t,m.c)+'<div class="gs-battle-mini-pills"><i>'+m.v+'/'+m.t+'</i><i>objectif collectif</i></div></div>'});return html}
-  function battle(top){var bs=bosses(top.xp),html='<div class="gs-battle-section-title">Boss à débloquer</div>';bs.forEach(function(b){html+='<div class="gs-battle-page-card '+(b.open?b.c:'lock')+'" onclick="gsBattleBottomOpen(\'battle\')"><b>'+E(b.name)+'</b><span>'+(b.open?(b.left+' PV restants. '+E(b.style)):('Débloqué à '+b.unlock+' XP. '+E(b.style)))+'</span>'+bar(b.open?Math.min(top.xp,b.hp):0,b.hp,b.c)+'<div class="gs-battle-mini-pills"><i>'+(b.open?'Disponible':'Bloqué')+'</i><i>'+b.hp+' PV</i></div></div>'});var r=ranked(),other=null;for(var i=0;i<r.length;i++){if(String(r[i].sq.id)!==String(top.sq.id)){other=r[i];break}}html+='<div class="gs-battle-section-title">Battle</div>';if(other){html+='<div class="gs-battle-page-row"><div><b>'+E(top.sq.name||'Ta Squad')+' VS '+E(other.sq.name||'Rivale')+'</b><span>Écart actuel : '+Math.abs(top.xp-other.xp)+' XP.</span></div><strong>'+((top.xp>=other.xp)?'DEVANT':'À RATTRAPER')+'</strong></div>'}else{html+='<div class="gs-battle-page-row"><div><b>Aucune rivale pour l’instant</b><span>Cherche une autre squad privée pour lancer un duel.</span></div><button class="gs-battle-page-btn" onclick="window.gsOpenPrivateSquadSearch&&window.gsOpenPrivateSquadSearch()">Trouver</button></div>'}return html}
-  function contribution(top){var list=members(top.sq).sort(function(a,b){return Number(b.xp||0)-Number(a.xp||0)}),html='<div class="gs-battle-section-title">Contribution</div>';list.forEach(function(m,i){html+='<div class="gs-battle-page-row"><div><b>'+E(m.name||(m.me?'Toi':'Membre'))+'</b><span>'+(i===0?'Moteur XP':'Membre actif')+' · contribution actuelle</span></div><strong>'+Number(m.xp||0)+' XP</strong></div>'});return html}
+  if(window.__gsBattleBottomPage20260508)return;
+  window.__gsBattleBottomPage20260508=true;
+  function S(){window.state=window.state||{};return window.state}
+  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c})}
+  function fid(f){return String(f&&((f.id)||(f.user_id)||(f.username))||'')}
+  function friends(){return S().friends||[]}
+  function squads(){var s=S();s.privateSquads=Array.isArray(s.privateSquads)?s.privateSquads:[];return s.privateSquads}
+  function members(sq){var s=S(),list=[{name:(s.profil&&s.profil.name)||'Toi',xp:Number(s.xp||0),me:true}];(sq.members||[]).forEach(function(id){var f=friends().filter(function(x){return fid(x)===String(id)})[0];if(f)list.push({name:f.name||f.display_name||'Ami',xp:Number(f.xp||(f.data&&f.data.xp)||0)})});return list}
+  function xp(sq){return members(sq).reduce(function(a,b){return a+Number(b.xp||0)},0)}
+  function ranked(){return squads().map(function(sq){return {sq:sq,xp:xp(sq),count:(sq.members||[]).length+1}}).sort(function(a,b){return b.xp-a.xp})}
+  function league(v){v=Number(v||0);if(v>=2500)return 'Or';if(v>=1000)return 'Argent';return 'Bronze'}
+  function missionProgress(v){return Math.max(0,Math.min(100,Math.round((Number(v||0)/500)*100)))}
+  function bar(v){return '<div class="gs-battle-bar"><div class="gs-battle-fill amber" style="width:'+missionProgress(v)+'%"></div></div>'}
   window.gsToggleBattleHelp=function(){var el=document.getElementById('gs-battle-help');if(el)el.classList.toggle('open')};
-  window.gsBattleBottomOpen=function(page){window.gsBattleBottomPage=page||'progression';window.gsRenderBattleSquadPage&&window.gsRenderBattleSquadPage()};
-  window.gsRenderBattleSquadPage=function(){var root=document.getElementById('battle-squad-page');if(!root)return;var arr=ranked(),top=arr[0],page=window.gsBattleBottomPage||'progression',html='<div class="gs-battle-page">';html+='<section class="gs-battle-page-hero"><div class="gs-battle-kicker">Mode conquête</div><h2>Battle Squad</h2><p>La page où ta squad avance en équipe : missions, boss, paliers, badges et contribution de chaque membre.</p><div class="gs-battle-hero-actions"><button class="gs-battle-page-btn primary" onclick="window.gsOpenPrivateSquads&&window.gsOpenPrivateSquads()">Gérer ma Squad privée</button><button class="gs-battle-page-btn" onclick="gsToggleBattleHelp()">Battle Squad, c’est quoi ?</button></div></section>';html+='<div class="gs-battle-help" id="gs-battle-help"><b>Simple : ta squad combat ensemble.</b>Les XP, séances et kilomètres des membres alimentent des missions communes. Les paliers débloquent des badges. Les boss deviennent plus durs quand la squad progresse.</div>';if(!top){html+='<div class="gs-battle-page-empty"><b>Aucune Squad privée active.</b>Crée d’abord ton cercle, ajoute tes membres, puis reviens ici pour lancer les missions Battle Squad.<div style="margin-top:13px"><button class="gs-battle-page-btn primary" onclick="window.gsOpenPrivateSquads&&window.gsOpenPrivateSquads()">Créer une Squad privée</button></div></div></div>';root.innerHTML=html;return}var sq=top.sq;html+='<div class="gs-battle-page-stat"><div><strong>'+E(sq.name||'Ta Squad')+'</strong><small>'+top.count+' membre'+(top.count>1?'s':'')+' · Ligue '+league(top.xp)+'</small></div><div class="gs-battle-page-score">'+top.xp+' XP</div></div>';html+=overview(top);html+=tabs(page);if(page==='missions')html+=missions(top);else if(page==='battle')html+=battle(top);else if(page==='contribution')html+=contribution(top);else html+=progression(top);html+='<div class="gs-battle-page-row"><div><b>Où gérer les membres ?</b><span>La création, les ajouts et les requêtes restent dans Squad privée.</span></div><button class="gs-battle-page-btn" onclick="window.gsOpenPrivateSquads&&window.gsOpenPrivateSquads()">Squad privée</button></div></div>';root.innerHTML=html};
-  var oldGo=window.goTab;if(typeof oldGo==='function'&&!oldGo.__gsBattleBottomPage20260508){window.goTab=function(name,el){var r=oldGo.apply(this,arguments);if(name==='battle')setTimeout(window.gsRenderBattleSquadPage,0);return r};window.goTab.__gsBattleBottomPage20260508=true}
+  window.gsRenderBattleSquadPage=function(){
+    var root=document.getElementById('battle-squad-page');if(!root)return;
+    var arr=ranked(),top=arr[0],html='<div class="gs-battle-page">';
+    html+='<section class="gs-battle-page-hero"><div class="gs-battle-kicker">Mode conquête</div><h2>Battle Squad</h2><p>Une page dédiée pour transformer ta squad privée en équipe : objectifs communs, boss, duel, coffre et contribution de chaque membre.</p><div class="gs-battle-hero-actions"><button class="gs-battle-page-btn primary" onclick="window.gsOpenPrivateSquads&&window.gsOpenPrivateSquads()">Gérer ma Squad privée</button><button class="gs-battle-page-btn" onclick="gsToggleBattleHelp()">Battle Squad, c’est quoi ?</button></div></section>';
+    html+='<div class="gs-battle-help" id="gs-battle-help"><b>Le principe est simple.</b>Tu crées une Squad privée, tu ajoutes tes membres, puis vos activités normales alimentent la Battle : XP cumulés, séances, kilomètres, missions collectives et duels. La Squad privée sert à gérer le groupe. Battle Squad sert à combattre, suivre l’avancée et comprendre les objectifs.</div>';
+    if(!top){
+      html+='<div class="gs-battle-page-empty"><b>Aucune Squad privée active.</b>Crée d’abord ton cercle, ajoute tes membres, puis reviens ici pour lancer les missions Battle Squad.<div style="margin-top:13px"><button class="gs-battle-page-btn primary" onclick="window.gsOpenPrivateSquads&&window.gsOpenPrivateSquads()">Créer une Squad privée</button></div></div>';
+    }else{
+      var sq=top.sq,all=members(sq),lead=all.slice().sort(function(a,b){return b.xp-a.xp})[0]||all[0];
+      html+='<div class="gs-battle-page-stat"><div><strong>'+E(sq.name||'Ta Squad')+'</strong><small>'+top.count+' membre'+(top.count>1?'s':'')+' · Ligue '+league(top.xp)+'</small></div><div class="gs-battle-page-score">'+top.xp+' XP</div></div>';
+      html+='<div class="gs-battle-page-grid"><div class="gs-battle-page-card gold"><b>Mission collective</b><span>Objectif actuel : 500 XP en équipe sur 7 jours.</span>'+bar(top.xp)+'</div><div class="gs-battle-page-card red"><b>Boss de Squad</b><span>Chaque XP retire des PV au boss commun. Plus la squad bouge, plus il tombe.</span></div><div class="gs-battle-page-card blue"><b>Duel hebdo</b><span>Compare ta squad à une rivale et suis l’écart XP à rattraper.</span></div><div class="gs-battle-page-card green"><b>Coffre de Squad</b><span>Les paliers récompensent la régularité collective.</span></div></div>';
+      html+='<div class="gs-battle-page-row"><div><b>Meilleur contributeur</b><span>'+E((lead&&lead.name)||'Toi')+' · '+Number((lead&&lead.xp)||0)+' XP</span></div><button class="gs-battle-page-btn" onclick="window.gsOpenBattleSquad&&window.gsOpenBattleSquad('+JSON.stringify(String(sq.id||''))+')">Détails</button></div>';
+      html+='<div class="gs-battle-page-row"><div><b>Où gérer les membres ?</b><span>La création, les ajouts et les requêtes restent dans Squad privée.</span></div><button class="gs-battle-page-btn" onclick="window.gsOpenPrivateSquads&&window.gsOpenPrivateSquads()">Squad privée</button></div>';
+    }
+    html+='</div>';root.innerHTML=html;
+  };
+  var oldGo=window.goTab;
+  if(typeof oldGo==='function'&&!oldGo.__gsBattleBottomPage20260508){
+    window.goTab=function(name,el){var r=oldGo.apply(this,arguments);if(name==='battle')setTimeout(window.gsRenderBattleSquadPage,0);return r};
+    window.goTab.__gsBattleBottomPage20260508=true;
+  }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(window.gsRenderBattleSquadPage,300)});else setTimeout(window.gsRenderBattleSquadPage,300);
 })();
 </script>
 
 
 
-<!-- G-SQUAD PATCH - connexion cloud Supabase, anti-mode local silencieux -->
+<!-- G-SQUAD PATCH - auth Supabase réelle, anti-boot local silencieux -->
 <style id="gs-cloud-auth-fix-css">
 .gs-cloud-auth-card{margin:0 0 14px;background:rgba(255,199,92,.10);border:1px solid rgba(255,199,92,.28);border-radius:18px;padding:14px;color:var(--txt);line-height:1.42}.gs-cloud-auth-card b{display:block;font-size:15px;font-weight:1000;letter-spacing:-.02em;margin-bottom:4px}.gs-cloud-auth-card span{display:block;color:var(--txt2);font-size:12px;font-weight:850}.gs-cloud-auth-card code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#FFC75C;font-size:11px;font-weight:900}.gs-cloud-auth-card.ok{background:rgba(115,214,162,.10);border-color:rgba(115,214,162,.24)}.gs-cloud-auth-card.ok code{color:#73D6A2}
 </style>
@@ -15616,20 +15605,19 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
     try{if(!k&&typeof SUPABASE_KEY==='string')k=SUPABASE_KEY}catch(e){}
     return (k||'').trim();
   }
+  function syncClient(client){if(!client)return false;window._supa=client;try{_supa=client}catch(e){}return !!(window._supa&&window._supa.auth)}
   function cloudReady(){
-    try{if(window._supa&&window._supa.auth)return true}catch(e){}
-    var key=configuredKey();
-    if(!validKey(key))return false;
-    try{
-      if(window.supabase&&window.supabase.createClient){
-        var url=(typeof SUPABASE_URL==='string'&&SUPABASE_URL)||window.SUPABASE_URL||'';
-        window._supa=window.supabase.createClient(url,key);
-        try{_supa=window._supa}catch(e){}
-        return !!(window._supa&&window._supa.auth);
-      }
-    }catch(e){console.warn('Supabase init error:',e)}
+    try{if(window._supa&&window._supa.auth){try{_supa=window._supa}catch(e){};return true}}catch(e){}
+    var key=configuredKey(); if(!validKey(key))return false;
+    try{if(window.supabase&&window.supabase.createClient){var url=(typeof SUPABASE_URL==='string'&&SUPABASE_URL)||window.SUPABASE_URL||'';if(!/^https:\/\/[a-z0-9-]+\.supabase\.co/i.test(url))return false;return syncClient(window.supabase.createClient(url,key));}}catch(e){console.warn('Supabase init error:',e)}
     return false;
   }
+  function setSupaUser(user){window._supaUser=user||null;try{_supaUser=user||null}catch(e){}return window._supaUser}
+  async function getSessionUser(){
+    if(!cloudReady())return null;
+    try{var res=await window._supa.auth.getSession();var user=res&&res.data&&res.data.session&&res.data.session.user;return setSupaUser(user||null)}catch(e){console.warn('Supabase session error:',e);return setSupaUser(null)}
+  }
+  window.gsEnsureSupaUser=async function(){return await getSessionUser()};
   function clearGuestMode(){
     try{sessionStorage.removeItem('gs_guest_session')}catch(e){}
     try{localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped')}catch(e){}
@@ -15637,92 +15625,40 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
     var b=$('guest-banner');if(b)try{b.remove()}catch(e){}
     try{document.body.classList.remove('gs-guest-confirmed')}catch(e){}
   }
-  function showAuth(view){
-    var auth=$('auth-screen');
-    if(auth){auth.style.display='flex';auth.classList&&auth.classList.add('open')}
-    var ob=$('onboard');if(ob)ob.style.display='none';
-    var ob11=$('gs-onboard-v11');if(ob11)ob11.remove();
-    try{if(typeof window.authShowView==='function')window.authShowView(view||'login')}catch(e){}
+  function showAuth(view){var auth=$('auth-screen');if(auth){auth.style.display='flex';auth.classList&&auth.classList.add('open')}var ob=$('onboard');if(ob)ob.style.display='none';var ob11=$('gs-onboard-v11');if(ob11)ob11.remove();try{if(typeof window.authShowView==='function')window.authShowView(view||'login')}catch(e){}}
+  function card(msg,ok){var auth=$('auth-screen');if(!auth)return;var panel=$('auth-view-login')||auth.querySelector('.auth-box')||auth;var old=$('gs-cloud-auth-card');if(old)old.remove();var html='<div id="gs-cloud-auth-card" class="gs-cloud-auth-card '+(ok?'ok':'')+'"><b>'+(ok?'Connexion cloud prête':'Connexion cloud inactive')+'</b><span>'+msg+'</span></div>';panel.insertAdjacentHTML('afterbegin',html)}
+  function showMissing(){showAuth('login');card('Le fichier ne contient pas de clé publique Supabase valide. Ajoute une clé <code>sb_publishable_...</code> ou une ancienne anon key JWT dans <code>SUPABASE_KEY</code> pour activer connexion, inscription, amis et sauvegarde cloud.',false);try{if(typeof window.authShowErr==='function')window.authShowErr('Supabase non configuré : ajoute une clé publique valide.')}catch(e){}}
+  function showLoginNeeded(){showAuth('login');card('Aucune session Supabase active sur ce navigateur. Connecte-toi ou crée un compte : le profil local seul ne suffit pas pour chercher des utilisateurs.',true)}
+  function showOnline(){var old=$('gs-cloud-auth-card');if(old)old.remove()}
+  function requireCloud(){if(cloudReady()){showOnline();return true}showMissing();return false}
+  var listenerInstalled=false;
+  function installAuthListener(){
+    if(listenerInstalled||!cloudReady())return;listenerInstalled=true;
+    try{window._supa.auth.onAuthStateChange(async function(event,session){
+      if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='USER_UPDATED'){var u=session&&session.user;if(u){clearGuestMode();setSupaUser(u);try{await window.afterAuth(u)}catch(e){console.warn('afterAuth state error:',e)}}}
+      if(event==='SIGNED_OUT'){setSupaUser(null);try{window.state={};localStorage.removeItem('ath7')}catch(e){}S();showAuth('login')}
+    })}catch(e){console.warn('auth listener error:',e)}
   }
-  function card(msg,ok){
-    var auth=$('auth-screen'); if(!auth)return;
-    var panel=$('auth-view-login')||auth.querySelector('.auth-box')||auth;
-    var old=$('gs-cloud-auth-card'); if(old)old.remove();
-    var html='<div id="gs-cloud-auth-card" class="gs-cloud-auth-card '+(ok?'ok':'')+'"><b>'+(ok?'Connexion cloud prête':'Connexion cloud inactive')+'</b><span>'+msg+'</span></div>';
-    panel.insertAdjacentHTML('afterbegin',html);
-  }
-  function showMissing(){
-    showAuth('login');
-    card('Le fichier ne contient pas encore de clé publique Supabase valide. Le mode local ne démarre plus automatiquement : ajoute une clé <code>sb_publishable_...</code> ou une ancienne anon key JWT dans <code>SUPABASE_KEY</code> pour activer connexion, inscription, amis et sauvegarde cloud.',false);
-    try{if(typeof window.authShowErr==='function')window.authShowErr('Supabase non configuré : ajoute une clé publique valide.')}catch(e){}
-  }
-  function showOnline(){var old=$('gs-cloud-auth-card');if(old)old.remove();}
-  function requireCloud(view){if(cloudReady()){showOnline();return true}showMissing();return false}
-
-  var oldInit=window.initAuth;
-  if(typeof oldInit==='function'){
-    window.initAuth=async function(){
-      if(!requireCloud('login'))return;
-      return oldInit.apply(this,arguments);
-    };
-  }
-
+  window.initAuth=async function(){
+    S();
+    try{if(typeof window.gsInstallOnboarding==='function')window.gsInstallOnboarding()}catch(e){console.error('onboarding install failed:',e)}
+    if(!requireCloud())return;
+    installAuthListener();
+    var user=await getSessionUser();
+    if(user){clearGuestMode();await window.afterAuth(user);return;}
+    setSupaUser(null);
+    showLoginNeeded();
+  };
   var oldLogin=window.doLogin;
-  if(typeof oldLogin==='function'){
-    window.doLogin=async function(){
-      clearGuestMode();
-      if(!requireCloud('login'))return;
-      return oldLogin.apply(this,arguments);
-    };
-  }
-
+  if(typeof oldLogin==='function'){window.doLogin=async function(){clearGuestMode();if(!requireCloud())return;installAuthListener();return oldLogin.apply(this,arguments)}}
   var oldSignup=window.doSignup;
-  if(typeof oldSignup==='function'){
-    window.doSignup=async function(){
-      clearGuestMode();
-      if(!requireCloud('signup-s3'))return;
-      return oldSignup.apply(this,arguments);
-    };
-  }
-
+  if(typeof oldSignup==='function'){window.doSignup=async function(){clearGuestMode();if(!requireCloud())return;installAuthListener();return oldSignup.apply(this,arguments)}}
   var oldAfter=window.afterAuth;
-  if(typeof oldAfter==='function'){
-    window.afterAuth=async function(user){
-      clearGuestMode();
-      var r=await oldAfter.apply(this,arguments);
-      try{if(user){window._supaUser=user;S().guestMode=false;save();}}catch(e){}
-      return r;
-    };
-  }
-
-  window.gsCloudAuthStatus=function(){
-    if(cloudReady()){showAuth('login');card('Supabase est initialisé. Tu peux te connecter ou créer un compte.',true);return true;}
-    showMissing();return false;
-  };
-
-  window.gsEnsureSupaUser=async function(){
-    if(window._supaUser)return window._supaUser;
-    if(!cloudReady())return null;
-    try{
-      var res=await window._supa.auth.getSession();
-      var u=res&&res.data&&res.data.session&&res.data.session.user;
-      if(u){window._supaUser=u;try{_supaUser=u}catch(e){}clearGuestMode();return u;}
-    }catch(e){console.warn('Session Supabase introuvable:',e)}
-    return null;
-  };
-  function bootCheck(){
-    if(!cloudReady()){
-      var guest=false;try{guest=sessionStorage.getItem('gs_guest_session')==='1'&&S().guestMode===true}catch(e){}
-      if(!guest)showMissing();
-    }else{
-      showOnline();
-      try{window.gsEnsureSupaUser&&window.gsEnsureSupaUser();}catch(e){}
-    }
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(bootCheck,80);setTimeout(bootCheck,700);});
-  else {setTimeout(bootCheck,80);setTimeout(bootCheck,700);}
+  if(typeof oldAfter==='function'){window.afterAuth=async function(user){if(user){clearGuestMode();setSupaUser(user)}var r=await oldAfter.apply(this,arguments);if(user){setSupaUser(user);try{S().guestMode=false;save()}catch(e){}}return r}}
+  window.gsCloudAuthStatus=async function(){if(!cloudReady()){showMissing();return false}installAuthListener();var user=await getSessionUser();if(user){card('Supabase est initialisé. Session active : '+(user.email||user.id)+'.',true);return true}showLoginNeeded();return false};
+  async function bootCheck(){if(!cloudReady()){var guest=false;try{guest=sessionStorage.getItem('gs_guest_session')==='1'&&S().guestMode===true}catch(e){}if(!guest)showMissing()}else{installAuthListener();var user=await getSessionUser();if(user){showOnline();clearGuestMode()}else{setSupaUser(null)}}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(bootCheck,80);setTimeout(bootCheck,700)});else{setTimeout(bootCheck,80);setTimeout(bootCheck,700)}
 })();
 </script>
-
 </body>
 </html>
