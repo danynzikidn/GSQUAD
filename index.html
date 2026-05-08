@@ -15820,14 +15820,13 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
 
 
 
-<!-- G-SQUAD PATCH ciblé - inscription uniquement: bouton final, skip étapes 5-10, libellés programme -->
+<!-- G-SQUAD PATCH ciblé - bouton final inscription fonctionnel -->
 <script id="gs-signup-start-adventure-fix">
 (function(){
-  if(window.__gsSignupStartAdventureFix20260508V3)return;window.__gsSignupStartAdventureFix20260508V3=true;
+  if(window.__gsSignupStartAdventureFix20260508V4)return;window.__gsSignupStartAdventureFix20260508V4=true;
   function $(id){return document.getElementById(id)}
   function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
   function P(){return S().profil}
-  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c})}
   function toast(t){try{if(typeof window.notify==='function')window.notify(t);else if(typeof window.nt==='function')window.nt(t);else console.log(t)}catch(e){}}
   function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('ath7',JSON.stringify(window.state||{}))}catch(e){}}
   function overlay(){return $('gs-onboard-v11')||$('gs-onboard-v4')}
@@ -15841,6 +15840,8 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
   function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim())}
   function validPassword(v){v=String(v||'');return v.length>=6&&/[A-ZÀ-ÖØ-Þ]/.test(v)&&/[^A-Za-z0-9]/.test(v)}
   function normalizeUsername(v){return String(v||'').trim().replace(/^@/,'').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()}
+  function currentPassword(){var pw=$('ob11-password-input');return pw?String(pw.value||''):String((window.OB11&&window.OB11.password)||'')}
+  function currentPasswordConfirm(){var cf=$('ob11-password-confirm');return cf?String(cf.value||''):''}
   function setStep(i,msg){markSignup();window.OB11.step=Math.max(0,Math.min(11,i));if(typeof window.renderOb11==='function')window.renderOb11();if(msg)toast(msg)}
   function readCurrent(){
     markSignup();
@@ -15852,6 +15853,12 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
     if(idx===4&&main)p.taille=Number(main.value||0)||'';
     if(idx===5&&main)p.poids=Number(main.value||0)||'';
     save();
+  }
+  function withTimeout(promise,ms,label){
+    return Promise.race([
+      promise,
+      new Promise(function(resolve){setTimeout(function(){resolve({__gsTimeout:true,label:label||'timeout'})},ms)})
+    ]);
   }
   function safeStateForSupabase(){
     var base;
@@ -15865,7 +15872,8 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
     if(!username||username.length<3)return {ok:false,msg:'Username trop court (3 caractères minimum).'};
     if(!window._supa||!window._supa.from)return {ok:false,msg:'Impossible de vérifier le username. Réessaie avec la connexion active.'};
     try{
-      var res=await window._supa.from('profiles').select('id').eq('username',username).limit(1);
+      var res=await withTimeout(window._supa.from('profiles').select('id').eq('username',username).limit(1),8000,'username');
+      if(res&&res.__gsTimeout)return {ok:false,msg:'Vérification du username trop longue. Réessaie.'};
       if(res&&res.error)return {ok:false,msg:'Impossible de vérifier le username. Réessaie.'};
       var rows=(res&&res.data)||[];
       var myId=(window._supaUser&&window._supaUser.id)||'';
@@ -15879,17 +15887,17 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
     var hint=$('ob11-username-hint');
     if(!hint){input.insertAdjacentHTML('afterend','<div id="ob11-username-hint" class="gs-ob11-hint" style="min-height:18px;margin-top:8px"></div>');hint=$('ob11-username-hint')}
     var timer=null;
-    if(!input.__gsUsernameUniqueBound){
+    if(!input.__gsUsernameUniqueBoundV4){
       input.addEventListener('input',function(){
         input.value=normalizeUsername(input.value);P().username=input.value;save();
         clearTimeout(timer);var v=input.value;hint.style.color='var(--mut)';hint.textContent=v.length<3?(v?'Minimum 3 caractères':''):'Vérification...';
-        if(v.length>=3){timer=setTimeout(async function(){var st=await usernameStatus(v);input.dataset.gsUsernameOk=st.ok?'1':'0';hint.style.color=st.ok?'var(--grn)':'var(--red)';hint.textContent=st.msg},280)}
+        if(v.length>=3){timer=setTimeout(async function(){var st=await usernameStatus(v);input.dataset.gsUsernameOk=st.ok?'1':'0';hint.style.color=st.ok?'var(--grn)':'var(--red)';hint.textContent=st.msg;setTimeout(applySignupOnlyPatch,0)},280)}
       });
-      input.__gsUsernameUniqueBound=true;
+      input.__gsUsernameUniqueBoundV4=true;
     }
-    if(input.value&&input.value.length>=3&&!input.dataset.gsUsernameChecked){
-      input.dataset.gsUsernameChecked='1';
-      setTimeout(async function(){var st=await usernameStatus(input.value);input.dataset.gsUsernameOk=st.ok?'1':'0';hint.style.color=st.ok?'var(--grn)':'var(--red)';hint.textContent=st.msg},40);
+    if(input.value&&input.value.length>=3&&!input.dataset.gsUsernameCheckedV4){
+      input.dataset.gsUsernameCheckedV4='1';
+      setTimeout(async function(){var st=await usernameStatus(input.value);input.dataset.gsUsernameOk=st.ok?'1':'0';hint.style.color=st.ok?'var(--grn)':'var(--red)';hint.textContent=st.msg;setTimeout(applySignupOnlyPatch,0)},40);
     }
   }
   async function ensureUsernameAvailable(){
@@ -15899,27 +15907,50 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
     if(!st.ok){setStep(2,st.msg);return false}
     return true;
   }
+  async function validateRequiredStep(idx){
+    readCurrent();
+    var p=P();
+    if(idx===0){
+      var email=String(p.email||'').trim().toLowerCase();
+      if(!validEmail(email)){setStep(0,'Email obligatoire pour créer ton compte.');return false}
+    }
+    if(idx===1){
+      var pass=currentPassword(),confirm=currentPasswordConfirm();
+      window.OB11.password=pass;
+      if(!validPassword(pass)){setStep(1,'Mot de passe: minimum 6 caractères, 1 majuscule et 1 caractère spécial.');return false}
+      if(!confirm||pass!==confirm){setStep(1,'Confirme ton mot de passe avant de continuer.');return false}
+    }
+    if(idx===2){
+      if(!await ensureUsernameAvailable())return false;
+    }
+    return true;
+  }
   async function createAccountIfNeeded(){
     readCurrent();
     var p=P(),email=String(p.email||'').trim().toLowerCase(),pass=String((window.OB11&&window.OB11.password)||''),username=normalizeUsername(p.username);
     p.email=email;p.username=username;save();
-    if(!validEmail(email)){setStep(0,'Ajoute un email valide pour créer ton compte.');return false}
+    if(!validEmail(email)){setStep(0,'Email obligatoire pour créer ton compte.');return false}
     if(!validPassword(pass)){setStep(1,'Mot de passe: minimum 6 caractères, 1 majuscule et 1 caractère spécial.');return false}
     if(!await ensureUsernameAvailable())return false;
     if(window._supaUser)return true;
     if(!window._supa||!window._supa.auth){toast('Supabase indisponible. Réessaie dans quelques secondes.');return false}
     try{
-      var res=await window._supa.auth.signUp({email:email,password:pass,options:{data:{username:username,display_name:p.name||username}}});
+      var res=await withTimeout(window._supa.auth.signUp({email:email,password:pass,options:{data:{username:username,display_name:p.name||username}}}),15000,'signup');
+      if(res&&res.__gsTimeout){toast('Création du compte trop longue. Réessaie.');return false}
       if(res&&res.error){toast(res.error.message||'Création du compte impossible.');return false}
       var user=res&&res.data&&res.data.user?res.data.user:null;
-      if(user){
-        window._supaUser=user;try{if(typeof _supaUser!=='undefined')_supaUser=user}catch(e){}
-        try{await window._supa.from('profiles').upsert({id:user.id,email:email,username:username,display_name:p.name||username,data:safeStateForSupabase(),updated_at:new Date().toISOString()},{onConflict:'id'})}catch(e){
-          var msg=String((e&&e.message)||'').toLowerCase();
-          if(msg.indexOf('duplicate')>-1||msg.indexOf('unique')>-1){setStep(2,'Ce @username est déjà pris.');return false}
-          console.warn('profile upsert failed',e);
+      if(user){window._supaUser=user;try{if(typeof _supaUser!=='undefined')_supaUser=user}catch(e){}}
+      try{
+        if(user&&window._supa&&window._supa.from){
+          window._supa.from('profiles').upsert({id:user.id,email:email,username:username,display_name:p.name||username,data:safeStateForSupabase(),updated_at:new Date().toISOString()},{onConflict:'id'}).then(function(r){
+            if(r&&r.error){
+              var msg=String((r.error&&r.error.message)||'').toLowerCase();
+              if(msg.indexOf('duplicate')>-1||msg.indexOf('unique')>-1)toast('Ce @username est déjà pris.');
+              else console.warn('profile upsert failed',r.error);
+            }
+          });
         }
-      }
+      }catch(e){console.warn('profile upsert background failed',e)}
       return true;
     }catch(e){console.error('signup failed',e);toast('Création du compte impossible. Réessaie.');return false}
   }
@@ -15928,10 +15959,13 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
     var s=S();s.onboarded=true;s.onboardingComplete=true;s.guestMode=false;
     try{if(window.OB11){window.OB11.password='';window.OB11.mode='done'}}catch(e){}
     save();
-    ['gs-onboard-v11','gs-onboard-v4','onboard'].forEach(function(id){var el=$(id);if(el){if(id==='onboard')el.style.display='none';else el.remove()}});
+    ['gs-onboard-v11','gs-onboard-v4','onboard'].forEach(function(id){var el=$(id);if(el){if(id==='onboard'){el.style.display='none';el.innerHTML=''}else el.remove()}});
     var auth=$('auth-screen');if(auth){auth.style.display='none';auth.classList&&auth.classList.remove('open')}
+    var boot=$('gs-boot-ov');if(boot)boot.style.display='none';
+    var app=document.querySelector('.app');if(app)app.style.display='flex';
     try{if(typeof window.hideGates==='function')window.hideGates()}catch(e){}
-    try{if(typeof window.bootApp==='function')window.bootApp()}catch(e){console.error(e)}
+    try{if(typeof window.bootApp==='function')window.bootApp()}catch(e){console.error(e);if(app)app.style.display='flex'}
+    try{if(typeof window.renderTopbarAvatar==='function')window.renderTopbarAvatar()}catch(e){}
     setTimeout(function(){try{if(typeof window.goTab==='function')window.goTab('accueil',$('nb-accueil'))}catch(e){}},60);
     toast('Bienvenue sur G-SQUAD');
   }
@@ -15963,6 +15997,22 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
     });
     ov.querySelectorAll('.gs-ob11-edit-note,.gs-ob11-static-note').forEach(function(el){if((el.textContent||'').toLowerCase().indexOf('modifiable')>-1)el.textContent="Modifiable après l'inscription"});
   }
+  function bindRequiredButton(ov,primary,idx){
+    if(!primary)return;
+    var refresh=function(){
+      var ok=true;
+      if(idx===0){ok=validEmail((($('ob11-main-input')||{}).value)||'')}
+      if(idx===1){var p=currentPassword(),c=currentPasswordConfirm();ok=validPassword(p)&&!!c&&p===c}
+      if(idx===2){ok=normalizeUsername((($('ob11-main-input')||{}).value)||P().username).length>=3}
+      if(idx>=0&&idx<=2)primary.disabled=!ok;
+      else if(!window.__gsFinishingSignupAdventure)primary.disabled=false;
+    };
+    var inputs=[];
+    if(idx===0||idx===2)inputs.push($('ob11-main-input'));
+    if(idx===1){inputs.push($('ob11-password-input'));inputs.push($('ob11-password-confirm'))}
+    inputs.forEach(function(inp){if(inp&&!inp.__gsRequiredBtnBoundV4){inp.addEventListener('input',function(){setTimeout(refresh,0)});inp.__gsRequiredBtnBoundV4=true}});
+    refresh();
+  }
   function applySignupOnlyPatch(){
     var ov=overlay();if(!ov||!isSignup())return;
     markSignup();var idx=stepIndex();
@@ -15974,15 +16024,16 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
       primary.textContent=idx>=11?'Commencer l’aventure':'Continuer';
       primary.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation()}window.ob11Next&&window.ob11Next();return false};
       primary.setAttribute('onclick','return ob11Next()');
+      bindRequiredButton(ov,primary,idx);
     }
   }
   var nativeRender=window.renderOb11;
-  if(typeof nativeRender==='function'&&!nativeRender.__gsSignupStrictV3){window.renderOb11=function(){var r=nativeRender.apply(this,arguments);setTimeout(applySignupOnlyPatch,0);setTimeout(applySignupOnlyPatch,90);return r};window.renderOb11.__gsSignupStrictV3=true}
+  if(typeof nativeRender==='function'&&!nativeRender.__gsSignupStrictV4){window.renderOb11=function(){var r=nativeRender.apply(this,arguments);setTimeout(applySignupOnlyPatch,0);setTimeout(applySignupOnlyPatch,120);return r};window.renderOb11.__gsSignupStrictV4=true}
   var nativeNext=window.ob11Next;
   window.ob11Next=async function(){
     if(!isSignup()&&typeof nativeNext==='function')return nativeNext.apply(this,arguments);
     markSignup();readCurrent();var idx=stepIndex();
-    if(idx===2&&!await ensureUsernameAvailable())return false;
+    if(idx<=2&&!await validateRequiredStep(idx))return false;
     try{if(idx===9&&typeof window.ob11SaveNutrition==='function')window.ob11SaveNutrition()}catch(e){}
     try{if(idx===10&&typeof window.ob11SaveProgram==='function')window.ob11SaveProgram()}catch(e){}
     if(idx<11){window.OB11.step=idx+1;if(typeof window.renderOb11==='function')window.renderOb11();return false}
@@ -15992,7 +16043,8 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
   window.ob11SkipStep=function(){
     if(!isSignup()&&typeof nativeSkip==='function')return nativeSkip.apply(this,arguments);
     markSignup();readCurrent();var idx=stepIndex();
-    if(idx<11){window.OB11.step=idx+1;if(typeof window.renderOb11==='function')window.renderOb11();return false}
+    if(idx<4){toast('Email, mot de passe et username sont obligatoires.');return false}
+    if(idx>=4&&idx<=10){window.OB11.step=idx+1;if(typeof window.renderOb11==='function')window.renderOb11();return false}
     return false;
   };
   var oldAuthCheck=window.authCheckUsername;
@@ -16006,11 +16058,11 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
     window.__gsAuthUsernameTimer=setTimeout(async function(){var st=await usernameStatus(username);hint.style.color=st.ok?'var(--grn)':'var(--red)';hint.textContent=st.msg},280);
   };
   var oldDoSignup=window.doSignup;
-  if(typeof oldDoSignup==='function'&&!oldDoSignup.__gsUsernameStrictV3){window.doSignup=async function(){var username=normalizeUsername((($('auth-username')||{}).value)||'');if(username){var st=await usernameStatus(username);if(!st.ok){var err=$('auth-err-s3')||$('auth-err-s1')||$('auth-err');if(err)err.textContent=st.msg;toast(st.msg);return false}}return oldDoSignup.apply(this,arguments)};window.doSignup.__gsUsernameStrictV3=true}
+  if(typeof oldDoSignup==='function'&&!oldDoSignup.__gsUsernameStrictV4){window.doSignup=async function(){var username=normalizeUsername((($('auth-username')||{}).value)||'');if(username){var st=await usernameStatus(username);if(!st.ok){var err=$('auth-err-s3')||$('auth-err-s1')||$('auth-err');if(err)err.textContent=st.msg;toast(st.msg);return false}}return oldDoSignup.apply(this,arguments)};window.doSignup.__gsUsernameStrictV4=true}
   var prevAuth=window.authShowView;
-  if(typeof prevAuth==='function'&&!prevAuth.__gsSignupStrictV3){window.authShowView=function(view){if(view==='signup'||view==='signup11'||view==='signup-s1'||view==='onboarding')markSignup();var r=prevAuth.apply(this,arguments);setTimeout(applySignupOnlyPatch,0);return r};window.authShowView.__gsSignupStrictV3=true}
+  if(typeof prevAuth==='function'&&!prevAuth.__gsSignupStrictV4){window.authShowView=function(view){if(view==='signup'||view==='signup11'||view==='signup-s1'||view==='onboarding')markSignup();var r=prevAuth.apply(this,arguments);setTimeout(applySignupOnlyPatch,0);return r};window.authShowView.__gsSignupStrictV4=true}
   var prevSignup=window.gsOpenSignupFlow;
-  if(typeof prevSignup==='function'&&!prevSignup.__gsSignupStrictV3){window.gsOpenSignupFlow=function(){markSignup();var r=prevSignup.apply(this,arguments);setTimeout(applySignupOnlyPatch,0);return r};window.gsOpenSignupFlow.__gsSignupStrictV3=true}
+  if(typeof prevSignup==='function'&&!prevSignup.__gsSignupStrictV4){window.gsOpenSignupFlow=function(){markSignup();var r=prevSignup.apply(this,arguments);setTimeout(applySignupOnlyPatch,0);return r};window.gsOpenSignupFlow.__gsSignupStrictV4=true}
   document.addEventListener('click',function(ev){
     var btn=ev.target&&ev.target.closest?ev.target.closest('#gs-onboard-v11 .gs-ob11-actions .primary,#gs-onboard-v4 .gs-onboard-actions .primary'):null;
     if(!btn||!isSignup())return;
@@ -16019,7 +16071,6 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(applySignupOnlyPatch,120)});else setTimeout(applySignupOnlyPatch,120);
 })();
 </script>
-
 
 </body>
 </html>
