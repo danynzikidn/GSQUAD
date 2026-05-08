@@ -3270,13 +3270,13 @@ function saveAPIKey(){
 // SUPABASE CONFIG
 // ============================================================
 var SUPABASE_URL = 'https://wtaalaenhthcvcztsqjb.supabase.co';
-// Remplacer cette valeur par la vraie anon public key Supabase (JWT qui commence par eyJ...).
-var SUPABASE_KEY = 'PASTE_SUPABASE_ANON_KEY_HERE';
-function gsIsValidSupabaseKey(k){return typeof k==='string' && /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+=*$/.test(k.trim());}
+// Clé publique Supabase côté client : accepte les nouvelles publishable keys et les anciennes anon keys JWT.
+var SUPABASE_KEY = 'sb_publishable_-NIiFXvur7ktZCe2nfkl9g_u1urf6t-';
+function gsIsValidSupabaseKey(k){k=(k||'').trim();return typeof k==='string' && (/^sb_publishable_[A-Za-z0-9_-]+$/.test(k) || /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+=*$/.test(k));}
 var _supa = null;
 try{
  _supa = (window.supabase && gsIsValidSupabaseKey(SUPABASE_KEY)) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY.trim()) : null;
- if(!_supa && SUPABASE_KEY && SUPABASE_KEY.indexOf('PASTE_')!==0){console.warn('Supabase désactivé: anon key invalide.');}
+ if(!_supa && SUPABASE_KEY && SUPABASE_KEY.indexOf('PASTE_')!==0){console.warn('Supabase désactivé: clé publique invalide.');}
 }catch(e){console.warn('Supabase init désactivé:', e);_supa=null;}
 var _supaUser = null;
 var _svTimeout = null;
@@ -3489,7 +3489,14 @@ async function afterAuth(user) {
 }
 
 async function initAuth() {
- if (!_supa) { bootApp(); return; }
+ if (!_supa) {
+ try {
+  document.getElementById('auth-screen').style.display = 'flex';
+  if (typeof authShowView === 'function') authShowView('login');
+  authShowErr('Connexion cloud désactivée : ajoute une clé publique Supabase valide.');
+ } catch(e) { console.warn('Supabase non configuré:', e); }
+ return;
+ }
  document.getElementById('auth-screen').style.display = 'flex';
  if (typeof authShowView === 'function') authShowView('landing');
  document.getElementById('onboard').style.display = 'none';
@@ -15574,6 +15581,124 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
   window.gsRenderBattleSquadPage=function(){var root=document.getElementById('battle-squad-page');if(!root)return;var arr=ranked(),top=arr[0],page=window.gsBattleBottomPage||'progression',html='<div class="gs-battle-page">';html+='<section class="gs-battle-page-hero"><div class="gs-battle-kicker">Mode conquête</div><h2>Battle Squad</h2><p>La page où ta squad avance en équipe : missions, boss, paliers, badges et contribution de chaque membre.</p><div class="gs-battle-hero-actions"><button class="gs-battle-page-btn primary" onclick="window.gsOpenPrivateSquads&&window.gsOpenPrivateSquads()">Gérer ma Squad privée</button><button class="gs-battle-page-btn" onclick="gsToggleBattleHelp()">Battle Squad, c’est quoi ?</button></div></section>';html+='<div class="gs-battle-help" id="gs-battle-help"><b>Simple : ta squad combat ensemble.</b>Les XP, séances et kilomètres des membres alimentent des missions communes. Les paliers débloquent des badges. Les boss deviennent plus durs quand la squad progresse.</div>';if(!top){html+='<div class="gs-battle-page-empty"><b>Aucune Squad privée active.</b>Crée d’abord ton cercle, ajoute tes membres, puis reviens ici pour lancer les missions Battle Squad.<div style="margin-top:13px"><button class="gs-battle-page-btn primary" onclick="window.gsOpenPrivateSquads&&window.gsOpenPrivateSquads()">Créer une Squad privée</button></div></div></div>';root.innerHTML=html;return}var sq=top.sq;html+='<div class="gs-battle-page-stat"><div><strong>'+E(sq.name||'Ta Squad')+'</strong><small>'+top.count+' membre'+(top.count>1?'s':'')+' · Ligue '+league(top.xp)+'</small></div><div class="gs-battle-page-score">'+top.xp+' XP</div></div>';html+=overview(top);html+=tabs(page);if(page==='missions')html+=missions(top);else if(page==='battle')html+=battle(top);else if(page==='contribution')html+=contribution(top);else html+=progression(top);html+='<div class="gs-battle-page-row"><div><b>Où gérer les membres ?</b><span>La création, les ajouts et les requêtes restent dans Squad privée.</span></div><button class="gs-battle-page-btn" onclick="window.gsOpenPrivateSquads&&window.gsOpenPrivateSquads()">Squad privée</button></div></div>';root.innerHTML=html};
   var oldGo=window.goTab;if(typeof oldGo==='function'&&!oldGo.__gsBattleBottomPage20260508){window.goTab=function(name,el){var r=oldGo.apply(this,arguments);if(name==='battle')setTimeout(window.gsRenderBattleSquadPage,0);return r};window.goTab.__gsBattleBottomPage20260508=true}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(window.gsRenderBattleSquadPage,300)});else setTimeout(window.gsRenderBattleSquadPage,300);
+})();
+</script>
+
+
+
+<!-- G-SQUAD PATCH - connexion cloud Supabase, anti-mode local silencieux -->
+<style id="gs-cloud-auth-fix-css">
+.gs-cloud-auth-card{margin:0 0 14px;background:rgba(255,199,92,.10);border:1px solid rgba(255,199,92,.28);border-radius:18px;padding:14px;color:var(--txt);line-height:1.42}.gs-cloud-auth-card b{display:block;font-size:15px;font-weight:1000;letter-spacing:-.02em;margin-bottom:4px}.gs-cloud-auth-card span{display:block;color:var(--txt2);font-size:12px;font-weight:850}.gs-cloud-auth-card code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#FFC75C;font-size:11px;font-weight:900}.gs-cloud-auth-card.ok{background:rgba(115,214,162,.10);border-color:rgba(115,214,162,.24)}.gs-cloud-auth-card.ok code{color:#73D6A2}
+</style>
+<script id="gs-cloud-auth-fix-20260508">
+(function(){
+  'use strict';
+  function $(id){return document.getElementById(id)}
+  function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
+  function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('ath7',JSON.stringify(window.state||{}))}catch(e){}}
+  function validKey(k){k=(k||'').trim();return typeof k==='string' && (/^sb_publishable_[A-Za-z0-9_-]+$/.test(k) || /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+=*$/.test(k))}
+  function configuredKey(){
+    var k='';
+    try{if(typeof window.GS_SUPABASE_KEY==='string')k=window.GS_SUPABASE_KEY}catch(e){}
+    try{var m=document.querySelector('meta[name="gs-supabase-key"]');if(!k&&m)k=m.getAttribute('content')||''}catch(e){}
+    try{if(!k&&typeof SUPABASE_KEY==='string')k=SUPABASE_KEY}catch(e){}
+    return (k||'').trim();
+  }
+  function cloudReady(){
+    try{if(window._supa&&window._supa.auth)return true}catch(e){}
+    var key=configuredKey();
+    if(!validKey(key))return false;
+    try{
+      if(window.supabase&&window.supabase.createClient){
+        var url=(typeof SUPABASE_URL==='string'&&SUPABASE_URL)||window.SUPABASE_URL||'';
+        window._supa=window.supabase.createClient(url,key);
+        try{_supa=window._supa}catch(e){}
+        return !!(window._supa&&window._supa.auth);
+      }
+    }catch(e){console.warn('Supabase init error:',e)}
+    return false;
+  }
+  function clearGuestMode(){
+    try{sessionStorage.removeItem('gs_guest_session')}catch(e){}
+    try{localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped')}catch(e){}
+    try{S().guestMode=false;save()}catch(e){}
+    var b=$('guest-banner');if(b)try{b.remove()}catch(e){}
+    try{document.body.classList.remove('gs-guest-confirmed')}catch(e){}
+  }
+  function showAuth(view){
+    var auth=$('auth-screen');
+    if(auth){auth.style.display='flex';auth.classList&&auth.classList.add('open')}
+    var ob=$('onboard');if(ob)ob.style.display='none';
+    var ob11=$('gs-onboard-v11');if(ob11)ob11.remove();
+    try{if(typeof window.authShowView==='function')window.authShowView(view||'login')}catch(e){}
+  }
+  function card(msg,ok){
+    var auth=$('auth-screen'); if(!auth)return;
+    var panel=$('auth-view-login')||auth.querySelector('.auth-box')||auth;
+    var old=$('gs-cloud-auth-card'); if(old)old.remove();
+    var html='<div id="gs-cloud-auth-card" class="gs-cloud-auth-card '+(ok?'ok':'')+'"><b>'+(ok?'Connexion cloud prête':'Connexion cloud inactive')+'</b><span>'+msg+'</span></div>';
+    panel.insertAdjacentHTML('afterbegin',html);
+  }
+  function showMissing(){
+    showAuth('login');
+    card('Le fichier ne contient pas encore de clé publique Supabase valide. Le mode local ne démarre plus automatiquement : ajoute une clé <code>sb_publishable_...</code> ou une ancienne anon key JWT dans <code>SUPABASE_KEY</code> pour activer connexion, inscription, amis et sauvegarde cloud.',false);
+    try{if(typeof window.authShowErr==='function')window.authShowErr('Supabase non configuré : ajoute une clé publique valide.')}catch(e){}
+  }
+  function showOnline(){var old=$('gs-cloud-auth-card');if(old)old.remove();}
+  function requireCloud(view){if(cloudReady()){showOnline();return true}showMissing();return false}
+
+  var oldInit=window.initAuth;
+  if(typeof oldInit==='function'){
+    window.initAuth=async function(){
+      if(!requireCloud('login'))return;
+      return oldInit.apply(this,arguments);
+    };
+  }
+
+  var oldLogin=window.doLogin;
+  if(typeof oldLogin==='function'){
+    window.doLogin=async function(){
+      clearGuestMode();
+      if(!requireCloud('login'))return;
+      return oldLogin.apply(this,arguments);
+    };
+  }
+
+  var oldSignup=window.doSignup;
+  if(typeof oldSignup==='function'){
+    window.doSignup=async function(){
+      clearGuestMode();
+      if(!requireCloud('signup-s3'))return;
+      return oldSignup.apply(this,arguments);
+    };
+  }
+
+  var oldAfter=window.afterAuth;
+  if(typeof oldAfter==='function'){
+    window.afterAuth=async function(user){
+      clearGuestMode();
+      var r=await oldAfter.apply(this,arguments);
+      try{if(user){window._supaUser=user;S().guestMode=false;save();}}catch(e){}
+      return r;
+    };
+  }
+
+  window.gsCloudAuthStatus=function(){
+    if(cloudReady()){showAuth('login');card('Supabase est initialisé. Tu peux te connecter ou créer un compte.',true);return true;}
+    showMissing();return false;
+  };
+
+  function bootCheck(){
+    if(!cloudReady()){
+      var guest=false;try{guest=sessionStorage.getItem('gs_guest_session')==='1'&&S().guestMode===true}catch(e){}
+      if(!guest)showMissing();
+    }else{
+      showOnline();
+      try{window._supa.auth.getSession().then(function(res){var u=res&&res.data&&res.data.session&&res.data.session.user;if(u){window._supaUser=u;S().guestMode=false;save();}})}catch(e){}
+    }
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(bootCheck,80);setTimeout(bootCheck,700);});
+  else {setTimeout(bootCheck,80);setTimeout(bootCheck,700);}
 })();
 </script>
 
