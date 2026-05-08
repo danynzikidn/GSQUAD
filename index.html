@@ -7598,28 +7598,60 @@ var coachHistory=[];function saveCoachMemory(){try{state.coachMemory=[]}catch(e)
  var r=new FileReader(); r.onload=function(){ S().profil=S().profil||{}; S().profil.avatar=r.result; save(); nt('Photo de profil ajoutée'); if(typeof openProfil==='function')openProfil();}; r.readAsDataURL(file);
  };
 
- // Robust username login: username -> email column OR data.email fallback.
+ // Robust username login: username -> email, sans modifier l'interface.
+ async function gsResolveLoginEmail(input){
+  input=(input||'').trim();
+  if(!input)return '';
+  if(input.indexOf('@')>0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input))return input.toLowerCase();
+  var uname=input.replace(/^@/,'').trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+  if(!uname||!window._supa)return '';
+
+  // 1) RPC Supabase si installé: fiable même avec RLS.
+  try{
+   var rpc=await window._supa.rpc('resolve_login_email',{login_input:uname});
+   if(rpc&&!rpc.error&&rpc.data){return Array.isArray(rpc.data)?(rpc.data[0]||''):rpc.data;}
+  }catch(e){}
+
+  // 2) Colonne profiles.username.
+  try{
+   var r=await window._supa.from('profiles').select('email,username,data').eq('username',uname).maybeSingle();
+   var row=r&&r.data?r.data:null;
+   if(row&&(row.email||(row.data&&row.data.email)||(row.data&&row.data.profil&&row.data.profil.email)))return row.email||(row.data&&row.data.email)||(row.data&&row.data.profil&&row.data.profil.email);
+  }catch(e){}
+
+  // 3) Anciennes sauvegardes: username parfois stocké dans data.profil.username.
+  try{
+   var r2=await window._supa.from('profiles').select('email,username,data').eq('data->profil->>username',uname).limit(1);
+   var row2=r2&&r2.data&&r2.data[0]?r2.data[0]:null;
+   if(row2&&(row2.email||(row2.data&&row2.data.email)||(row2.data&&row2.data.profil&&row2.data.profil.email)))return row2.email||(row2.data&&row2.data.email)||(row2.data&&row2.data.profil&&row2.data.profil.email);
+  }catch(e){}
+
+  // 4) Fallback client limité: garde la reconnexion possible sur anciennes lignes mal normalisées.
+  try{
+   var r3=await window._supa.from('profiles').select('email,username,data').limit(200);
+   var list=(r3&&r3.data)||[];
+   for(var i=0;i<list.length;i++){
+    var u=list[i]||{},d=u.data||{},pr=d.profil||{};
+    var candidates=[u.username,pr.username,d.username,pr.user,pr.handle].map(function(x){return String(x||'').replace(/^@/,'').trim().toLowerCase()});
+    if(candidates.indexOf(uname)>-1){return u.email||d.email||pr.email||'';}
+   }
+  }catch(e){}
+  return '';
+ }
  var oldLogin=window.doLogin;
  window.doLogin=async function(){
- var input=($('auth-email')||{}).value||'', pass=($('auth-password')||{}).value||''; input=input.trim();
- if(!input||!pass){try{authShowView('login');authShowErr('Remplis tous les champs.')}catch(e){} return;}
- try{setAuthLoading(true)}catch(e){}
- var email=input;
- if(!window._supa||!window._supa.auth){try{setAuthLoading(false);authShowErr('Connexion Supabase indisponible.')}catch(e){} return;}
- if((!input.includes('@')) || input[0]==='@'){
- var uname=input.replace(/^@/,'').toLowerCase();
- try{
- var lookup=await window._supa.from('profiles').select('email,data').eq('username',uname).maybeSingle();
- var row=lookup.data||{}; email=row.email || (row.data&&row.data.email) || (row.data&&row.data.auth_email) || '';
- }catch(e){}
- if(!email){try{setAuthLoading(false);authShowErr('Utilisateur introuvable ou email non enregistré sur le profil.')}catch(e){} return;}
- }
- try{
- var res=await window._supa.auth.signInWithPassword({email:email,password:pass});
- try{setAuthLoading(false)}catch(e){}
- if(res.error){try{authShowErr('Email / username ou mot de passe incorrect.')}catch(e){} return;}
- await afterAuth(res.data.user);
- }catch(e){try{setAuthLoading(false);authShowErr('Erreur connexion: '+e.message)}catch(_){} }
+  var input=($('auth-email')||{}).value||'', pass=($('auth-password')||{}).value||''; input=input.trim();
+  if(!input||!pass){try{authShowView('login');authShowErr('Remplis tous les champs.')}catch(e){} return;}
+  try{setAuthLoading(true)}catch(e){}
+  if(!window._supa||!window._supa.auth){try{setAuthLoading(false);authShowErr('Connexion Supabase indisponible.')}catch(e){} return;}
+  try{
+   var email=await gsResolveLoginEmail(input);
+   if(!email){try{setAuthLoading(false);authShowErr('Utilisateur introuvable. Vérifie le @username.')}catch(e){} return;}
+   var res=await window._supa.auth.signInWithPassword({email:email,password:pass});
+   try{setAuthLoading(false)}catch(e){}
+   if(res.error){try{authShowErr('Email / username ou mot de passe incorrect.')}catch(e){} return;}
+   await afterAuth(res.data.user);
+  }catch(e){try{setAuthLoading(false);authShowErr('Erreur connexion: '+(e&&e.message?e.message:e))}catch(_){} }
  };
 
  // Robust user search modal - fixes undefined index, searches username/display/email if allowed.
@@ -15363,352 +15395,547 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
 })();
 </script>
 
-<!-- G-SQUAD PATCH - inscription uniquement: auth obligatoire + bouton final fiable -->
-<script id="gs-signup-auth-final-fix-20260508">
+<!-- G-SQUAD PATCH - inscription complète en onboarding 12 étapes -->
+<script id="gs-signup-supabase-first-fix">
 (function(){
-  if(window.__gsSignupAuthFinalFix20260508)return;window.__gsSignupAuthFinalFix20260508=true;
-  function $(id){return document.getElementById(id)}
-  function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
-  function P(){return S().profil}
-  function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('ath7',JSON.stringify(window.state||{}))}catch(e){}}
-  function toast(t){try{if(typeof window.notify==='function')window.notify(t);else if(typeof window.nt==='function')window.nt(t);else console.log(t)}catch(e){}}
-  function overlay(){return $('gs-onboard-v11')||$('gs-onboard-v4')}
-  function markSignup(){window.OB11=window.OB11||{step:0,total:12,password:''};window.OB11.total=12;window.OB11.mode='signup'}
-  function isSignup(){var ov=overlay();return !!(ov&&window.OB11&&window.OB11.mode==='signup')}
-  function stepIndex(){return Math.max(0,Math.min(11,Number((window.OB11&&window.OB11.step)||0)))}
-  function steps(){return ['email','password','username','name','height','weight','gym','bmi','goal','nutrition','program','start']}
-  function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim())}
-  function validPassword(v){v=String(v||'');return v.length>=6&&/[A-ZÀ-ÖØ-Þ]/.test(v)&&/[^A-Za-z0-9]/.test(v)}
-  function normalizeUsername(v){return String(v||'').trim().replace(/^@/,'').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()}
-  function withTimeout(p,ms,label){
-    return new Promise(function(resolve,reject){
-      var done=false,t=setTimeout(function(){if(done)return;done=true;reject(new Error(label||'timeout'))},ms);
-      Promise.resolve(p).then(function(v){if(done)return;done=true;clearTimeout(t);resolve(v)},function(e){if(done)return;done=true;clearTimeout(t);reject(e)});
-    });
-  }
-  function setStep(i,msg){markSignup();window.OB11.step=Math.max(0,Math.min(11,i));if(typeof window.renderOb11==='function')window.renderOb11();if(msg)toast(msg)}
-  function readCurrent(){
-    markSignup();
-    var idx=stepIndex(),id=steps()[idx],p=P(),main=$('ob11-main-input');
-    if(id==='email'&&main)p.email=String(main.value||'').trim().toLowerCase();
-    if(id==='password'){
-      var pw=$('ob11-password-input');
-      if(pw)window.OB11.password=String(pw.value||'');
+ if(window.__gsSignupFullProfile20260508)return;window.__gsSignupFullProfile20260508=true;
+ function $(id){return document.getElementById(id)}
+ function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
+ function P(){return S().profil}
+ function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('ath7',JSON.stringify(window.state||{}))}catch(e){}}
+ function toast(t){try{if(typeof window.notify==='function')window.notify(t);else if(typeof window.nt==='function')window.nt(t);else console.log(t)}catch(e){}}
+ function cleanLocalSignupFlags(){try{sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped')}catch(e){}try{S().guestMode=false;delete P().localPasswordSet;delete P().passwordLastChangedAt}catch(e){}}
+ function hideAuthAndLegacy(){var auth=$('auth-screen');if(auth){auth.style.display='none';auth.classList&&auth.classList.remove('open')}var ob=$('onboard');if(ob)ob.style.display='none';var ob11=$('gs-onboard-v11');if(ob11)ob11.remove()}
+ function openSignupWizard(){cleanLocalSignupFlags();hideAuthAndLegacy();window.OB11=window.OB11||{step:0,total:12,password:''};window.OB11.total=12;window.OB11.step=0;window.OB11.mode='signup';if(typeof window.openOnboardingWizard==='function')return window.openOnboardingWizard(0);if(typeof window.renderOb11==='function')return window.renderOb11()}
+ function applySignupLabels(){try{if(!window.OB11||window.OB11.mode!=='signup')return;var idx=Number(window.OB11.step||0),sub=document.querySelector('#gs-onboard-v11 .gs-ob11-sub'),hint=document.querySelector('#gs-onboard-v11 .gs-ob11-hint'),skip=document.querySelector('#gs-onboard-v11 .gs-ob11-skip');if(idx===0){if(sub)sub.textContent='Étape 1/12. Email obligatoire pour créer ton compte.';if(hint)hint.textContent='Il servira à te connecter et synchroniser ta progression.'}if(idx===1){if(sub)sub.textContent='Étape 2/12. Mot de passe obligatoire pour sécuriser ton compte.'}if(idx===2){if(sub)sub.textContent='Étape 3/12. Username obligatoire, visible par ta Squad.'}if(skip)skip.style.display=idx<=2?'none':''}catch(e){}}
+ var oldRender=window.renderOb11;
+ if(typeof oldRender==='function'&&!oldRender.__gsSignupFullProfile){window.renderOb11=function(){var r=oldRender.apply(this,arguments);setTimeout(applySignupLabels,0);return r};window.renderOb11.__gsSignupFullProfile=true;}
+ var oldOpen=window.openOnboardingWizard;
+ if(typeof oldOpen==='function'&&!oldOpen.__gsSignupModeKeep){window.openOnboardingWizard=function(step){var r=oldOpen.apply(this,arguments);setTimeout(applySignupLabels,0);return r};window.openOnboardingWizard.__gsSignupModeKeep=true;}
+ var prevAuth=window.authShowView;
+ window.authShowView=function(view){if(view==='signup'||view==='signup11'||view==='signup-s1'||view==='onboarding')return openSignupWizard();if(typeof prevAuth==='function')return prevAuth.apply(this,arguments);['landing','login','signup-s1','signup-s2','signup-s3'].forEach(function(v){var el=$('auth-view-'+v);if(el)el.style.display=(v===(view||'landing'))?'':'none'})};
+ window.gsOpenSignupFlow=openSignupWizard;
+ window.openSignup11=openSignupWizard;
+ function rewriteSignupButtons(){document.querySelectorAll('button').forEach(function(btn){var oc=btn.getAttribute('onclick')||'';if(oc.indexOf("authShowView('signup-s1')")!==-1||oc.indexOf('openSignup11()')!==-1||oc.indexOf('gsOpenSignupFlow()')!==-1){btn.setAttribute('onclick',"authShowView('signup-s1')")}})}
+ async function createSupabaseAccount(){cleanLocalSignupFlags();var p=P(),email=String(p.email||'').trim().toLowerCase(),pass=(window.OB11&&window.OB11.password)||'',username=String(p.username||'').trim().replace(/^@/,'').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();p.email=email;p.username=username;save();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){window.OB11.step=0;window.renderOb11&&window.renderOb11();toast('Ajoute un email valide pour créer ton compte.');return false}if(!pass||pass.length<6){window.OB11.step=1;window.renderOb11&&window.renderOb11();toast('Ajoute un mot de passe valide.');return false}if(!username||username.length<3){window.OB11.step=2;window.renderOb11&&window.renderOb11();toast('Choisis un username de 3 caractères minimum.');return false}if(window._supaUser)return true;if(!window._supa||!window._supa.auth){toast('Supabase indisponible. Réessaie dans quelques secondes.');return false}try{var check=await window._supa.from('profiles').select('id').eq('username',username).maybeSingle();if(check&&check.data){window.OB11.step=2;window.renderOb11&&window.renderOb11();toast('Ce @username est déjà pris.');return false}}catch(e){console.warn('username check skipped',e)}try{var res=await window._supa.auth.signUp({email:email,password:pass,options:{data:{username:username,display_name:p.name||username}}});if(res.error){toast(res.error.message||'Création du compte impossible.');return false}var user=res.data&&res.data.user;if(user){window._supaUser=user;try{if(typeof _supaUser!=='undefined')_supaUser=user}catch(e){}try{await window._supa.from('profiles').upsert({id:user.id,email:email,username:username,display_name:p.name||username,data:(typeof window.gsSafeSupabaseState==='function'?window.gsSafeSupabaseState(S()):S()),updated_at:new Date().toISOString()},{onConflict:'id'})}catch(e){console.warn('profile upsert failed',e)}}try{window.OB11.password=''}catch(e){}save();return true}catch(e){console.error('signup failed',e);toast('Création du compte impossible. Réessaie.');return false}}
+ var oldNext=window.ob11Next;
+ if(typeof oldNext==='function'&&!oldNext.__gsSignupFullProfile){window.ob11Next=async function(){var idx=window.OB11&&typeof window.OB11.step==='number'?window.OB11.step:0;if(window.OB11&&window.OB11.mode==='signup'&&idx>=11){var ok=await createSupabaseAccount();if(!ok)return}return oldNext.apply(this,arguments)};window.ob11Next.__gsSignupFullProfile=true;}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(rewriteSignupButtons,60);setTimeout(rewriteSignupButtons,500);setTimeout(rewriteSignupButtons,1400)});else{setTimeout(rewriteSignupButtons,60);setTimeout(rewriteSignupButtons,500);setTimeout(rewriteSignupButtons,1400)}
+})();
+</script>
+
+
+<style id="gs-walkthrough-2026-v2">
+/* Backdrop allégé : on voit l'app derrière */
+.gs-walk-ov{position:fixed;inset:0;z-index:99994;background:rgba(0,0,0,.42);opacity:0;transition:opacity .25s ease;pointer-events:none}
+.gs-walk-ov.on{opacity:1;pointer-events:auto}
+/* Spotlight avec halo lumineux + dimming léger */
+.gs-walk-spot{position:fixed;z-index:99995;border:2.5px solid #F4F0EA;border-radius:20px;box-shadow:0 0 0 9999px rgba(0,0,0,.45),0 0 28px rgba(143,185,255,.55),0 0 0 4px rgba(143,185,255,.18);pointer-events:none;transition:left .25s ease,top .25s ease,width .25s ease,height .25s ease}
+.gs-walk-spot.pulse{animation:gsWalkPulse 1.6s ease-in-out infinite}
+@keyframes gsWalkPulse{0%,100%{box-shadow:0 0 0 9999px rgba(0,0,0,.45),0 0 24px rgba(143,185,255,.45),0 0 0 4px rgba(143,185,255,.18)}50%{box-shadow:0 0 0 9999px rgba(0,0,0,.45),0 0 44px rgba(143,185,255,.75),0 0 0 7px rgba(143,185,255,.28)}}
+/* Carte tooltip */
+.gs-walk-card{position:fixed;left:14px;right:14px;z-index:99996;background:linear-gradient(160deg,#0E1320,#070A0E);border:1px solid rgba(255,255,255,.12);border-radius:24px;color:#fff;padding:18px 18px 16px;box-shadow:0 22px 60px rgba(0,0,0,.55);transform:translateY(16px);opacity:0;transition:transform .25s cubic-bezier(.2,.8,.2,1),opacity .25s ease}
+.gs-walk-card.bottom{bottom:calc(env(safe-area-inset-bottom,0px) + 18px)}
+.gs-walk-card.top{top:calc(env(safe-area-inset-top,0px) + 18px)}
+.gs-walk-card.on{transform:translateY(0);opacity:1}
+.gs-walk-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.gs-walk-step{font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:1000;color:#8FB9FF}
+.gs-walk-skip{background:none;border:0;color:#7C8493;font-size:12px;font-weight:900;cursor:pointer;padding:4px 8px;font-family:inherit}
+.gs-walk-card b{display:block;font-size:20px;line-height:1.08;letter-spacing:-.035em;font-weight:1000;margin:0 0 8px}
+.gs-walk-card p{margin:0 0 14px;color:#C7CAD1;font-size:14px;line-height:1.48;font-weight:500}
+.gs-walk-prog{display:flex;gap:4px;margin-bottom:14px}
+.gs-walk-prog i{flex:1;height:3px;border-radius:99px;background:rgba(255,255,255,.12);transition:background .25s ease}
+.gs-walk-prog i.done{background:#8FB9FF}
+.gs-walk-prog i.cur{background:#F4F0EA}
+.gs-walk-actions{display:flex;gap:8px;align-items:stretch}
+.gs-walk-actions button{flex:1;border-radius:14px;padding:13px 14px;font-size:14px;font-weight:1000;font-family:inherit;cursor:pointer;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.05);color:#fff}
+.gs-walk-actions button:disabled{opacity:.35;cursor:not-allowed}
+.gs-walk-actions .gs-walk-next{flex:1.4;background:#F4F0EA;color:#071018;border-color:#F4F0EA}
+.gs-walk-actions .gs-walk-next.last{background:linear-gradient(135deg,#8FB9FF,#F4F0EA)}
+@media(min-width:560px){.gs-walk-card{left:auto;right:14px;width:360px}}
+
+/* Bouton flottant ? toujours accessible (sauf pendant le walkthrough) */
+.gs-walk-fab{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 100px);z-index:9000;width:48px;height:48px;border-radius:999px;border:1px solid rgba(143,185,255,.32);background:rgba(14,19,32,.92);color:#8FB9FF;font-size:22px;font-weight:1000;font-family:inherit;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.05) inset;transition:transform .18s ease,background .18s ease}
+.gs-walk-fab:hover,.gs-walk-fab:active{transform:scale(1.05);background:rgba(143,185,255,.18)}
+.gs-walk-fab.hidden{display:none}
+/* Visibilité du FAB gérée par showFab() selon la nav réelle */
+.gs-walk-fab.hidden{display:none!important}
+</style>
+<script id="gs-walkthrough-2026-v2-js">
+(function(){
+  if(window.__gsWalk2026v2)return;window.__gsWalk2026v2=true;
+
+  function $(s,r){return (r||document).querySelector(s)}
+  function exists(sel){try{var e=document.querySelector(sel);return e&&e.offsetParent!==null}catch(e){return false}}
+  function findTarget(sel){
+    if(!sel)return null;
+    var sels=String(sel).split(',');
+    for(var i=0;i<sels.length;i++){
+      var s=sels[i].trim();if(!s)continue;
+      try{var el=document.querySelector(s);if(el&&el.getBoundingClientRect)return el}catch(e){}
     }
-    if(id==='username'&&main)p.username=normalizeUsername(main.value);
-    if(id==='name'&&main){p.name=String(main.value||'').trim();var age=$('ob11-age'),gender=$('ob11-gender');if(age)p.age=Number(age.value||0)||'';if(gender)p.gender=gender.value||p.gender||'homme'}
-    if(id==='height'&&main)p.taille=Number(main.value||0)||'';
-    if(id==='weight'&&main)p.poids=Number(String(main.value||'').replace(',','.'))||'';
-    save();
-  }
-  function cleanLocalSignupFlags(){
-    try{sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped')}catch(e){}
-    try{S().guestMode=false;delete P().localPasswordSet;delete P().passwordLastChangedAt}catch(e){}
-  }
-  function safePayload(){
-    var out;
-    try{out=(typeof window.gsSafeSupabaseState==='function')?window.gsSafeSupabaseState(S()):JSON.parse(JSON.stringify(S()))}catch(e){out={profil:P()}}
-    try{if(out.profil&&typeof out.profil.avatar==='string'&&out.profil.avatar.indexOf('data:image')===0)out.profil.avatar=''}catch(e){}
-    try{if(Array.isArray(out.galerie)){out.galerie=out.galerie.map(function(x){var y=Object.assign({},x||{});if(typeof y.src==='string'&&y.src.indexOf('data:image')===0)y.src='';if(typeof y.url==='string'&&y.url.indexOf('data:image')===0)y.url='';return y})}}catch(e){}
-    return out;
-  }
-  async function usernameStatus(username){
-    username=normalizeUsername(username);
-    if(username.length<3)return {ok:false,msg:'Username trop court (3 caractères minimum).'};
-    if(!window._supa||!window._supa.from)return {ok:false,msg:'Connexion Supabase nécessaire pour vérifier le username.'};
-    try{
-      var q=window._supa.from('profiles').select('id').eq('username',username).limit(1);
-      var res=await withTimeout(q,5500,'username_timeout');
-      if(res&&res.error)return {ok:false,msg:'Impossible de vérifier le username. Réessaie.'};
-      var rows=(res&&res.data)||[],myId=(window._supaUser&&window._supaUser.id)||'';
-      var taken=rows.some(function(r){return r&&r.id&&String(r.id)!==String(myId)});
-      if(taken)return {ok:false,msg:'Ce @username est déjà pris.'};
-      return {ok:true,msg:'@'+username+' · disponible'};
-    }catch(e){return {ok:false,msg:'Vérification du username trop lente. Réessaie.'}}
-  }
-  async function ensureUsernameAvailable(){
-    var p=P(),username=normalizeUsername(p.username||(($('ob11-main-input')||{}).value||''));
-    p.username=username;save();
-    var st=await usernameStatus(username);
-    if(!st.ok){setStep(2,st.msg);return false}
-    return true;
-  }
-  async function trySignIn(email,password){
-    if(!window._supa||!window._supa.auth||!window._supa.auth.signInWithPassword)return null;
-    try{
-      var r=await withTimeout(window._supa.auth.signInWithPassword({email:email,password:password}),9000,'signin_timeout');
-      if(r&&r.error)return null;
-      var u=r&&r.data&&(r.data.user||(r.data.session&&r.data.session.user));
-      if(u){window._supaUser=u;try{if(typeof _supaUser!=='undefined')_supaUser=u}catch(e){};return u}
-    }catch(e){}
     return null;
   }
-  async function upsertProfile(user){
-    if(!user||!window._supa||!window._supa.from)return true;
-    var p=P(),email=String(p.email||'').trim().toLowerCase(),username=normalizeUsername(p.username);
+  function closeAllOverlays(){
+    // Ferme tous les overlays connus pour repartir d'un état propre
+    try{if(typeof window.closeProfil==='function')window.closeProfil()}catch(e){}
+    try{if(typeof window.closeHamburger==='function')window.closeHamburger()}catch(e){}
+    try{var qa=document.getElementById('quick-action-ov');if(qa)qa.remove()}catch(e){}
+    try{var notif=document.getElementById('gs-notif-ov');if(notif)notif.remove()}catch(e){}
+    try{var lb=document.getElementById('gs-leaderboard-ov')||document.getElementById('lb2-ov');if(lb)lb.remove()}catch(e){}
+  }
+  function gotoTab(tab){
     try{
-      var payload={id:user.id,email:email,username:username,display_name:p.name||username,data:safePayload(),updated_at:new Date().toISOString()};
-      var res=await withTimeout(window._supa.from('profiles').upsert(payload,{onConflict:'id'}),5000,'profile_timeout');
-      if(res&&res.error){
-        var msg=String(res.error.message||'').toLowerCase();
-        if(msg.indexOf('duplicate')>-1||msg.indexOf('unique')>-1){setStep(2,'Ce @username est déjà pris.');return false}
-        console.warn('profile upsert warning',res.error);
-      }
-    }catch(e){console.warn('profile upsert timeout/warning',e)}
-    return true;
+      // Cherche le bouton de la nav et le clique pour utiliser la logique d'origine
+      var btn=document.getElementById('nb-'+tab);
+      if(btn&&typeof window.goTab==='function'){window.goTab(tab,btn);return}
+      if(typeof window.goTab==='function'){window.goTab(tab,null);return}
+      // Fallback : activer manuellement le panel
+      ['accueil','seance','nutri','battle','journal'].forEach(function(t){
+        var p=document.getElementById('p-'+t);if(p)p.classList.remove('act');
+        var b=document.getElementById('nb-'+t);if(b)b.classList.remove('act');
+      });
+      var p=document.getElementById('p-'+tab);if(p)p.classList.add('act');
+      var b=document.getElementById('nb-'+tab);if(b)b.classList.add('act');
+    }catch(e){}
   }
-  async function createAccount(){
-    readCurrent();
-    var p=P(),email=String(p.email||'').trim().toLowerCase(),password=String((window.OB11&&window.OB11.password)||''),username=normalizeUsername(p.username);
-    p.email=email;p.username=username;save();
-    if(!validEmail(email)){setStep(0,'Ajoute un email valide pour créer ton compte.');return false}
-    if(!validPassword(password)){setStep(1,'Mot de passe: minimum 6 caractères, 1 majuscule et 1 caractère spécial.');return false}
-    if(!await ensureUsernameAvailable())return false;
-    if(!window._supa||!window._supa.auth){setStep(0,'Connexion Supabase indisponible. Réessaie.');return false}
-    if(window._supaUser){return upsertProfile(window._supaUser)}
+
+  // Définition du tour : 12 étapes qui couvrent vraiment l'app
+  // Chaque étape : titre, description, sélecteur, action préalable optionnelle
+  var STEPS=[
+    {
+      t:'Bienvenue, Athlète',
+      d:'Ce guide t’ouvre chaque page et t’explique ce qui compte. Tu peux le quitter à tout moment et le relancer via le bouton ? en bas à droite.',
+      sel:'#nb-accueil,.nav button:first-child',
+      action:function(){closeAllOverlays();gotoTab('accueil')}
+    },
+    {
+      t:'Ton accueil',
+      d:'Ton hub. Salut perso, raccourcis, dernières activités. C’est ici que tu lances tout.',
+      sel:'#p-accueil .gs-hero,#p-accueil .wrap > :first-child,#accueil-feed',
+      action:function(){closeAllOverlays();gotoTab('accueil')}
+    },
+    {
+      t:'Ta séance',
+      d:'L’onglet Séance. Tape pour ouvrir ton programme du jour.',
+      sel:'#nb-seance',
+      action:function(){closeAllOverlays();gotoTab('accueil')}
+    },
+    {
+      t:'Le terrain',
+      d:'Ton exercice en cours, tes sets à valider. Plus tu push, plus tu montes en XP. Le bouton play lance le timer, valide chaque set en bas.',
+      sel:'.sess-ex-card,#hero,.ex-hero,#p-seance .gs-hero',
+      action:function(){closeAllOverlays();gotoTab('seance')}
+    },
+    {
+      t:'Le bouton +',
+      d:'Au centre de la nav. Log libre, marche/randonnée GPS, biblio d’exos. Les raccourcis qui font gagner du temps.',
+      sel:'#nb-plus',
+      action:function(){closeAllOverlays();gotoTab('accueil')}
+    },
+    {
+      t:'Action rapide',
+      d:'Toutes tes options en un tap. Ajouter un set, partir marcher, ouvrir la biblio, prendre une photo de progression.',
+      sel:'#quick-action-ov .gs-menu-grid,#quick-action-ov .gs-menu-btn:first-child,#quick-action-ov',
+      action:function(){closeAllOverlays();setTimeout(function(){if(typeof window.openQuickAction==='function')window.openQuickAction()},120)}
+    },
+    {
+      t:'Battle Squad',
+      d:'Défie tes potes. Challenges, classements, qui pousse le plus. La compétition, en vrai.',
+      sel:'#nb-battle',
+      action:function(){closeAllOverlays();gotoTab('accueil')}
+    },
+    {
+      t:'Ton profil',
+      d:'Ton image dans la Squad : avatar, ranking, badges, stats publiques. On l’ouvre.',
+      sel:'#nb-profil',
+      action:function(){closeAllOverlays();gotoTab('accueil')}
+    },
+    {
+      t:'Profil = ta vitrine',
+      d:'Photo de profil, niveau, streak, abonnés, performance. Compléter mon profil débloque tout. Calcule ton programme et accède au classement direct depuis ici.',
+      sel:'#profil-ov .gs-prof-top,#profil-ov .gs-profile-clean,#profil-ov',
+      action:function(){closeAllOverlays();setTimeout(function(){if(typeof window.openProfil==='function')window.openProfil()},120)}
+    },
+    {
+      t:'Le menu',
+      d:'En haut à gauche : ton menu. Programme, journal, classement, salles de sport, musique. On l’ouvre.',
+      sel:'#app-header .gs-r-head-btn:first-child,[onclick*="openHamburger"]:not(.ham-btn)',
+      action:function(){closeAllOverlays();gotoTab('accueil')}
+    },
+    {
+      t:'Tout est dans le menu',
+      d:'Programme d’entraînement, Journal de bord, Classement global, Tes salles avec accès direct, Musique pour la séance. Le QG de l’app.',
+      sel:'#more-sh,.more-sh',
+      action:function(){closeAllOverlays();setTimeout(function(){if(typeof window.openHamburger==='function')window.openHamburger()},120)}
+    },
+    {
+      t:'Tes notifications',
+      d:'La cloche en haut à droite. Demandes d’amis, réactions, encouragements de la Squad. Tu rates rien.',
+      sel:'#gs-header-bell-v4,.gs-r-bell,[onclick*="openNotifications"]',
+      action:function(){closeAllOverlays();gotoTab('accueil')}
+    },
+    {
+      t:'Tu es prêt',
+      d:'Tu connais l’app. Tu peux relancer ce guide à tout moment via le bouton ? en bas à droite. À toi de jouer.',
+      sel:'#nb-accueil,.nav',
+      action:function(){closeAllOverlays();gotoTab('accueil')}
+    }
+  ];
+
+  var current=0,active=false;
+
+  function ensureDom(){
+    if($('#gs-walk-ov'))return;
+    document.body.insertAdjacentHTML('beforeend',
+      '<div class="gs-walk-ov" id="gs-walk-ov"></div>'+
+      '<div class="gs-walk-spot" id="gs-walk-spot" style="display:none"></div>'+
+      '<div class="gs-walk-card bottom" id="gs-walk-card"></div>'
+    );
+  }
+  function position(){
+    var step=STEPS[current];
+    var spot=$('#gs-walk-spot'),card=$('#gs-walk-card');
+    if(!spot||!card)return;
+    var target=findTarget(step.sel);
+    if(!target){
+      spot.style.display='none';
+      card.classList.remove('top');card.classList.add('bottom');
+      return;
+    }
+    // Scroll to target if needed (mais sans bouger les overlays modaux)
     try{
-      var res=await withTimeout(window._supa.auth.signUp({email:email,password:password,options:{data:{username:username,display_name:p.name||username}}}),12000,'signup_timeout');
-      if(res&&res.error){
-        var m=String(res.error.message||'');
-        var existing=/already|registered|exists|exist/i.test(m);
-        if(existing){
-          var signed=await trySignIn(email,password);
-          if(signed)return upsertProfile(signed);
-        }
-        toast(m||'Création du compte impossible.');return false;
-      }
-      var user=res&&res.data&&(res.data.user||(res.data.session&&res.data.session.user));
-      if(!user){toast('Compte non confirmé. Vérifie tes mails puis connecte-toi.');return false}
-      window._supaUser=user;try{if(typeof _supaUser!=='undefined')_supaUser=user}catch(e){}
-      return upsertProfile(user);
-    }catch(e){
-      console.error('signup timeout/error',e);
-      toast('Création du compte trop lente. Vérifie ta connexion puis réessaie.');
-      return false;
+      var inOverlay=target.closest('.profil-ov,.more-sh,#quick-action-ov,#gs-notif-ov');
+      if(!inOverlay)target.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});
+    }catch(e){}
+    var r=target.getBoundingClientRect();
+    var pad=8;
+    spot.style.display='block';
+    spot.style.left=Math.max(6,r.left-pad)+'px';
+    spot.style.top=Math.max(6,r.top-pad)+'px';
+    spot.style.width=Math.max(40,r.width+pad*2)+'px';
+    spot.style.height=Math.max(40,r.height+pad*2)+'px';
+    spot.classList.add('pulse');
+    // Décide si la carte va en haut ou en bas selon où est la cible
+    var vh=window.innerHeight,centerY=r.top+r.height/2;
+    if(centerY>vh*0.55){
+      card.classList.add('top');card.classList.remove('bottom');
+    }else{
+      card.classList.add('bottom');card.classList.remove('top');
     }
   }
-  function showAppNow(){
-    cleanLocalSignupFlags();
-    var s=S();s.onboarded=true;s.onboardingComplete=true;s.guestMode=false;
-    try{if(window.OB11){window.OB11.password='';window.OB11.mode='done'}}catch(e){}
-    save();
-    ['gs-onboard-v11','gs-onboard-v4'].forEach(function(id){var el=$(id);if(el)el.remove()});
-    var ob=$('onboard');if(ob){ob.style.display='none';ob.innerHTML=''}
-    var auth=$('auth-screen');if(auth){auth.style.display='none';auth.classList&&auth.classList.remove('open')}
-    try{if(typeof window.hideGates==='function')window.hideGates()}catch(e){}
-    try{if(typeof window.bootApp==='function')window.bootApp()}catch(e){console.error(e);var app=document.querySelector('.app');if(app)app.style.display='flex'}
-    setTimeout(function(){try{if(typeof window.goTab==='function')window.goTab('accueil',$('nb-accueil'))}catch(e){}},60);
-    toast('Bienvenue sur G-SQUAD');
-  }
-  function programLabelPatch(ov){
-    if(!ov)return;
-    var title=((ov.querySelector('.gs-ob11-title,.gs-onboard-title')||{}).textContent||'').toLowerCase();
-    if(title.indexOf('programme')<0&&title.indexOf('plan')<0)return;
-    ov.querySelectorAll('button').forEach(function(btn){var t=(btn.textContent||'').toLowerCase();if(t.indexOf('sauvegarder')>-1||t.indexOf('valider cette base')>-1||t.indexOf('appliquer à mon programme')>-1){btn.outerHTML='<div class="gs-ob11-edit-note">Modifiable après l\'inscription</div>'}});
-    ov.querySelectorAll('.gs-ob11-edit-note,.gs-ob11-static-note').forEach(function(el){if((el.textContent||'').toLowerCase().indexOf('modifiable')>-1)el.textContent="Modifiable après l'inscription"});
-  }
-  function passwordStatus(){
-    var p=String((($('ob11-password-input')||{}).value)||''),c=String((($('ob11-password-confirm')||{}).value)||''),ok=validPassword(p),same=!!p&&p===c;
-    var box=$('ob11-pass-rules');
-    if(box)box.innerHTML='<span class="'+(/[A-ZÀ-ÖØ-Þ]/.test(p)?'ok':'bad')+'">Majuscule</span> · <span class="'+(/[^A-Za-z0-9]/.test(p)?'ok':'bad')+'">Caractère spécial</span> · <span class="'+(p.length>=6?'ok':'bad')+'">6 caractères</span> · <span class="'+(same?'ok':'bad')+'">Confirmation</span>';
-    return ok&&same;
-  }
-  function refreshPrimary(){
-    var ov=overlay();if(!ov||!isSignup())return;
-    var idx=stepIndex(),p=P(),primary=ov.querySelector('.gs-ob11-actions .primary,.gs-onboard-actions .primary');
-    if(!primary)return;
-    var disabled=false;
-    if(idx===0)disabled=!validEmail((($('ob11-main-input')||{}).value)||p.email||'');
-    if(idx===1)disabled=!passwordStatus();
-    if(idx===2)disabled=normalizeUsername((($('ob11-main-input')||{}).value)||p.username||'').length<3;
-    primary.disabled=!!disabled;
-    primary.style.opacity=disabled?'.45':'';
-    primary.style.cursor=disabled?'not-allowed':'';
-  }
-  function bindStepInputs(){
-    var idx=stepIndex(),main=$('ob11-main-input'),p1=$('ob11-password-input'),p2=$('ob11-password-confirm');
-    [main,p1,p2].forEach(function(el){if(!el||el.__gsSignupFinalBound)return;el.__gsSignupFinalBound=true;el.addEventListener('input',function(){readCurrent();refreshPrimary()})});
-    if(idx===1){
-      if(p1)p1.type='password';if(p2)p2.type='password';
-      var toggle=$('ob11-password-toggle')||document.querySelector('.gs-ob11-eye');
-      if(toggle){toggle.textContent='Voir';toggle.onclick=function(){var a=$('ob11-password-input'),b=$('ob11-password-confirm'),show=a&&a.type==='password';if(a)a.type=show?'text':'password';if(b)b.type=show?'text':'password';toggle.textContent=show?'Masquer':'Voir'}}
-      passwordStatus();
+  function render(){
+    var step=STEPS[current];
+    var card=$('#gs-walk-card'),ov=$('#gs-walk-ov');
+    if(!card||!ov)return;
+    var prog='';
+    for(var i=0;i<STEPS.length;i++){
+      prog+='<i class="'+(i<current?'done':(i===current?'cur':''))+'"></i>';
     }
-    if(idx===2&&main){
-      var hint=$('ob11-username-hint');
-      if(!hint){main.insertAdjacentHTML('afterend','<div id="ob11-username-hint" class="gs-ob11-hint" style="min-height:18px;margin-top:8px"></div>');hint=$('ob11-username-hint')}
-      if(!main.__gsSignupUsernameBound){
-        var timer=null;
-        main.addEventListener('input',function(){main.value=normalizeUsername(main.value);P().username=main.value;save();refreshPrimary();clearTimeout(timer);var v=main.value;if(!hint)return;if(v.length<3){hint.style.color='var(--mut)';hint.textContent=v?'Minimum 3 caractères':'';return}hint.style.color='var(--mut)';hint.textContent='Vérification...';timer=setTimeout(async function(){var st=await usernameStatus(v);hint.style.color=st.ok?'var(--grn)':'var(--red)';hint.textContent=st.msg},320)});
-        main.__gsSignupUsernameBound=true;
-      }
+    var isLast=(current===STEPS.length-1);
+    card.innerHTML=
+      '<div class="gs-walk-card-head">'+
+        '<div class="gs-walk-step">Étape '+(current+1)+' / '+STEPS.length+'</div>'+
+        '<button class="gs-walk-skip" onclick="window.gsWalkClose()">Quitter</button>'+
+      '</div>'+
+      '<div class="gs-walk-prog">'+prog+'</div>'+
+      '<b>'+step.t+'</b>'+
+      '<p>'+step.d+'</p>'+
+      '<div class="gs-walk-actions">'+
+        '<button class="gs-walk-prev" '+(current===0?'disabled':'')+' onclick="window.gsWalkPrev()">Précédent</button>'+
+        '<button class="gs-walk-next '+(isLast?'last':'')+'" onclick="window.gsWalkNext()">'+(isLast?'Terminer':'Suivant')+'</button>'+
+      '</div>';
+    // Action préalable (ouverture page/menu) puis positionnement
+    if(typeof step.action==='function'){
+      try{step.action()}catch(e){}
     }
+    requestAnimationFrame(function(){
+      ov.classList.add('on');
+      card.classList.add('on');
+      // Laisser le temps aux overlays de s'ouvrir/animer avant de positionner
+      setTimeout(position,260);
+    });
   }
-  function applySignupPatch(){
-    var ov=overlay();if(!ov||!isSignup())return;
-    markSignup();var idx=stepIndex(),skip=ov.querySelector('.gs-ob11-skip,.gs-onboard-skip'),primary=ov.querySelector('.gs-ob11-actions .primary,.gs-onboard-actions .primary'),sub=ov.querySelector('.gs-ob11-sub,.gs-onboard-sub'),hint=ov.querySelector('.gs-ob11-hint,.gs-onboard-hint');
-    if(idx===0){if(sub)sub.textContent='Étape 1/12. Email obligatoire pour créer ton compte.';if(hint)hint.textContent='Entre ton email pour continuer.'}
-    if(idx===1){if(sub)sub.textContent='Étape 2/12. Mot de passe obligatoire pour sécuriser ton compte.'}
-    if(idx===2){if(sub)sub.textContent='Étape 3/12. Username obligatoire et unique.'}
-    if(skip){var visible=idx>=4&&idx<=10;skip.textContent='Passer cette étape - retrouvable dans Profil';skip.hidden=!visible;skip.style.display=visible?'':'none'}
-    if(primary){primary.textContent=idx>=11?'Commencer l’aventure':'Continuer';primary.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation()}return window.ob11Next&&window.ob11Next()};primary.setAttribute('onclick','return ob11Next()')}
-    programLabelPatch(ov);bindStepInputs();refreshPrimary();
-  }
-  async function nextSignup(){
-    if(!isSignup()){return window.__gsOldOb11NextFinal?window.__gsOldOb11NextFinal.apply(this,arguments):undefined}
-    markSignup();readCurrent();var idx=stepIndex();
-    if(idx===0&&!validEmail(P().email)){setStep(0,'Ajoute un email valide pour créer ton compte.');return false}
-    if(idx===1&&!passwordStatus()){setStep(1,'Crée un mot de passe valide et confirme-le.');return false}
-    if(idx===2&&!await ensureUsernameAvailable())return false;
-    try{if(idx===9&&typeof window.ob11SaveNutrition==='function')window.ob11SaveNutrition()}catch(e){}
-    try{if(idx===10&&typeof window.ob11SaveProgram==='function')window.ob11SaveProgram()}catch(e){}
-    if(idx<11){window.OB11.step=idx+1;if(typeof window.renderOb11==='function')window.renderOb11();return false}
-    return window.gsFinishSignupAdventure();
-  }
-  window.gsFinishSignupAdventure=async function(){
-    if(window.__gsFinishingSignupAdventure)return false;
-    window.__gsFinishingSignupAdventure=true;
-    var btn=document.querySelector('#gs-onboard-v11 .gs-ob11-actions .primary,#gs-onboard-v4 .gs-onboard-actions .primary'),old=btn?btn.textContent:'';
-    try{
-      markSignup();readCurrent();
-      if(btn){btn.disabled=true;btn.textContent='Création du compte...';btn.style.opacity='.6'}
-      var ok=await createAccount();
-      if(!ok)return false;
-      showAppNow();
-      return true;
-    }finally{
-      window.__gsFinishingSignupAdventure=false;
-      if(btn&&document.body.contains(btn)){btn.disabled=false;btn.textContent=old||'Commencer l’aventure';btn.style.opacity='';refreshPrimary()}
+  function showFab(){
+    var fab=document.getElementById('gs-walk-fab');
+    if(!fab)return;
+    function visible(el){
+      if(!el)return false;
+      try{
+        var cs=window.getComputedStyle?getComputedStyle(el):null;
+        if(cs&&(cs.display==='none'||cs.visibility==='hidden'||cs.opacity==='0'))return false;
+        var r=el.getBoundingClientRect?el.getBoundingClientRect():null;
+        return !!(r&&r.width>0&&r.height>0);
+      }catch(e){return false}
     }
+    var nav=document.getElementById('main-nav')||document.querySelector('.nav');
+    fab.classList.toggle('hidden',!!(!visible(nav)||active));
+  }
+
+  window.gsWalkStart=function(idx){
+    current=Math.max(0,Math.min(Number(idx)||0,STEPS.length-1));
+    active=true;
+    ensureDom();
+    showFab();
+    render();
   };
-  if(!window.__gsOldOb11NextFinal)window.__gsOldOb11NextFinal=window.ob11Next;
-  window.ob11Next=nextSignup;
-  window.ob11SkipStep=function(){if(!isSignup()&&window.__gsOldOb11SkipFinal)return window.__gsOldOb11SkipFinal.apply(this,arguments);markSignup();readCurrent();var idx=stepIndex();if(idx>=4&&idx<=10){window.OB11.step=idx+1;if(typeof window.renderOb11==='function')window.renderOb11()}return false};
-  if(!window.__gsOldOb11SkipFinal)window.__gsOldOb11SkipFinal=window.ob11SkipStep;
-  var oldRender=window.renderOb11;
-  if(typeof oldRender==='function'&&!oldRender.__gsSignupAuthFinal){window.renderOb11=function(){var r=oldRender.apply(this,arguments);setTimeout(applySignupPatch,0);setTimeout(applySignupPatch,90);return r};window.renderOb11.__gsSignupAuthFinal=true}
-  function openSignupWizard(){cleanLocalSignupFlags();markSignup();window.OB11.step=0;var auth=$('auth-screen');if(auth){auth.style.display='none';auth.classList&&auth.classList.remove('open')}var ob=$('onboard');if(ob)ob.style.display='none';if(typeof window.renderOb11==='function')window.renderOb11()}
-  var prevAuth=window.authShowView;
-  window.authShowView=function(view){if(view==='signup'||view==='signup11'||view==='signup-s1'||view==='onboarding')return openSignupWizard();if(typeof prevAuth==='function')return prevAuth.apply(this,arguments)};
-  window.gsOpenSignupFlow=openSignupWizard;window.openSignup11=openSignupWizard;
-  document.addEventListener('click',function(ev){var btn=ev.target&&ev.target.closest?ev.target.closest('#gs-onboard-v11 .gs-ob11-actions .primary,#gs-onboard-v4 .gs-onboard-actions .primary'):null;if(!btn||!isSignup())return;ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();window.ob11Next&&window.ob11Next()},true);
-  document.addEventListener('DOMContentLoaded',function(){setTimeout(applySignupPatch,80)});
-  if(document.readyState!=='loading')setTimeout(applySignupPatch,80);
+  window.gsWalkNext=function(){
+    if(current>=STEPS.length-1){return window.gsWalkClose()}
+    current++;render();
+  };
+  window.gsWalkPrev=function(){
+    if(current<=0)return;
+    current--;render();
+  };
+  window.gsWalkClose=function(){
+    active=false;
+    closeAllOverlays();
+    ['gs-walk-ov','gs-walk-spot','gs-walk-card'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.remove();
+    });
+    showFab();
+  };
+
+  // Override des entrées legacy : tout pointe vers la nouvelle version
+  window.gsGuideStartTour=window.gsWalkStart;
+  window.gsGuideCloseTour=window.gsWalkClose;
+  window.openGuide=function(){window.gsWalkStart(0)};
+
+  // Reposition sur resize/scroll
+  window.addEventListener('resize',function(){if(active)position()});
+  window.addEventListener('scroll',function(){if(active)position()},true);
+
+  // Bouton flottant ? toujours accessible
+  function injectFab(){
+    if(document.getElementById('gs-walk-fab'))return;
+    var btn=document.createElement('button');
+    btn.id='gs-walk-fab';
+    btn.className='gs-walk-fab';
+    btn.type='button';
+    btn.setAttribute('aria-label','Guide G-SQUAD');
+    btn.title='Guide';
+    btn.textContent='?';
+    btn.onclick=function(){window.gsWalkStart(0)};
+    document.body.appendChild(btn);
+    showFab();
+    // Re-check visibility périodiquement (au cas où auth/onboard se referment)
+    setInterval(showFab,1500);
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',injectFab);
+  }else{
+    injectFab();
+  }
 })();
 </script>
 
 
 
-<style id="gs-username-search-friend-profile-final-css">
-/* Patch ciblé : login username, recherche amis, profil public cohérent avec le Profil perso */
-.friend-ov.gs-friend-profile-v5{padding:0!important;background:var(--bg)!important;overflow:auto!important;z-index:2400!important}
-.friend-ov.gs-friend-profile-v5>.friend-head{display:none!important}
-.gs-friend-prof4 .gs-prof4-avatar{cursor:default!important}
-.gs-friend-prof4 .gs-prof4-avatar i{display:none!important}
-.gs-friend-prof4 .gs-prof4-settings[disabled]{opacity:.62;cursor:default!important}
-.gs-friend-prof4 .gs-prof4-settings.add{background:var(--txt)!important;color:#071018!important;border-color:var(--txt)!important}
-.gs-friend-prof4 .gs-prof4-settings.sent{background:rgba(143,185,255,.12)!important;color:var(--acc)!important;border-color:rgba(143,185,255,.25)!important}
-.gs-friend-prof4 .gs-prof4-username{cursor:default!important}
-.gs-friend-prof4 .gs-prof4-rank{cursor:default!important}
-.gs-friend-prof4 .gs-prof4-xp-ledger{cursor:default!important}
-.gs-friend-empty-tile{grid-column:1/-1;min-height:168px;border:1px dashed rgba(255,255,255,.12);background:rgba(255,255,255,.025);border-radius:26px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--mut);font-size:13px;font-weight:850;line-height:1.35;padding:24px}
-.gs-friend-route-card{min-height:136px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(145deg,rgba(18,24,33,.95),rgba(10,15,21,.92));border-radius:24px;padding:15px;display:flex;flex-direction:column;justify-content:space-between;gap:12px;color:var(--txt)}
-.gs-friend-route-card b{font-size:17px;font-weight:1000;letter-spacing:-.035em}.gs-friend-route-card span{font-size:12px;color:var(--mut);font-weight:850;line-height:1.35}.gs-friend-route-card i{display:block;height:4px;border-radius:999px;background:linear-gradient(90deg,var(--acc),rgba(255,255,255,.18));width:70%}
-.gs-smart-match{display:inline-flex;align-items:center;gap:5px;color:var(--mut);font-size:11px;font-weight:850}.gs-smart-match b{color:var(--acc);font-weight:1000}.gs-search-smart-empty{padding:18px;text-align:center;color:var(--mut);font-size:13px;line-height:1.4;font-weight:850}.gs-search-smart-empty b{display:block;color:var(--txt);font-size:15px;margin-bottom:3px}
+<!-- G-SQUAD PATCH ciblé - onboarding: mot de passe lisible et sans boutons transparents -->
+<style id="gs-onboarding-clean-save-password-css">
+.gs-onboard-v11 .gs-ob11-edit-note,
+.gs-onboard-v11 .gs-ob11-static-note{
+  border:1px solid rgba(143,185,255,.18)!important;
+  background:rgba(143,185,255,.08)!important;
+  color:var(--txt2)!important;
+  border-radius:18px!important;
+  padding:13px 14px!important;
+  font-size:12px!important;
+  font-weight:900!important;
+  text-align:center!important;
+  line-height:1.35!important;
+}
+.gs-onboard-v11 .gs-ob11-static-note span{display:block;margin-top:4px;color:var(--mut)!important;font-size:11px!important;font-weight:800!important}
+.gs-onboard-v11 .gs-ob11-passwrap,
+.gs-onboard-v11 .gs-ob11-pwd-stack{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;align-items:stretch!important}
+.gs-onboard-v11 .gs-ob11-pwd-stack .gs-ob11-input{width:100%!important;box-sizing:border-box!important;margin:0!important;padding-right:16px!important}
+.gs-onboard-v11 .gs-ob11-password-field{-webkit-text-security:disc!important;text-security:disc!important}
+.gs-onboard-v11.gs-ob11-show-password .gs-ob11-password-field{-webkit-text-security:none!important;text-security:none!important}
+.gs-onboard-v11 .gs-ob11-eye{display:none!important}
+.gs-onboard-v11 .gs-ob11-pwd-toggle{
+  width:100%!important;
+  border:1px solid rgba(143,185,255,.28)!important;
+  background:rgba(143,185,255,.10)!important;
+  color:var(--txt)!important;
+  border-radius:18px!important;
+  padding:14px 16px!important;
+  min-height:52px!important;
+  font-size:13px!important;
+  font-weight:1000!important;
+  text-align:center!important;
+  font-family:'DM Sans',system-ui,sans-serif!important;
+}
+.gs-onboard-v11 .gs-pass-rules{display:flex!important;flex-wrap:wrap!important;gap:6px!important;margin:2px 0 0!important;color:var(--mut)!important;font-size:11px!important;font-weight:900!important;line-height:1.35!important}
+.gs-onboard-v11 .gs-pass-rules span{display:inline-flex!important;align-items:center!important;border-radius:999px!important;padding:4px 7px!important;background:rgba(255,255,255,.045)!important;border:1px solid rgba(255,255,255,.07)!important}
+.gs-onboard-v11 .gs-pass-rules span.ok{color:#73D6A2!important;border-color:rgba(115,214,162,.25)!important;background:rgba(115,214,162,.09)!important}
+.gs-onboard-v11 .gs-pass-rules span.bad{color:#FF6B6B!important;border-color:rgba(255,107,107,.20)!important;background:rgba(255,107,107,.07)!important}
+.gs-onboard-v11 input::-webkit-credentials-auto-fill-button,
+.gs-onboard-v11 input::-webkit-contacts-auto-fill-button,
+.gs-onboard-v11 input::-webkit-caps-lock-indicator{visibility:hidden!important;display:none!important;pointer-events:none!important}
+.gs-onboard-v11 input::-ms-reveal,
+.gs-onboard-v11 input::-ms-clear{display:none!important}
 </style>
-<script id="gs-username-search-friend-profile-final-js">
+<script id="gs-onboarding-clean-save-password-js">
 (function(){
-  if(window.__gsUsernameSearchFriendProfileFinal)return;
-  window.__gsUsernameSearchFriendProfileFinal=true;
   function $(id){return document.getElementById(id)}
-  function S(){window.state=window.state||{};return window.state}
-  function P(){var s=S();s.profil=s.profil||{};return s.profil}
-  function E(v){return String(v==null?'':v).replace(/[&<>\'\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]})}
-  function clean(v){return String(v||'').trim()}
-  function normalize(v){return clean(v).replace(/^@/,'').toLowerCase()}
-  function msg(t){try{if(typeof window.notify==='function')window.notify(t);else console.log('[G-SQUAD]',t)}catch(e){console.log('[G-SQUAD]',t)}}
-  function isEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean(v))}
-  function dataOf(u){return (u&&u.data)||u?._fullData||{}}
-  function profOf(u){var d=dataOf(u);return (d&&d.profil)||{}}
-  function publicName(u){var d=dataOf(u),p=(d&&d.profil)||{};return clean(u&&u.display_name)||clean(u&&u.name)||clean(p.name)||((u&&u.email)?String(u.email).split('@')[0]:'Utilisateur')}
-  function publicUsername(u){var p=profOf(u);return normalize((u&&u.username)||p.username||'')}
-  function publicAvatar(u){var p=profOf(u),av=(u&&u.avatar)||p.avatar||'';return av||''}
-  function friendIds(){return (S().friends||[]).map(function(f){return f&&f.id}).filter(Boolean)}
-  function isFriend(id){return friendIds().indexOf(id)>-1}
-  function avatarHtml(name,av){return av?'<img src="'+E(av)+'" alt="">':E((name||'U').charAt(0).toUpperCase())}
-  function safeList(v){return Array.isArray(v)?v:[]}
-  function xpOf(data){return Number((data&&data.xp)||0)||0}
-  function levelInfo(xp){
-    try{if(typeof window.gsLevelInfo==='function'){var g=window.gsLevelInfo(xp)||{};var lvl=Number(g.lvl||g.level||1)||1,now=Number(g.now||g.current||0)||0,next=Number(g.next||g.need||100)||100;return {lvl:lvl,now:now,next:next,toNext:Math.max(0,next-now),pct:Math.max(0,Math.min(100,Number(g.pct||Math.round((now/Math.max(1,next))*100))||0))}}}catch(e){}
-    xp=Number(xp||0);var lvl=1,need=100,acc=0;while(xp>=acc+need&&lvl<999){acc+=need;lvl++;need=100+(lvl-1)*50}var now=Math.max(0,xp-acc);return {lvl:lvl,now:now,next:need,toNext:Math.max(0,need-now),pct:Math.round((now/Math.max(1,need))*100)}
+  function safeAttr(inp){
+    if(!inp)return;
+    inp.type='text';
+    inp.classList.add('gs-ob11-password-field');
+    inp.setAttribute('autocomplete','off');
+    inp.setAttribute('autocorrect','off');
+    inp.setAttribute('autocapitalize','none');
+    inp.setAttribute('spellcheck','false');
   }
-  function sessionsOf(data){var n=0;if(data&&data.journal){Object.keys(data.journal).forEach(function(k){if(data.journal[k]&&data.journal[k].seanceDone)n++})}if(!n&&Array.isArray(data&&data.sessions))n=data.sessions.length;return n}
-  function scores(data){data=data||{};var xp=xpOf(data),sessions=sessionsOf(data),logs=Array.isArray(data.logs)?data.logs:(Array.isArray(data.setLogs)?data.setLogs:[]),best=0,reps=0,volume=0;logs.forEach(function(l){var kg=Number(l.charge||l.weight||l.kg||0)||0,r=Number(l.reps||0)||0;best=Math.max(best,kg);reps=Math.max(reps,r);volume+=Math.max(0,kg)*Math.max(1,r)});var force=Math.min(99,Math.round(32+best*1.15+xp/150+sessions*.9));var vol=Math.min(99,Math.round(30+Math.log10(volume+10)*13+xp/170+sessions));var endu=Math.min(99,Math.round(30+reps*2+xp/190+sessions*1.4));var goat=Math.round(force*.4+vol*.34+endu*.26);return {xp:xp,sessions:sessions,best:best,reps:reps,volumeKg:Math.round(volume),force:force,volume:vol,endurance:endu,goat:goat}}
-  function badgeMini(sp){var label=sp.sessions>=10?'Régulier':(sp.sessions>=1?'Premier pas':'Départ');return '<span class="gs-prof4-name-badge"><span>'+E(label)+'</span></span>'}
-  function formatOf(p){return p.programName||p.programmeName||p.planName||p.split||p.format||p.program||''}
-  function gymDef(g){return (window.GS_GYMS&&window.GS_GYMS[g])||{name:g||'Salle',color:'#8FB9FF',txt:String(g||'GY').slice(0,2).toUpperCase()}}
-  function sportLabel(s){try{return (window.SPORTS_LABELS&&window.SPORTS_LABELS[s])||s}catch(e){return s}}
-  function stripHtml(p){p=p||{};var items=[],fmt=formatOf(p);if(fmt)items.push('<span class="gs-prof4-pill format"><i>'+E(fmt)+'</i><span>Programme</span></span>');safeList(p.gyms).forEach(function(g){var d=gymDef(g);items.push('<span class="gs-prof4-pill gym"><i style="background:'+E(d.color||'#8FB9FF')+'33;color:'+E(d.color||'#8FB9FF')+'">'+E(d.txt||String(g).slice(0,2).toUpperCase())+'</i><span>'+E(d.name||g)+'</span></span>')});safeList(p.sports).slice(0,4).forEach(function(s){items.push('<span class="gs-prof4-pill gym"><i>'+E(String(sportLabel(s)).slice(0,2).toUpperCase())+'</i><span>'+E(sportLabel(s))+'</span></span>')});if(!items.length)return '<div class="gs-prof4-strip"><span class="gs-prof4-strip-empty">Profil sportif non renseigné</span></div>';return '<div class="gs-prof4-strip">'+items.join('')+'</div>'}
-  function photosOf(data){data=data||{};var p=data.profil||{};var arr=safeList(data.galerie).concat(safeList(data.gallery),safeList(data.photos),safeList(p.photos),safeList(p.galerie));var out=[];arr.forEach(function(x){var src=typeof x==='string'?x:(x&&(x.src||x.url||x.image||x.dataUrl));if(src&&out.indexOf(src)<0)out.push(src)});return out.slice(0,18)}
-  function routesOf(data){data=data||{};var arr=safeList(data.routes).concat(safeList(data.traces),safeList(data.runningRoutes),safeList(data.randoRoutes));if(data.activities&&Array.isArray(data.activities)){data.activities.forEach(function(a){if(a&&(a.distance||a.km||a.route||a.polyline))arr.push(a)})}return arr.slice(0,12)}
-  function renderPhotos(photos){if(!photos.length)return '<div class="gs-friend-empty-tile">Aucun moment public pour l’instant.</div>';return photos.map(function(src){return '<div class="gs-moment-tile"><img src="'+E(src)+'" alt=""></div>'}).join('')}
-  function renderRoutes(routes){if(!routes.length)return '<div class="gs-friend-empty-tile">Aucun tracé public pour l’instant.</div>';return routes.map(function(r){var title=r.name||r.title||r.type||'Sortie',dist=r.distance||r.km||r.dist||'',date=r.date||r.created_at||'';return '<div class="gs-friend-route-card"><i></i><div><b>'+E(title)+'</b><span>'+E(dist?(dist+' km'):'Distance non renseignée')+(date?' · '+E(String(date).slice(0,10)):'')+'</span></div></div>'}).join('')}
-  async function resolveLoginEmail(input){
-    input=clean(input);if(!input)return '';
-    if(isEmail(input))return input.toLowerCase();
-    var uname=normalize(input);if(!uname)return '';
-    if(!window._supa)return '';
-    try{var rpc=await window._supa.rpc('resolve_login_email',{login_input:uname});if(!rpc.error&&rpc.data)return Array.isArray(rpc.data)?(rpc.data[0]||''):rpc.data}catch(e){}
-    try{var r=await window._supa.from('profiles').select('email,username').eq('username',uname).limit(1);if(!r.error&&r.data&&r.data[0]&&r.data[0].email)return r.data[0].email}catch(e){}
-    try{var r2=await window._supa.from('profiles').select('email,username').ilike('username',uname).limit(1);if(!r2.error&&r2.data&&r2.data[0]&&r2.data[0].email)return r2.data[0].email}catch(e){}
-    return '';
-  }
-  window.doLogin=async function(){
-    var inputEl=$('auth-email'),passEl=$('auth-password');var input=inputEl?clean(inputEl.value):'',pass=passEl?passEl.value:'';
-    if(!input||!pass){if(typeof window.authShowView==='function')window.authShowView('login');if(typeof window.authShowErr==='function')window.authShowErr('Entre ton email ou ton @username + ton mot de passe.');return}
-    if(!window._supa){if(typeof window.authShowErr==='function')window.authShowErr('Connexion Supabase indisponible.');return}
+  function setupPasswordStep(){
     try{
-      if(typeof window.setAuthLoading==='function')window.setAuthLoading(true);
-      var email=await resolveLoginEmail(input);
-      if(!email){if(typeof window.authShowErr==='function')window.authShowErr('Utilisateur introuvable. Vérifie le @username.');return}
-      var res=await window._supa.auth.signInWithPassword({email:email,password:pass});
-      if(res.error){if(typeof window.authShowErr==='function')window.authShowErr('Identifiant ou mot de passe incorrect.');return}
-      if(typeof window.afterAuth==='function')await window.afterAuth(res.data.user);
-    }catch(e){if(typeof window.authShowErr==='function')window.authShowErr(e.message||'Connexion impossible.')}finally{if(typeof window.setAuthLoading==='function')window.setAuthLoading(false)}
+      var ov=$('gs-onboard-v11');
+      if(!ov)return;
+      var ob=window.OB11||{};
+      if(Number(ob.step)!==1)return;
+      var inp=$('ob11-password-input');
+      if(!inp)return;
+      var wrap=inp.closest('.gs-ob11-passwrap')||inp.parentNode;
+      if(!wrap)return;
+      wrap.classList.add('gs-ob11-pwd-stack');
+      ov.querySelectorAll('.gs-ob11-eye').forEach(function(btn){btn.remove()});
+      safeAttr(inp);
+      var cf=$('ob11-password-confirm');
+      if(!cf){
+        inp.insertAdjacentHTML('afterend','<input id="ob11-password-confirm" class="gs-ob11-input gs-ob11-password-field" type="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="Confirmer le mot de passe">');
+        cf=$('ob11-password-confirm');
+      }
+      safeAttr(cf);
+      var toggle=$('ob11-password-toggle');
+      if(!toggle){
+        cf.insertAdjacentHTML('afterend','<button type="button" id="ob11-password-toggle" class="gs-ob11-pwd-toggle">Afficher les mots de passe</button>');
+        toggle=$('ob11-password-toggle');
+      }
+      var rules=$('ob11-pass-rules');
+      if(!rules){
+        toggle.insertAdjacentHTML('afterend','<div id="ob11-pass-rules" class="gs-pass-rules"></div>');
+        rules=$('ob11-pass-rules');
+      }else if(rules.previousElementSibling!==toggle){
+        toggle.insertAdjacentElement('afterend',rules);
+      }
+      function refreshRules(){
+        var p=inp.value||'',c=cf.value||'',same=!!p&&p===c;
+        if(rules){rules.innerHTML='<span class="'+(p.length>=6?'ok':'bad')+'">6 caractères min</span><span class="'+(/[A-Z]/.test(p)?'ok':'bad')+'">Majuscule</span><span class="'+(/[^A-Za-z0-9]/.test(p)?'ok':'bad')+'">Caractère spécial</span><span class="'+(same?'ok':'bad')+'">Confirmation</span>';}
+      }
+      function refreshToggle(){
+        var visible=ov.classList.contains('gs-ob11-show-password');
+        if(toggle)toggle.textContent=visible?'Masquer les mots de passe':'Afficher les mots de passe';
+      }
+      if(!inp.__gsPwdCleanBound){inp.addEventListener('input',refreshRules);inp.__gsPwdCleanBound=true;}
+      if(cf&&!cf.__gsPwdCleanBound){cf.addEventListener('input',refreshRules);cf.__gsPwdCleanBound=true;}
+      if(toggle&&!toggle.__gsPwdCleanBound){toggle.onclick=function(){ov.classList.toggle('gs-ob11-show-password');refreshToggle()};toggle.__gsPwdCleanBound=true;}
+      refreshRules();refreshToggle();
+    }catch(e){}
+  }
+  window.ob11TogglePassword=function(){
+    var ov=$('gs-onboard-v11');
+    if(!ov)return;
+    ov.classList.toggle('gs-ob11-show-password');
+    var b=$('ob11-password-toggle');
+    if(b)b.textContent=ov.classList.contains('gs-ob11-show-password')?'Masquer les mots de passe':'Afficher les mots de passe';
   };
-  async function smartUsers(q){
-    if(!window._supa||!window._supaUser)return {login:true,users:[]};
-    var raw=clean(q),needle=normalize(raw).replace(/[%,]/g,'');if(needle.length<2)return {users:[]};
-    var rows=[],seen={};
-    function add(list){(list||[]).forEach(function(u){if(u&&u.id&&!seen[u.id]){seen[u.id]=1;rows.push(u)}})}
-    try{var rpc=await window._supa.rpc('search_profiles_public',{search_query:needle,max_count:24});if(!rpc.error)add(rpc.data)}catch(e){}
-    try{var res=await window._supa.from('profiles').select('id,email,username,display_name,data').or('username.ilike.%'+needle+'%,display_name.ilike.%'+needle+'%,email.ilike.%'+needle+'%').neq('id',window._supaUser.id).limit(24);if(!res.error)add(res.data)}catch(e){}
-    if(rows.length<8){try{var res2=await window._supa.from('profiles').select('id,email,username,display_name,data').neq('id',window._supaUser.id).limit(80);if(!res2.error)add((res2.data||[]).filter(function(u){var p=profOf(u),hay=[u.username,u.display_name,u.email,p.name].join(' ').toLowerCase();return hay.indexOf(needle)>-1}))}catch(e){}}
-    rows.sort(function(a,b){return scoreSearch(b,needle)-scoreSearch(a,needle)});
-    return {users:rows.slice(0,16)};
+  var oldRender=window.renderOb11;
+  if(typeof oldRender==='function'&&!oldRender.__gsCleanPwdDotsV2){
+    window.renderOb11=function(){var r=oldRender.apply(this,arguments);setTimeout(setupPasswordStep,0);setTimeout(setupPasswordStep,80);return r};
+    window.renderOb11.__gsCleanPwdDotsV2=true;
   }
-  function scoreSearch(u,n){var p=profOf(u),un=publicUsername(u),nm=publicName(u).toLowerCase(),dn=String(u.display_name||'').toLowerCase(),pn=String(p.name||'').toLowerCase();var s=0;if(un===n)s+=120;if(un.indexOf(n)===0)s+=70;if(nm===n)s+=80;if(nm.indexOf(n)===0)s+=50;if(dn.indexOf(n)>-1)s+=30;if(pn.indexOf(n)>-1)s+=35;if((u.email||'').toLowerCase().indexOf(n)>-1)s+=10;return s}
-  function matchLabel(u,n){var un=publicUsername(u),nm=publicName(u);if(un&&un.indexOf(n)===0)return 'username';if(nm.toLowerCase().indexOf(n)>-1)return 'nom';return 'profil'}
-  async function renderSmartResults(target,q,modal){
-    var el=typeof target==='string'?$(target):target;if(!el)return;var n=normalize(q);
-    if(n.length<2){el.innerHTML='<div class="gs-search-smart-empty"><b>Recherche intelligente</b>Tape un @username ou un nom.</div>';return}
-    el.innerHTML='<div class="gs-search-smart-empty"><b>Recherche...</b>On cherche par username et par nom.</div>';
-    try{var r=await smartUsers(q);if(r.login){el.innerHTML='<div class="gs-search-smart-empty"><b>Compte requis</b>Connecte-toi pour ajouter des amis.</div>';return}var users=r.users||[];if(!users.length){el.innerHTML='<div class="gs-search-smart-empty"><b>Aucun profil trouvé</b>Essaie un @username exact ou le nom affiché.</div>';return}var ids=friendIds();el.innerHTML=users.map(function(u,i){var name=publicName(u),uname=publicUsername(u),av=publicAvatar(u),already=ids.indexOf(u.id)>-1,key='gs_smart_user_'+Date.now()+'_'+i;window[key]={id:u.id,name:name,username:uname,avatar:av,xp:xpOf(dataOf(u)),data:dataOf(u),display_name:u.display_name||name,email:u.email||''};return '<div class="ucard" style="margin-bottom:8px;cursor:pointer" onclick="'+(modal?'closeSearchModal&&closeSearchModal();':'')+'openFriendProfile&&openFriendProfile(window[\''+key+'\'])"><div class="ucard-av">'+avatarHtml(name,av)+'</div><div style="flex:1;min-width:0"><div class="ucard-name">'+E(name)+'</div><div class="ucard-sub">'+(uname?'<span style="color:var(--acc)">@'+E(uname)+'</span> · ':'')+'<span class="gs-smart-match">Trouvé par <b>'+E(matchLabel(u,n))+'</b></span></div></div><button class="ucard-btn '+(already?'sent':'')+'" '+(already?'disabled':'')+' onclick="event.stopPropagation();sendFriendRequest&&sendFriendRequest(\''+E(u.id)+'\',\''+E(name).replace(/&#39;/g,"\\'")+'\',this)">'+(already?'Ami':'Ajouter')+'</button></div>'}).join('')}
-    catch(e){el.innerHTML='<div class="gs-search-smart-empty"><b>Erreur de recherche</b>'+E(e.message||e)+'</div>'}
+  document.addEventListener('input',function(){setTimeout(setupPasswordStep,0)},true);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(setupPasswordStep,100)});
+  else setTimeout(setupPasswordStep,100);
+})();
+</script>
+
+
+
+<!-- G-SQUAD PATCH ciblé - bouton final inscription fonctionnel -->
+<script id="gs-signup-start-adventure-fix">
+(function(){
+  if(window.__gsSignupStartAdventureFix20260508)return;window.__gsSignupStartAdventureFix20260508=true;
+  function $(id){return document.getElementById(id)}
+  function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
+  function P(){return S().profil}
+  function toast(t){try{if(typeof window.notify==='function')window.notify(t);else if(typeof window.nt==='function')window.nt(t);else console.log(t)}catch(e){}}
+  function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('ath7',JSON.stringify(window.state||{}))}catch(e){}}
+  function cleanLocalSignupFlags(){try{sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped')}catch(e){}try{S().guestMode=false;delete P().localPasswordSet;delete P().passwordLastChangedAt}catch(e){}}
+  function safeStateForSupabase(){
+    var base;
+    try{base=(typeof window.gsSafeSupabaseState==='function')?window.gsSafeSupabaseState(S()):JSON.parse(JSON.stringify(S()))}catch(e){base={profil:{}}}
+    try{if(base.profil&&typeof base.profil.avatar==='string'&&base.profil.avatar.indexOf('data:image')===0)base.profil.avatar=''}catch(e){}
+    try{if(Array.isArray(base.galerie)){base.galerie=base.galerie.map(function(x){var y=Object.assign({},x||{});if(typeof y.src==='string'&&y.src.indexOf('data:image')===0)y.src='';if(typeof y.url==='string'&&y.url.indexOf('data:image')===0)y.url='';return y})}}catch(e){}
+    return base;
   }
-  window.renderUserResults=renderSmartResults;
-  window.searchUsers=function(q){clearTimeout(window._gsSmartSearchT);window._gsSmartSearchT=setTimeout(function(){renderSmartResults('social-results',q,false)},160)};
-  window.closeSearchModal=function(){var el=$('search-modal');if(el)el.remove()};
-  window.openSearchModal=function(){var old=$('search-modal');if(old)old.remove();var html='<div id="search-modal" class="gs-social-search2"><div class="gs-social-search-head2"><input id="search-modal-inp" placeholder="@username ou nom" autocomplete="off"><button class="gs-search-close2" type="button" onclick="event.stopPropagation();closeSearchModal()">×</button></div><div id="search-modal-results" class="gs-social-results2"><div class="gs-search-smart-empty"><b>Ajoute un ami</b>Cherche par @username ou par nom affiché.</div></div><div style="flex:1" onclick="closeSearchModal()"></div></div>';document.body.insertAdjacentHTML('beforeend',html);var inp=$('search-modal-inp');if(inp){inp.oninput=function(){var v=this.value;clearTimeout(window._gsSmartSearchT);window._gsSmartSearchT=setTimeout(function(){renderSmartResults('search-modal-results',v,true)},160)};setTimeout(function(){try{inp.focus()}catch(e){}},60)}};
-  window.gsFriendProfileAdd=function(btn){var u=window.__gsFriendProfileV5User||{};if(!u.id)return;if(btn&&btn.disabled)return;if(typeof window.sendFriendRequest==='function'){window.sendFriendRequest(u.id,publicName(u),btn);if(btn){btn.textContent='Demandé';btn.classList.remove('add');btn.classList.add('sent')}}};
-  async function fetchFull(u){u=u||{};if(!window._supa||!u.id)return u;try{var r=await window._supa.from('profiles').select('id,email,username,display_name,data').eq('id',u.id).maybeSingle();if(!r.error&&r.data){return Object.assign({},u,r.data,{name:publicName(Object.assign({},u,r.data)),avatar:publicAvatar(Object.assign({},u,r.data)),xp:xpOf(r.data.data||{})})}}catch(e){}return u}
-  function renderFriendProfile(u){
-    var ov=$('friend-ov'),body=$('friend-profile-body');if(!ov||!body)return;u=u||{};window.__gsFriendProfileV5User=u;var data=dataOf(u),p=profOf(u),name=publicName(u),username=publicUsername(u),av=publicAvatar(u),sp=scores(data),lv=levelInfo(sp.xp),photos=photosOf(data),routes=routesOf(data);var isMe=window._supaUser&&u.id===window._supaUser.id,already=isFriend(u.id);var action=isMe?'<button type="button" class="gs-prof4-settings sent" disabled>Moi</button>':(already?'<button type="button" class="gs-prof4-settings sent" disabled>Ami</button>':'<button type="button" class="gs-prof4-settings add" onclick="gsFriendProfileAdd(this)">Ajouter</button>');var avatar=av?'<img src="'+E(av)+'">':E((name||'U').charAt(0).toUpperCase());body.style.padding='0';body.innerHTML='<div class="gs-prof4 gs-friend-prof4"><div class="gs-prof4-head"><button class="gs-prof4-back" onclick="window.closeFriendProfile&&window.closeFriendProfile()">‹</button><div class="gs-prof4-title">Profil</div>'+action+'</div><section class="gs-prof4-id"><button type="button" class="gs-prof4-avatar">'+avatar+'</button><div class="gs-prof4-id-right"><div class="gs-prof4-name-row"><div class="gs-prof4-name">'+E(name)+'</div>'+badgeMini(sp)+'</div><div class="gs-prof4-lvl-row"><span class="gs-prof4-lvl">Niv. '+E(lv.lvl)+'</span><span class="gs-prof4-xp">'+E(sp.xp)+' XP <small>· '+E(lv.toNext)+' avant niv. '+E(lv.lvl+1)+'</small></span></div><div class="gs-prof4-track" title="'+E(lv.now)+' / '+E(lv.next)+' XP"><i style="width:'+E(lv.pct)+'%"></i></div></div></section><div class="gs-prof4-userline"><button type="button" class="gs-prof4-username">'+(username?'@'+E(username):'@username')+'</button><span class="gs-prof4-userline-sep"></span><button type="button" class="gs-prof4-rank"><span>Score</span><b>'+E(sp.goat)+'</b></button><button type="button" class="gs-prof4-xp-ledger"><span>Séances</span> '+E(sp.sessions)+'</button></div>'+stripHtml(p)+'<div class="gs-prof4-swipe"><section class="gs-prof4-slide"><div class="gs-prof4-photo-head"><div><div class="gs-prof4-kicker">Grille photo</div><div class="gs-prof4-section-title">Moments</div><div class="gs-prof4-photo-sub">Glisse à gauche pour voir ses tracés.</div></div></div><div class="gs-moments-grid">'+renderPhotos(photos)+'</div></section><section class="gs-prof4-slide"><div class="gs-prof4-photo-head"><div><div class="gs-prof4-kicker">Tracés</div><div class="gs-prof4-section-title">Running & randonnée</div><div class="gs-prof4-photo-sub">Glisse à droite pour revenir aux photos.</div></div></div><div class="gs-prof4-route-grid">'+renderRoutes(routes)+'</div></section></div></div>';ov.classList.add('open','gs-friend-profile-v5');try{if(typeof window.decorateAll==='function')window.decorateAll()}catch(e){}
+  function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim())}
+  function validPassword(v){v=String(v||'');return v.length>=6&&/[A-ZÀ-ÖØ-Þ]/.test(v)&&/[^A-Za-z0-9]/.test(v)}
+  function setStep(i,msg){try{window.OB11=window.OB11||{step:0,total:12,password:''};window.OB11.total=12;window.OB11.step=i;if(typeof window.renderOb11==='function')window.renderOb11()}catch(e){}if(msg)toast(msg)}
+  function finishAdventure(){
+    cleanLocalSignupFlags();
+    var s=S();s.onboarded=true;s.onboardingComplete=true;s.guestMode=false;
+    try{if(window.OB11)window.OB11.password=''}catch(e){}
+    save();
+    var ob=$('gs-onboard-v11');if(ob)ob.remove();
+    var auth=$('auth-screen');if(auth){auth.style.display='none';if(auth.classList)auth.classList.remove('open')}
+    try{if(typeof window.hideGates==='function')window.hideGates()}catch(e){}
+    try{if(typeof window.bootApp==='function')window.bootApp()}catch(e){}
+    toast('Bienvenue sur G-SQUAD');
   }
-  window.openFriendProfile=async function(u){u=u||{};renderFriendProfile(u);var full=await fetchFull(u);renderFriendProfile(full)};
-  var oldCloseFriend=window.closeFriendProfile;
-  window.closeFriendProfile=function(){var ov=$('friend-ov');if(ov){ov.classList.remove('gs-friend-profile-v5');ov.classList.remove('open')}if(typeof oldCloseFriend==='function')return oldCloseFriend.apply(this,arguments)};
-  setTimeout(function(){try{var a=$('auth-email');if(a){a.placeholder='Email ou @username';a.setAttribute('autocomplete','username')}}catch(e){}},300);
+  async function createAccountIfNeeded(){
+    var ob=window.OB11||{},p=P();
+    if(ob.mode!=='signup')return true;
+    var email=String(p.email||'').trim().toLowerCase();
+    var pass=String(ob.password||'');
+    var username=String(p.username||'').trim().replace(/^@/,'').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();
+    p.email=email;p.username=username;save();
+    if(!validEmail(email)){setStep(0,'Ajoute un email valide pour créer ton compte.');return false}
+    if(!validPassword(pass)){setStep(1,'Mot de passe: minimum 6 caractères, 1 majuscule et 1 caractère spécial.');return false}
+    if(!username||username.length<3){setStep(2,'Choisis un username de 3 caractères minimum.');return false}
+    if(window._supaUser)return true;
+    if(!window._supa||!window._supa.auth){toast('Supabase indisponible. Profil créé en local pour continuer.');return true}
+    try{
+      var check=await window._supa.from('profiles').select('id').eq('username',username).maybeSingle();
+      if(check&&check.data){setStep(2,'Ce @username est déjà pris.');return false}
+    }catch(e){console.warn('username check skipped',e)}
+    try{
+      var res=await window._supa.auth.signUp({email:email,password:pass,options:{data:{username:username,display_name:p.name||username}}});
+      if(res&&res.error){toast(res.error.message||'Création du compte impossible.');return false}
+      var user=res&&res.data&&res.data.user?res.data.user:null;
+      if(user){
+        window._supaUser=user;try{if(typeof _supaUser!=='undefined')_supaUser=user}catch(e){}
+        try{await window._supa.from('profiles').upsert({id:user.id,email:email,username:username,display_name:p.name||username,data:safeStateForSupabase(),updated_at:new Date().toISOString()},{onConflict:'id'})}catch(e){console.warn('profile upsert failed',e)}
+      }
+      return true;
+    }catch(e){console.error('signup failed',e);toast('Création du compte impossible. Réessaie.');return false}
+  }
+  window.gsFinishSignupAdventure=async function(){
+    if(window.__gsFinishingSignupAdventure)return;
+    window.__gsFinishingSignupAdventure=true;
+    var btn=document.querySelector('#gs-onboard-v11 .gs-ob11-actions .primary');
+    var oldTxt=btn?btn.textContent:'';
+    try{
+      if(btn){btn.disabled=true;btn.textContent='Création du compte...'}
+      var ok=await createAccountIfNeeded();
+      if(!ok)return;
+      finishAdventure();
+    }finally{
+      window.__gsFinishingSignupAdventure=false;
+      if(btn&&document.body.contains(btn)){btn.disabled=false;btn.textContent=oldTxt||'Commencer l’aventure'}
+      setTimeout(patchStartButton,0);
+    }
+  };
+  function patchStartButton(){
+    var ob=window.OB11||{},ov=$('gs-onboard-v11');
+    if(!ov||Number(ob.step)!==11)return;
+    var btn=ov.querySelector('.gs-ob11-actions .primary');
+    if(btn){btn.textContent='Commencer l’aventure';btn.setAttribute('onclick','gsFinishSignupAdventure()');btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}window.gsFinishSignupAdventure();return false};}
+  }
+  var oldRender=window.renderOb11;
+  if(typeof oldRender==='function'&&!oldRender.__gsStartAdventureFix){window.renderOb11=function(){var r=oldRender.apply(this,arguments);setTimeout(patchStartButton,0);setTimeout(patchStartButton,80);return r};window.renderOb11.__gsStartAdventureFix=true;}
+  document.addEventListener('click',function(ev){var btn=ev.target&&ev.target.closest?ev.target.closest('#gs-onboard-v11 .gs-ob11-actions .primary'):null;if(!btn||!window.OB11||Number(window.OB11.step)!==11)return;ev.preventDefault();ev.stopPropagation();window.gsFinishSignupAdventure&&window.gsFinishSignupAdventure();},true);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(patchStartButton,120)});else setTimeout(patchStartButton,120);
 })();
 </script>
 
