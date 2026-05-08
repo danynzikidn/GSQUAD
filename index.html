@@ -15599,5 +15599,118 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
 
 
 
+<style id="gs-username-search-friend-profile-final-css">
+/* Patch ciblé : login username, recherche amis, profil public cohérent avec le Profil perso */
+.friend-ov.gs-friend-profile-v5{padding:0!important;background:var(--bg)!important;overflow:auto!important;z-index:2400!important}
+.friend-ov.gs-friend-profile-v5>.friend-head{display:none!important}
+.gs-friend-prof4 .gs-prof4-avatar{cursor:default!important}
+.gs-friend-prof4 .gs-prof4-avatar i{display:none!important}
+.gs-friend-prof4 .gs-prof4-settings[disabled]{opacity:.62;cursor:default!important}
+.gs-friend-prof4 .gs-prof4-settings.add{background:var(--txt)!important;color:#071018!important;border-color:var(--txt)!important}
+.gs-friend-prof4 .gs-prof4-settings.sent{background:rgba(143,185,255,.12)!important;color:var(--acc)!important;border-color:rgba(143,185,255,.25)!important}
+.gs-friend-prof4 .gs-prof4-username{cursor:default!important}
+.gs-friend-prof4 .gs-prof4-rank{cursor:default!important}
+.gs-friend-prof4 .gs-prof4-xp-ledger{cursor:default!important}
+.gs-friend-empty-tile{grid-column:1/-1;min-height:168px;border:1px dashed rgba(255,255,255,.12);background:rgba(255,255,255,.025);border-radius:26px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--mut);font-size:13px;font-weight:850;line-height:1.35;padding:24px}
+.gs-friend-route-card{min-height:136px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(145deg,rgba(18,24,33,.95),rgba(10,15,21,.92));border-radius:24px;padding:15px;display:flex;flex-direction:column;justify-content:space-between;gap:12px;color:var(--txt)}
+.gs-friend-route-card b{font-size:17px;font-weight:1000;letter-spacing:-.035em}.gs-friend-route-card span{font-size:12px;color:var(--mut);font-weight:850;line-height:1.35}.gs-friend-route-card i{display:block;height:4px;border-radius:999px;background:linear-gradient(90deg,var(--acc),rgba(255,255,255,.18));width:70%}
+.gs-smart-match{display:inline-flex;align-items:center;gap:5px;color:var(--mut);font-size:11px;font-weight:850}.gs-smart-match b{color:var(--acc);font-weight:1000}.gs-search-smart-empty{padding:18px;text-align:center;color:var(--mut);font-size:13px;line-height:1.4;font-weight:850}.gs-search-smart-empty b{display:block;color:var(--txt);font-size:15px;margin-bottom:3px}
+</style>
+<script id="gs-username-search-friend-profile-final-js">
+(function(){
+  if(window.__gsUsernameSearchFriendProfileFinal)return;
+  window.__gsUsernameSearchFriendProfileFinal=true;
+  function $(id){return document.getElementById(id)}
+  function S(){window.state=window.state||{};return window.state}
+  function P(){var s=S();s.profil=s.profil||{};return s.profil}
+  function E(v){return String(v==null?'':v).replace(/[&<>\'\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]})}
+  function clean(v){return String(v||'').trim()}
+  function normalize(v){return clean(v).replace(/^@/,'').toLowerCase()}
+  function msg(t){try{if(typeof window.notify==='function')window.notify(t);else console.log('[G-SQUAD]',t)}catch(e){console.log('[G-SQUAD]',t)}}
+  function isEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean(v))}
+  function dataOf(u){return (u&&u.data)||u?._fullData||{}}
+  function profOf(u){var d=dataOf(u);return (d&&d.profil)||{}}
+  function publicName(u){var d=dataOf(u),p=(d&&d.profil)||{};return clean(u&&u.display_name)||clean(u&&u.name)||clean(p.name)||((u&&u.email)?String(u.email).split('@')[0]:'Utilisateur')}
+  function publicUsername(u){var p=profOf(u);return normalize((u&&u.username)||p.username||'')}
+  function publicAvatar(u){var p=profOf(u),av=(u&&u.avatar)||p.avatar||'';return av||''}
+  function friendIds(){return (S().friends||[]).map(function(f){return f&&f.id}).filter(Boolean)}
+  function isFriend(id){return friendIds().indexOf(id)>-1}
+  function avatarHtml(name,av){return av?'<img src="'+E(av)+'" alt="">':E((name||'U').charAt(0).toUpperCase())}
+  function safeList(v){return Array.isArray(v)?v:[]}
+  function xpOf(data){return Number((data&&data.xp)||0)||0}
+  function levelInfo(xp){
+    try{if(typeof window.gsLevelInfo==='function'){var g=window.gsLevelInfo(xp)||{};var lvl=Number(g.lvl||g.level||1)||1,now=Number(g.now||g.current||0)||0,next=Number(g.next||g.need||100)||100;return {lvl:lvl,now:now,next:next,toNext:Math.max(0,next-now),pct:Math.max(0,Math.min(100,Number(g.pct||Math.round((now/Math.max(1,next))*100))||0))}}}catch(e){}
+    xp=Number(xp||0);var lvl=1,need=100,acc=0;while(xp>=acc+need&&lvl<999){acc+=need;lvl++;need=100+(lvl-1)*50}var now=Math.max(0,xp-acc);return {lvl:lvl,now:now,next:need,toNext:Math.max(0,need-now),pct:Math.round((now/Math.max(1,need))*100)}
+  }
+  function sessionsOf(data){var n=0;if(data&&data.journal){Object.keys(data.journal).forEach(function(k){if(data.journal[k]&&data.journal[k].seanceDone)n++})}if(!n&&Array.isArray(data&&data.sessions))n=data.sessions.length;return n}
+  function scores(data){data=data||{};var xp=xpOf(data),sessions=sessionsOf(data),logs=Array.isArray(data.logs)?data.logs:(Array.isArray(data.setLogs)?data.setLogs:[]),best=0,reps=0,volume=0;logs.forEach(function(l){var kg=Number(l.charge||l.weight||l.kg||0)||0,r=Number(l.reps||0)||0;best=Math.max(best,kg);reps=Math.max(reps,r);volume+=Math.max(0,kg)*Math.max(1,r)});var force=Math.min(99,Math.round(32+best*1.15+xp/150+sessions*.9));var vol=Math.min(99,Math.round(30+Math.log10(volume+10)*13+xp/170+sessions));var endu=Math.min(99,Math.round(30+reps*2+xp/190+sessions*1.4));var goat=Math.round(force*.4+vol*.34+endu*.26);return {xp:xp,sessions:sessions,best:best,reps:reps,volumeKg:Math.round(volume),force:force,volume:vol,endurance:endu,goat:goat}}
+  function badgeMini(sp){var label=sp.sessions>=10?'Régulier':(sp.sessions>=1?'Premier pas':'Départ');return '<span class="gs-prof4-name-badge"><span>'+E(label)+'</span></span>'}
+  function formatOf(p){return p.programName||p.programmeName||p.planName||p.split||p.format||p.program||''}
+  function gymDef(g){return (window.GS_GYMS&&window.GS_GYMS[g])||{name:g||'Salle',color:'#8FB9FF',txt:String(g||'GY').slice(0,2).toUpperCase()}}
+  function sportLabel(s){try{return (window.SPORTS_LABELS&&window.SPORTS_LABELS[s])||s}catch(e){return s}}
+  function stripHtml(p){p=p||{};var items=[],fmt=formatOf(p);if(fmt)items.push('<span class="gs-prof4-pill format"><i>'+E(fmt)+'</i><span>Programme</span></span>');safeList(p.gyms).forEach(function(g){var d=gymDef(g);items.push('<span class="gs-prof4-pill gym"><i style="background:'+E(d.color||'#8FB9FF')+'33;color:'+E(d.color||'#8FB9FF')+'">'+E(d.txt||String(g).slice(0,2).toUpperCase())+'</i><span>'+E(d.name||g)+'</span></span>')});safeList(p.sports).slice(0,4).forEach(function(s){items.push('<span class="gs-prof4-pill gym"><i>'+E(String(sportLabel(s)).slice(0,2).toUpperCase())+'</i><span>'+E(sportLabel(s))+'</span></span>')});if(!items.length)return '<div class="gs-prof4-strip"><span class="gs-prof4-strip-empty">Profil sportif non renseigné</span></div>';return '<div class="gs-prof4-strip">'+items.join('')+'</div>'}
+  function photosOf(data){data=data||{};var p=data.profil||{};var arr=safeList(data.galerie).concat(safeList(data.gallery),safeList(data.photos),safeList(p.photos),safeList(p.galerie));var out=[];arr.forEach(function(x){var src=typeof x==='string'?x:(x&&(x.src||x.url||x.image||x.dataUrl));if(src&&out.indexOf(src)<0)out.push(src)});return out.slice(0,18)}
+  function routesOf(data){data=data||{};var arr=safeList(data.routes).concat(safeList(data.traces),safeList(data.runningRoutes),safeList(data.randoRoutes));if(data.activities&&Array.isArray(data.activities)){data.activities.forEach(function(a){if(a&&(a.distance||a.km||a.route||a.polyline))arr.push(a)})}return arr.slice(0,12)}
+  function renderPhotos(photos){if(!photos.length)return '<div class="gs-friend-empty-tile">Aucun moment public pour l’instant.</div>';return photos.map(function(src){return '<div class="gs-moment-tile"><img src="'+E(src)+'" alt=""></div>'}).join('')}
+  function renderRoutes(routes){if(!routes.length)return '<div class="gs-friend-empty-tile">Aucun tracé public pour l’instant.</div>';return routes.map(function(r){var title=r.name||r.title||r.type||'Sortie',dist=r.distance||r.km||r.dist||'',date=r.date||r.created_at||'';return '<div class="gs-friend-route-card"><i></i><div><b>'+E(title)+'</b><span>'+E(dist?(dist+' km'):'Distance non renseignée')+(date?' · '+E(String(date).slice(0,10)):'')+'</span></div></div>'}).join('')}
+  async function resolveLoginEmail(input){
+    input=clean(input);if(!input)return '';
+    if(isEmail(input))return input.toLowerCase();
+    var uname=normalize(input);if(!uname)return '';
+    if(!window._supa)return '';
+    try{var rpc=await window._supa.rpc('resolve_login_email',{login_input:uname});if(!rpc.error&&rpc.data)return Array.isArray(rpc.data)?(rpc.data[0]||''):rpc.data}catch(e){}
+    try{var r=await window._supa.from('profiles').select('email,username').eq('username',uname).limit(1);if(!r.error&&r.data&&r.data[0]&&r.data[0].email)return r.data[0].email}catch(e){}
+    try{var r2=await window._supa.from('profiles').select('email,username').ilike('username',uname).limit(1);if(!r2.error&&r2.data&&r2.data[0]&&r2.data[0].email)return r2.data[0].email}catch(e){}
+    return '';
+  }
+  window.doLogin=async function(){
+    var inputEl=$('auth-email'),passEl=$('auth-password');var input=inputEl?clean(inputEl.value):'',pass=passEl?passEl.value:'';
+    if(!input||!pass){if(typeof window.authShowView==='function')window.authShowView('login');if(typeof window.authShowErr==='function')window.authShowErr('Entre ton email ou ton @username + ton mot de passe.');return}
+    if(!window._supa){if(typeof window.authShowErr==='function')window.authShowErr('Connexion Supabase indisponible.');return}
+    try{
+      if(typeof window.setAuthLoading==='function')window.setAuthLoading(true);
+      var email=await resolveLoginEmail(input);
+      if(!email){if(typeof window.authShowErr==='function')window.authShowErr('Utilisateur introuvable. Vérifie le @username.');return}
+      var res=await window._supa.auth.signInWithPassword({email:email,password:pass});
+      if(res.error){if(typeof window.authShowErr==='function')window.authShowErr('Identifiant ou mot de passe incorrect.');return}
+      if(typeof window.afterAuth==='function')await window.afterAuth(res.data.user);
+    }catch(e){if(typeof window.authShowErr==='function')window.authShowErr(e.message||'Connexion impossible.')}finally{if(typeof window.setAuthLoading==='function')window.setAuthLoading(false)}
+  };
+  async function smartUsers(q){
+    if(!window._supa||!window._supaUser)return {login:true,users:[]};
+    var raw=clean(q),needle=normalize(raw).replace(/[%,]/g,'');if(needle.length<2)return {users:[]};
+    var rows=[],seen={};
+    function add(list){(list||[]).forEach(function(u){if(u&&u.id&&!seen[u.id]){seen[u.id]=1;rows.push(u)}})}
+    try{var rpc=await window._supa.rpc('search_profiles_public',{search_query:needle,max_count:24});if(!rpc.error)add(rpc.data)}catch(e){}
+    try{var res=await window._supa.from('profiles').select('id,email,username,display_name,data').or('username.ilike.%'+needle+'%,display_name.ilike.%'+needle+'%,email.ilike.%'+needle+'%').neq('id',window._supaUser.id).limit(24);if(!res.error)add(res.data)}catch(e){}
+    if(rows.length<8){try{var res2=await window._supa.from('profiles').select('id,email,username,display_name,data').neq('id',window._supaUser.id).limit(80);if(!res2.error)add((res2.data||[]).filter(function(u){var p=profOf(u),hay=[u.username,u.display_name,u.email,p.name].join(' ').toLowerCase();return hay.indexOf(needle)>-1}))}catch(e){}}
+    rows.sort(function(a,b){return scoreSearch(b,needle)-scoreSearch(a,needle)});
+    return {users:rows.slice(0,16)};
+  }
+  function scoreSearch(u,n){var p=profOf(u),un=publicUsername(u),nm=publicName(u).toLowerCase(),dn=String(u.display_name||'').toLowerCase(),pn=String(p.name||'').toLowerCase();var s=0;if(un===n)s+=120;if(un.indexOf(n)===0)s+=70;if(nm===n)s+=80;if(nm.indexOf(n)===0)s+=50;if(dn.indexOf(n)>-1)s+=30;if(pn.indexOf(n)>-1)s+=35;if((u.email||'').toLowerCase().indexOf(n)>-1)s+=10;return s}
+  function matchLabel(u,n){var un=publicUsername(u),nm=publicName(u);if(un&&un.indexOf(n)===0)return 'username';if(nm.toLowerCase().indexOf(n)>-1)return 'nom';return 'profil'}
+  async function renderSmartResults(target,q,modal){
+    var el=typeof target==='string'?$(target):target;if(!el)return;var n=normalize(q);
+    if(n.length<2){el.innerHTML='<div class="gs-search-smart-empty"><b>Recherche intelligente</b>Tape un @username ou un nom.</div>';return}
+    el.innerHTML='<div class="gs-search-smart-empty"><b>Recherche...</b>On cherche par username et par nom.</div>';
+    try{var r=await smartUsers(q);if(r.login){el.innerHTML='<div class="gs-search-smart-empty"><b>Compte requis</b>Connecte-toi pour ajouter des amis.</div>';return}var users=r.users||[];if(!users.length){el.innerHTML='<div class="gs-search-smart-empty"><b>Aucun profil trouvé</b>Essaie un @username exact ou le nom affiché.</div>';return}var ids=friendIds();el.innerHTML=users.map(function(u,i){var name=publicName(u),uname=publicUsername(u),av=publicAvatar(u),already=ids.indexOf(u.id)>-1,key='gs_smart_user_'+Date.now()+'_'+i;window[key]={id:u.id,name:name,username:uname,avatar:av,xp:xpOf(dataOf(u)),data:dataOf(u),display_name:u.display_name||name,email:u.email||''};return '<div class="ucard" style="margin-bottom:8px;cursor:pointer" onclick="'+(modal?'closeSearchModal&&closeSearchModal();':'')+'openFriendProfile&&openFriendProfile(window[\''+key+'\'])"><div class="ucard-av">'+avatarHtml(name,av)+'</div><div style="flex:1;min-width:0"><div class="ucard-name">'+E(name)+'</div><div class="ucard-sub">'+(uname?'<span style="color:var(--acc)">@'+E(uname)+'</span> · ':'')+'<span class="gs-smart-match">Trouvé par <b>'+E(matchLabel(u,n))+'</b></span></div></div><button class="ucard-btn '+(already?'sent':'')+'" '+(already?'disabled':'')+' onclick="event.stopPropagation();sendFriendRequest&&sendFriendRequest(\''+E(u.id)+'\',\''+E(name).replace(/&#39;/g,"\\'")+'\',this)">'+(already?'Ami':'Ajouter')+'</button></div>'}).join('')}
+    catch(e){el.innerHTML='<div class="gs-search-smart-empty"><b>Erreur de recherche</b>'+E(e.message||e)+'</div>'}
+  }
+  window.renderUserResults=renderSmartResults;
+  window.searchUsers=function(q){clearTimeout(window._gsSmartSearchT);window._gsSmartSearchT=setTimeout(function(){renderSmartResults('social-results',q,false)},160)};
+  window.closeSearchModal=function(){var el=$('search-modal');if(el)el.remove()};
+  window.openSearchModal=function(){var old=$('search-modal');if(old)old.remove();var html='<div id="search-modal" class="gs-social-search2"><div class="gs-social-search-head2"><input id="search-modal-inp" placeholder="@username ou nom" autocomplete="off"><button class="gs-search-close2" type="button" onclick="event.stopPropagation();closeSearchModal()">×</button></div><div id="search-modal-results" class="gs-social-results2"><div class="gs-search-smart-empty"><b>Ajoute un ami</b>Cherche par @username ou par nom affiché.</div></div><div style="flex:1" onclick="closeSearchModal()"></div></div>';document.body.insertAdjacentHTML('beforeend',html);var inp=$('search-modal-inp');if(inp){inp.oninput=function(){var v=this.value;clearTimeout(window._gsSmartSearchT);window._gsSmartSearchT=setTimeout(function(){renderSmartResults('search-modal-results',v,true)},160)};setTimeout(function(){try{inp.focus()}catch(e){}},60)}};
+  window.gsFriendProfileAdd=function(btn){var u=window.__gsFriendProfileV5User||{};if(!u.id)return;if(btn&&btn.disabled)return;if(typeof window.sendFriendRequest==='function'){window.sendFriendRequest(u.id,publicName(u),btn);if(btn){btn.textContent='Demandé';btn.classList.remove('add');btn.classList.add('sent')}}};
+  async function fetchFull(u){u=u||{};if(!window._supa||!u.id)return u;try{var r=await window._supa.from('profiles').select('id,email,username,display_name,data').eq('id',u.id).maybeSingle();if(!r.error&&r.data){return Object.assign({},u,r.data,{name:publicName(Object.assign({},u,r.data)),avatar:publicAvatar(Object.assign({},u,r.data)),xp:xpOf(r.data.data||{})})}}catch(e){}return u}
+  function renderFriendProfile(u){
+    var ov=$('friend-ov'),body=$('friend-profile-body');if(!ov||!body)return;u=u||{};window.__gsFriendProfileV5User=u;var data=dataOf(u),p=profOf(u),name=publicName(u),username=publicUsername(u),av=publicAvatar(u),sp=scores(data),lv=levelInfo(sp.xp),photos=photosOf(data),routes=routesOf(data);var isMe=window._supaUser&&u.id===window._supaUser.id,already=isFriend(u.id);var action=isMe?'<button type="button" class="gs-prof4-settings sent" disabled>Moi</button>':(already?'<button type="button" class="gs-prof4-settings sent" disabled>Ami</button>':'<button type="button" class="gs-prof4-settings add" onclick="gsFriendProfileAdd(this)">Ajouter</button>');var avatar=av?'<img src="'+E(av)+'">':E((name||'U').charAt(0).toUpperCase());body.style.padding='0';body.innerHTML='<div class="gs-prof4 gs-friend-prof4"><div class="gs-prof4-head"><button class="gs-prof4-back" onclick="window.closeFriendProfile&&window.closeFriendProfile()">‹</button><div class="gs-prof4-title">Profil</div>'+action+'</div><section class="gs-prof4-id"><button type="button" class="gs-prof4-avatar">'+avatar+'</button><div class="gs-prof4-id-right"><div class="gs-prof4-name-row"><div class="gs-prof4-name">'+E(name)+'</div>'+badgeMini(sp)+'</div><div class="gs-prof4-lvl-row"><span class="gs-prof4-lvl">Niv. '+E(lv.lvl)+'</span><span class="gs-prof4-xp">'+E(sp.xp)+' XP <small>· '+E(lv.toNext)+' avant niv. '+E(lv.lvl+1)+'</small></span></div><div class="gs-prof4-track" title="'+E(lv.now)+' / '+E(lv.next)+' XP"><i style="width:'+E(lv.pct)+'%"></i></div></div></section><div class="gs-prof4-userline"><button type="button" class="gs-prof4-username">'+(username?'@'+E(username):'@username')+'</button><span class="gs-prof4-userline-sep"></span><button type="button" class="gs-prof4-rank"><span>Score</span><b>'+E(sp.goat)+'</b></button><button type="button" class="gs-prof4-xp-ledger"><span>Séances</span> '+E(sp.sessions)+'</button></div>'+stripHtml(p)+'<div class="gs-prof4-swipe"><section class="gs-prof4-slide"><div class="gs-prof4-photo-head"><div><div class="gs-prof4-kicker">Grille photo</div><div class="gs-prof4-section-title">Moments</div><div class="gs-prof4-photo-sub">Glisse à gauche pour voir ses tracés.</div></div></div><div class="gs-moments-grid">'+renderPhotos(photos)+'</div></section><section class="gs-prof4-slide"><div class="gs-prof4-photo-head"><div><div class="gs-prof4-kicker">Tracés</div><div class="gs-prof4-section-title">Running & randonnée</div><div class="gs-prof4-photo-sub">Glisse à droite pour revenir aux photos.</div></div></div><div class="gs-prof4-route-grid">'+renderRoutes(routes)+'</div></section></div></div>';ov.classList.add('open','gs-friend-profile-v5');try{if(typeof window.decorateAll==='function')window.decorateAll()}catch(e){}
+  }
+  window.openFriendProfile=async function(u){u=u||{};renderFriendProfile(u);var full=await fetchFull(u);renderFriendProfile(full)};
+  var oldCloseFriend=window.closeFriendProfile;
+  window.closeFriendProfile=function(){var ov=$('friend-ov');if(ov){ov.classList.remove('gs-friend-profile-v5');ov.classList.remove('open')}if(typeof oldCloseFriend==='function')return oldCloseFriend.apply(this,arguments)};
+  setTimeout(function(){try{var a=$('auth-email');if(a){a.placeholder='Email ou @username';a.setAttribute('autocomplete','username')}}catch(e){}},300);
+})();
+</script>
+
 </body>
 </html>
