@@ -3884,6 +3884,7 @@ function searchUsersModal(query){
  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);font-size:13px">Recherche...</div>';
  clearTimeout(window._searchModalTimeout);
  window._searchModalTimeout=setTimeout(async function(){
+ if((!window._supaUser)&&typeof window.gsEnsureSupaUser==='function')await window.gsEnsureSupaUser();
  if(!_supa||!_supaUser){el.innerHTML='<div style="background:rgba(143,185,255,.08);border:1px solid rgba(143,185,255,.18);border-radius:18px;padding:18px;text-align:center;margin:8px 0"><div style="font-size:15px;font-weight:900;color:var(--txt);margin-bottom:6px">Compte requis</div><div style="font-size:13px;color:var(--mut);margin-bottom:14px">Crée un compte gratuit pour trouver et défier tes amis</div><button type=\"button\" onclick=\"document.getElementById(\'social-ov\').classList.remove(\'open\');document.getElementById(\'auth-screen\').style.display=\'flex\';if(typeof authShowView===\'function\')authShowView(\'signup-s1\')\" style=\"padding:11px 20px;border-radius:99px;background:var(--txt);color:#071018;font-weight:900;font-size:13px;border:none;cursor:pointer;margin-right:8px\">Créer un compte</button><button type=\"button\" onclick=\"document.getElementById(\'social-ov\').classList.remove(\'open\');document.getElementById(\'auth-screen\').style.display=\'flex\';if(typeof authShowView===\'function\')authShowView(\'login\')\" style=\"padding:11px 20px;border-radius:99px;background:none;color:var(--txt);font-weight:900;font-size:13px;border:1px solid rgba(255,255,255,.12);cursor:pointer\">Connexion</button></div>';return;}
  try{
  var qLower=query.replace(/^@/,'').toLowerCase();
@@ -7097,17 +7098,24 @@ document.addEventListener('DOMContentLoaded',function(){
  ensureState();
  try{ gsInstallOnboarding(); }catch(e){ console.error('onboarding install failed:', e); }
  var auth=$('auth-screen'), onboard=$('onboard');
- if(state.onboarded && state.profil && state.profil.name){ bootSafe(); return; }
  if(auth) auth.style.display='flex'; if(onboard) onboard.style.display='none';
- if(!_supa) return;
+ if(!_supa || !_supa.auth) return;
  try{
- var sess=await _supa.auth.getSession();
- if(sess && sess.data && sess.data.session && sess.data.session.user){ await afterAuth(sess.data.session.user); }
+ if(!window._gsAuthListenerInstalled){
  _supa.auth.onAuthStateChange(async function(event, session){
- if(event==='SIGNED_OUT'){ state={}; _supaUser=null; ensureState(); if(auth)auth.style.display='flex'; if(onboard)onboard.style.display='none'; }
+ var u=session&&session.user;
+ if(u){ window._supaUser=u; try{_supaUser=u}catch(e){} try{state.guestMode=false;sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');}catch(e){} }
+ if(event==='SIGNED_OUT'){ state={}; window._supaUser=null; try{_supaUser=null}catch(e){} ensureState(); if(auth)auth.style.display='flex'; if(onboard)onboard.style.display='none'; }
  });
+ window._gsAuthListenerInstalled=true;
+ }
+ var sess=await _supa.auth.getSession();
+ var user=sess && sess.data && sess.data.session && sess.data.session.user;
+ if(user){ window._supaUser=user; try{_supaUser=user}catch(e){} await afterAuth(user); return; }
+ if(sessionStorage.getItem('gs_guest_session')==='1' && state.guestMode===true && state.onboarded && state.profil && state.profil.name){ if(auth)auth.style.display='none'; bootSafe(); return; }
  }catch(e){ console.warn('Supabase auth unavailable:', e); }
  };
+
 
  document.addEventListener('DOMContentLoaded', function(){
  setTimeout(function(){
@@ -7850,6 +7858,7 @@ document.addEventListener('DOMContentLoaded',function(){
  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);font-size:13px">Recherche...</div>';
  clearTimeout(window._searchModalTimeout);
  window._searchModalTimeout=setTimeout(async function(){
+ if((!window._supaUser)&&typeof window.gsEnsureSupaUser==='function')await window.gsEnsureSupaUser();
  if(!window._supa||!window._supaUser){el.innerHTML='<div style="background:rgba(143,185,255,.08);border:1px solid rgba(143,185,255,.18);border-radius:18px;padding:18px;text-align:center;margin:8px 0"><b>Compte requis</b><div style="font-size:13px;color:var(--mut);margin:8px 0 14px">Connecte-toi pour chercher un utilisateur.</div><button type="button" onclick="document.getElementById(\'auth-screen\').style.display=\'flex\';authShowView&&authShowView(\'login\')" style="padding:11px 20px;border-radius:99px;background:var(--txt);color:#071018;font-weight:900;border:none">Connexion</button></div>';return;}
  try{
  var q=query.replace(/^@/,'').toLowerCase();
@@ -9586,6 +9595,8 @@ document.addEventListener('DOMContentLoaded',function(){
  return false;
  }
  window._supaUser=user;
+ try{_supaUser=user}catch(e){}
+ try{state.guestMode=false;sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');}catch(e){}
  hideAppGates();
  try{await loadFromSupabase(user.id)}catch(e){console.warn('loadFromSupabase failed',e)}
  var st=ensureState(),p=st.profil||{};
@@ -10388,7 +10399,7 @@ document.addEventListener('DOMContentLoaded',function(){
  };
 
  async function hasSupabaseSession(){
- try{if(window._supa&&window._supa.auth){var sess=await window._supa.auth.getSession();return!!(sess&&sess.data&&sess.data.session&&sess.data.session.user)}}catch(e){}
+ try{if(window._supa&&window._supa.auth){var sess=await window._supa.auth.getSession();var u=sess&&sess.data&&sess.data.session&&sess.data.session.user;if(u){window._supaUser=u;try{_supaUser=u}catch(e){}try{S().guestMode=false;sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');save()}catch(e){}return true}}}catch(e){}
  return!!window._supaUser;
  }
  async function enforceAuthLanding(){
@@ -11161,7 +11172,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
   function safeAvatar(u){var av=u&&u.data&&u.data.profil&&u.data.profil.avatar;var mine=P().avatar||'';if(!av||av===mine)return '';return av}
   function avatarHtml(name,av){return av?'<img src="'+E(av)+'" alt="">':E((name||'U').charAt(0).toUpperCase())}
-  async function queryUsers(q){if(!window._supa||!window._supaUser)return {login:true,users:[]};var clean=String(q||'').replace(/^@/,'').trim();if(clean.length<2)return {users:[]};var res=await window._supa.from('profiles').select('id,email,username,display_name,data').or('username.ilike.%'+clean+'%,display_name.ilike.%'+clean+'%,email.ilike.%'+clean+'%').neq('id',window._supaUser.id).limit(12);return {users:res.data||[],error:res.error}}
+  async function queryUsers(q){if((!window._supaUser)&&typeof window.gsEnsureSupaUser==='function')await window.gsEnsureSupaUser();if(!window._supa||!window._supaUser)return {login:true,users:[]};var clean=String(q||'').replace(/^@/,'').trim();if(clean.length<2)return {users:[]};var res=await window._supa.from('profiles').select('id,email,username,display_name,data').or('username.ilike.%'+clean+'%,display_name.ilike.%'+clean+'%,email.ilike.%'+clean+'%').neq('id',window._supaUser.id).limit(12);return {users:res.data||[],error:res.error}}
   async function renderUserResults(target,q,modal){var el=typeof target==='string'?$(target):target;if(!el)return;if(!q||q.length<2){el.innerHTML='<div class="gs-search-empty2">Tape au moins 2 caractères.</div>';return}el.innerHTML='<div class="gs-search-empty2">Recherche...</div>';try{var r=await queryUsers(q);if(r.login){el.innerHTML='<div class="gs-search-empty2"><b style="color:var(--txt)">Compte requis</b><br>Connecte-toi pour chercher des utilisateurs.</div>';return}if(r.error)throw r.error;if(!r.users.length){el.innerHTML='<div class="gs-search-empty2">Aucun utilisateur trouvé.</div>';return}var friendIds=(S().friends||[]).map(function(f){return f.id});el.innerHTML=r.users.map(function(u,i){var pr=(u.data&&u.data.profil)||{},name=u.display_name||pr.name||(u.email?u.email.split('@')[0]:'Utilisateur'),uname=u.username?'@'+u.username:'',av=safeAvatar(u),isFriend=friendIds.indexOf(u.id)>-1;var obj={id:u.id,name:name,username:u.username||'',avatar:av,xp:(u.data&&u.data.xp)||0,data:u.data||{}};var key='gs_search_user_'+i+'_'+Date.now();window[key]=obj;return '<div class="ucard" style="margin-bottom:8px;cursor:pointer" onclick="'+(modal?'closeSearchModal();':'')+'openFriendProfile(window[\''+key+'\'])"><div class="ucard-av">'+avatarHtml(name,av)+'</div><div style="flex:1;min-width:0"><div class="ucard-name">'+E(name)+'</div><div class="ucard-sub">'+(uname?'<span style="color:var(--acc)">'+E(uname)+'</span> · ':'')+E(((u.data&&u.data.xp)||0))+' XP</div></div><button class="ucard-btn '+(isFriend?'sent':'')+'" '+(isFriend?'disabled':'')+' onclick="event.stopPropagation();sendFriendRequest(\''+E(u.id)+'\',\''+E(name).replace(/&#39;/g,"\\'")+'\',this)">'+(isFriend?'Ami':'Ajouter')+'</button></div>'}).join('')}catch(e){el.innerHTML='<div class="gs-search-empty2" style="color:var(--red)">Erreur: '+E(e.message||e)+'</div>'}}
   window.closeSearchModal=function(){var el=$('search-modal');if(el)el.remove()};
   window.openSearchModal=function(){var old=$('search-modal');if(old)old.remove();var html='<div id="search-modal" class="gs-social-search2"><div class="gs-social-search-head2"><input id="search-modal-inp" placeholder="@username, prénom ou email" autocomplete="off"><button class="gs-search-close2" type="button" onclick="event.stopPropagation();closeSearchModal()">×</button></div><div id="search-modal-results" class="gs-social-results2"><div class="gs-search-empty2">Cherche un utilisateur pour voir son profil ou l’ajouter.</div></div><div style="flex:1" onclick="closeSearchModal()"></div></div>';document.body.insertAdjacentHTML('beforeend',html);var inp=$('search-modal-inp');if(inp){inp.oninput=function(){clearTimeout(window._gsUserSearchT);var v=this.value;window._gsUserSearchT=setTimeout(function(){renderUserResults('search-modal-results',v,true)},180)};setTimeout(function(){try{inp.focus()}catch(e){}},30)}};
@@ -13607,6 +13618,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     var clean=qSafe(q);
     if(clean.length<2){el.innerHTML='<div class="gs-notif-row3"><div class="gs-notif-dot3">'+icon('search')+'</div><div class="gs-notif-copy3"><b>Recherche utilisateur</b><span>Tape au moins 2 caractères pour trouver un profil.</span></div></div>';return}
     el.innerHTML='<div class="gs-notif-row3"><div class="gs-notif-dot3">'+icon('search')+'</div><div class="gs-notif-copy3"><b>Recherche...</b><span>On cherche dans les profils G-SQUAD.</span></div></div>';
+    if((!window._supaUser)&&typeof window.gsEnsureSupaUser==='function')await window.gsEnsureSupaUser();
     if(!window._supa||!window._supaUser){
       el.innerHTML='<div class="gs-notif-row3"><div class="gs-notif-dot3">'+icon('search')+'</div><div class="gs-notif-copy3"><b>Compte requis</b><span>Connecte-toi pour chercher des utilisateurs.</span></div></div>';
       return;
@@ -15688,13 +15700,23 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
     showMissing();return false;
   };
 
+  window.gsEnsureSupaUser=async function(){
+    if(window._supaUser)return window._supaUser;
+    if(!cloudReady())return null;
+    try{
+      var res=await window._supa.auth.getSession();
+      var u=res&&res.data&&res.data.session&&res.data.session.user;
+      if(u){window._supaUser=u;try{_supaUser=u}catch(e){}clearGuestMode();return u;}
+    }catch(e){console.warn('Session Supabase introuvable:',e)}
+    return null;
+  };
   function bootCheck(){
     if(!cloudReady()){
       var guest=false;try{guest=sessionStorage.getItem('gs_guest_session')==='1'&&S().guestMode===true}catch(e){}
       if(!guest)showMissing();
     }else{
       showOnline();
-      try{window._supa.auth.getSession().then(function(res){var u=res&&res.data&&res.data.session&&res.data.session.user;if(u){window._supaUser=u;S().guestMode=false;save();}})}catch(e){}
+      try{window.gsEnsureSupaUser&&window.gsEnsureSupaUser();}catch(e){}
     }
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(bootCheck,80);setTimeout(bootCheck,700);});
