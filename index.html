@@ -7844,7 +7844,6 @@ document.addEventListener('DOMContentLoaded',function(){
  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);font-size:13px">Recherche...</div>';
  clearTimeout(window._searchModalTimeout);
  window._searchModalTimeout=setTimeout(async function(){
- if((!window._supaUser)&&typeof window.gsEnsureSupaUser==='function')await window.gsEnsureSupaUser();
  if(!window._supa||!window._supaUser){el.innerHTML='<div style="background:rgba(143,185,255,.08);border:1px solid rgba(143,185,255,.18);border-radius:18px;padding:18px;text-align:center;margin:8px 0"><b>Compte requis</b><div style="font-size:13px;color:var(--mut);margin:8px 0 14px">Connecte-toi pour chercher un utilisateur.</div><button type="button" onclick="document.getElementById(\'auth-screen\').style.display=\'flex\';authShowView&&authShowView(\'login\')" style="padding:11px 20px;border-radius:99px;background:var(--txt);color:#071018;font-weight:900;border:none">Connexion</button></div>';return;}
  try{
  var q=query.replace(/^@/,'').toLowerCase();
@@ -9656,40 +9655,25 @@ document.addEventListener('DOMContentLoaded',function(){
 </script>
 
 
-<!-- G-SQUAD PATCH - route create account to 11-step onboarding -->
+<!-- G-SQUAD PATCH - signup Supabase avant onboarding -->
 <script id="gs-route-signup-to-ob11">
 (function(){
- function open11(){
- try{
- var auth=document.getElementById('auth-screen');
- if(auth) auth.style.display='none';
- var onboard=document.getElementById('onboard');
- if(onboard) onboard.style.display='none';
- if(window.OB11) window.OB11.step=0;
- if(typeof window.openOnboardingWizard==='function') window.openOnboardingWizard(0);
- else if(typeof window.renderOb11==='function') window.renderOb11();
- else {
- if(auth) auth.style.display='flex';
- if(window._oldAuthShowViewFor11) window._oldAuthShowViewFor11('signup-s1');
+ function showSignupAuth(){
+  var auth=document.getElementById('auth-screen');
+  if(auth){auth.style.display='flex';auth.classList&&auth.classList.add('open');}
+  var onboard=document.getElementById('onboard');if(onboard)onboard.style.display='none';
+  var ob11=document.getElementById('gs-onboard-v11');if(ob11)ob11.remove();
+  if(window._oldAuthShowViewFor11)return window._oldAuthShowViewFor11('signup-s1');
+  ['landing','login','signup-s1','signup-s2','signup-s3'].forEach(function(v){var el=document.getElementById('auth-view-'+v);if(el)el.style.display=(v==='signup-s1')?'':'none';});
  }
- }catch(e){console.warn('open 11-step signup failed',e)}
- }
- window.openSignup11=open11;
- if(!window._oldAuthShowViewFor11 && typeof window.authShowView==='function') window._oldAuthShowViewFor11=window.authShowView;
+ window.openSignup11=showSignupAuth;
+ if(!window._oldAuthShowViewFor11 && typeof window.authShowView==='function')window._oldAuthShowViewFor11=window.authShowView;
  window.authShowView=function(view){
- if(view==='signup-s1'||view==='signup'||view==='signup11'||view==='onboarding') { open11(); return; }
- if(window._oldAuthShowViewFor11) return window._oldAuthShowViewFor11(view);
+  if(view==='signup'||view==='signup11')view='signup-s1';
+  if(view==='onboarding'){if(typeof window.openOnboardingWizard==='function')return window.openOnboardingWizard(0);return;}
+  if(window._oldAuthShowViewFor11)return window._oldAuthShowViewFor11(view);
+  ['landing','login','signup-s1','signup-s2','signup-s3'].forEach(function(v){var el=document.getElementById('auth-view-'+v);if(el)el.style.display=(v===(view||'landing'))?'':'none';});
  };
- document.addEventListener('DOMContentLoaded',function(){
- setTimeout(function(){
- document.querySelectorAll('button').forEach(function(btn){
- var oc=btn.getAttribute('onclick')||'';
- if(oc.indexOf("authShowView('signup-s1')")!==-1 || oc.indexOf('authShowView(\"signup-s1\")')!==-1){
- btn.setAttribute('onclick','openSignup11()');
- }
- });
- },80);
- });
 })();
 </script>
 
@@ -10341,11 +10325,16 @@ document.addEventListener('DOMContentLoaded',function(){
  if(typeof oldOpenOnboarding==='function')return oldOpenOnboarding.call(window,step||0);
  if(typeof window.renderOb11==='function'){window.renderOb11();return;}
  }
- window.gsOpenSignupFlow=function(){open11(0)};
+ window.gsOpenSignupFlow=function(){
+ var auth=$('auth-screen');if(auth){auth.style.display='flex';auth.classList&&auth.classList.add('open');}
+ hideOnboarding();
+ var ids=['landing','login','signup-s1','signup-s2','signup-s3'];
+ ids.forEach(function(v){var el=$('auth-view-'+v);if(el)el.style.display=(v==='signup-s1')?'block':'none';});
+};
  window.openOnboardingWizard=function(step){
  var profileOpen=($('profil-ov')&&$('profil-ov').classList.contains('open'))||$('profile-settings-v1');
  var alreadyInsideApp=!!profileOpen || (S().onboarded===true && ($('auth-screen')||{}).style.display==='none');
- var manual=(Date.now()<manualObUntil)||alreadyInsideApp;
+ var manual=(Date.now()<manualObUntil)||alreadyInsideApp||!!window._supaUser;
  if(!manual &&!S().onboarded &&!sessionStorage.getItem('gs_guest_session')){showLanding();return;}
  return open11(typeof step==='number'?step:0);
  };
@@ -10353,7 +10342,8 @@ document.addEventListener('DOMContentLoaded',function(){
  var prevAuthShow=window.authShowView;
  window._authLandingShow=prevAuthShow;
  window.authShowView=function(view){
- if(view==='signup-s1'||view==='signup'||view==='signup11'||view==='onboarding'){window.gsOpenSignupFlow();return;}
+ if(view==='signup'||view==='signup11')view='signup-s1';
+ if(view==='onboarding'){if(typeof window.openOnboardingWizard==='function')return window.openOnboardingWizard(0);return;}
  if(typeof prevAuthShow==='function')return prevAuthShow.apply(this,arguments);
  var ids=['landing','login','signup-s1','signup-s2','signup-s3'];
  ids.forEach(function(v){var el=$('auth-view-'+v);if(el)el.style.display=(v===(view||'landing'))?'block':'none';});
@@ -10364,7 +10354,7 @@ document.addEventListener('DOMContentLoaded',function(){
  document.querySelectorAll('button').forEach(function(btn){
  var oc=btn.getAttribute('onclick')||'';
  if(oc.indexOf("authShowView('signup-s1')")!==-1 || oc.indexOf('authShowView("signup-s1")')!==-1 || oc.indexOf('openSignup11()')!==-1){
- btn.setAttribute('onclick','gsOpenSignupFlow()');
+ btn.setAttribute('onclick',"authShowView('signup-s1')");
  }
  });
  }
@@ -11156,7 +11146,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
   function safeAvatar(u){var av=u&&u.data&&u.data.profil&&u.data.profil.avatar;var mine=P().avatar||'';if(!av||av===mine)return '';return av}
   function avatarHtml(name,av){return av?'<img src="'+E(av)+'" alt="">':E((name||'U').charAt(0).toUpperCase())}
-  async function queryUsers(q){if((!window._supaUser)&&typeof window.gsEnsureSupaUser==='function')await window.gsEnsureSupaUser();if(!window._supa||!window._supaUser)return {login:true,users:[]};var clean=String(q||'').replace(/^@/,'').trim();if(clean.length<2)return {users:[]};var res=await window._supa.from('profiles').select('id,email,username,display_name,data').or('username.ilike.%'+clean+'%,display_name.ilike.%'+clean+'%,email.ilike.%'+clean+'%').neq('id',window._supaUser.id).limit(12);return {users:res.data||[],error:res.error}}
+  async function queryUsers(q){if(!window._supa||!window._supaUser)return {login:true,users:[]};var clean=String(q||'').replace(/^@/,'').trim();if(clean.length<2)return {users:[]};var res=await window._supa.from('profiles').select('id,email,username,display_name,data').or('username.ilike.%'+clean+'%,display_name.ilike.%'+clean+'%,email.ilike.%'+clean+'%').neq('id',window._supaUser.id).limit(12);return {users:res.data||[],error:res.error}}
   async function renderUserResults(target,q,modal){var el=typeof target==='string'?$(target):target;if(!el)return;if(!q||q.length<2){el.innerHTML='<div class="gs-search-empty2">Tape au moins 2 caractères.</div>';return}el.innerHTML='<div class="gs-search-empty2">Recherche...</div>';try{var r=await queryUsers(q);if(r.login){el.innerHTML='<div class="gs-search-empty2"><b style="color:var(--txt)">Compte requis</b><br>Connecte-toi pour chercher des utilisateurs.</div>';return}if(r.error)throw r.error;if(!r.users.length){el.innerHTML='<div class="gs-search-empty2">Aucun utilisateur trouvé.</div>';return}var friendIds=(S().friends||[]).map(function(f){return f.id});el.innerHTML=r.users.map(function(u,i){var pr=(u.data&&u.data.profil)||{},name=u.display_name||pr.name||(u.email?u.email.split('@')[0]:'Utilisateur'),uname=u.username?'@'+u.username:'',av=safeAvatar(u),isFriend=friendIds.indexOf(u.id)>-1;var obj={id:u.id,name:name,username:u.username||'',avatar:av,xp:(u.data&&u.data.xp)||0,data:u.data||{}};var key='gs_search_user_'+i+'_'+Date.now();window[key]=obj;return '<div class="ucard" style="margin-bottom:8px;cursor:pointer" onclick="'+(modal?'closeSearchModal();':'')+'openFriendProfile(window[\''+key+'\'])"><div class="ucard-av">'+avatarHtml(name,av)+'</div><div style="flex:1;min-width:0"><div class="ucard-name">'+E(name)+'</div><div class="ucard-sub">'+(uname?'<span style="color:var(--acc)">'+E(uname)+'</span> · ':'')+E(((u.data&&u.data.xp)||0))+' XP</div></div><button class="ucard-btn '+(isFriend?'sent':'')+'" '+(isFriend?'disabled':'')+' onclick="event.stopPropagation();sendFriendRequest(\''+E(u.id)+'\',\''+E(name).replace(/&#39;/g,"\\'")+'\',this)">'+(isFriend?'Ami':'Ajouter')+'</button></div>'}).join('')}catch(e){el.innerHTML='<div class="gs-search-empty2" style="color:var(--red)">Erreur: '+E(e.message||e)+'</div>'}}
   window.closeSearchModal=function(){var el=$('search-modal');if(el)el.remove()};
   window.openSearchModal=function(){var old=$('search-modal');if(old)old.remove();var html='<div id="search-modal" class="gs-social-search2"><div class="gs-social-search-head2"><input id="search-modal-inp" placeholder="@username, prénom ou email" autocomplete="off"><button class="gs-search-close2" type="button" onclick="event.stopPropagation();closeSearchModal()">×</button></div><div id="search-modal-results" class="gs-social-results2"><div class="gs-search-empty2">Cherche un utilisateur pour voir son profil ou l’ajouter.</div></div><div style="flex:1" onclick="closeSearchModal()"></div></div>';document.body.insertAdjacentHTML('beforeend',html);var inp=$('search-modal-inp');if(inp){inp.oninput=function(){clearTimeout(window._gsUserSearchT);var v=this.value;window._gsUserSearchT=setTimeout(function(){renderUserResults('search-modal-results',v,true)},180)};setTimeout(function(){try{inp.focus()}catch(e){}},30)}};
@@ -13602,7 +13592,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     var clean=qSafe(q);
     if(clean.length<2){el.innerHTML='<div class="gs-notif-row3"><div class="gs-notif-dot3">'+icon('search')+'</div><div class="gs-notif-copy3"><b>Recherche utilisateur</b><span>Tape au moins 2 caractères pour trouver un profil.</span></div></div>';return}
     el.innerHTML='<div class="gs-notif-row3"><div class="gs-notif-dot3">'+icon('search')+'</div><div class="gs-notif-copy3"><b>Recherche...</b><span>On cherche dans les profils G-SQUAD.</span></div></div>';
-    if((!window._supaUser)&&typeof window.gsEnsureSupaUser==='function')await window.gsEnsureSupaUser();
     if(!window._supa||!window._supaUser){
       el.innerHTML='<div class="gs-notif-row3"><div class="gs-notif-dot3">'+icon('search')+'</div><div class="gs-notif-copy3"><b>Compte requis</b><span>Connecte-toi pour chercher des utilisateurs.</span></div></div>';
       return;
@@ -15585,80 +15574,62 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
 })();
 </script>
 
-
-
-<!-- G-SQUAD PATCH - auth Supabase réelle, anti-boot local silencieux -->
-<style id="gs-cloud-auth-fix-css">
-.gs-cloud-auth-card{margin:0 0 14px;background:rgba(255,199,92,.10);border:1px solid rgba(255,199,92,.28);border-radius:18px;padding:14px;color:var(--txt);line-height:1.42}.gs-cloud-auth-card b{display:block;font-size:15px;font-weight:1000;letter-spacing:-.02em;margin-bottom:4px}.gs-cloud-auth-card span{display:block;color:var(--txt2);font-size:12px;font-weight:850}.gs-cloud-auth-card code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#FFC75C;font-size:11px;font-weight:900}.gs-cloud-auth-card.ok{background:rgba(115,214,162,.10);border-color:rgba(115,214,162,.24)}.gs-cloud-auth-card.ok code{color:#73D6A2}
-</style>
-<script id="gs-cloud-auth-fix-20260508">
+<!-- G-SQUAD PATCH - inscription Supabase obligatoire avant onboarding -->
+<script id="gs-signup-supabase-first-fix">
 (function(){
-  'use strict';
-  function $(id){return document.getElementById(id)}
-  function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
-  function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('ath7',JSON.stringify(window.state||{}))}catch(e){}}
-  function validKey(k){k=(k||'').trim();return typeof k==='string' && (/^sb_publishable_[A-Za-z0-9_-]+$/.test(k) || /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+=*$/.test(k))}
-  function configuredKey(){
-    var k='';
-    try{if(typeof window.GS_SUPABASE_KEY==='string')k=window.GS_SUPABASE_KEY}catch(e){}
-    try{var m=document.querySelector('meta[name="gs-supabase-key"]');if(!k&&m)k=m.getAttribute('content')||''}catch(e){}
-    try{if(!k&&typeof SUPABASE_KEY==='string')k=SUPABASE_KEY}catch(e){}
-    return (k||'').trim();
+ function $(id){return document.getElementById(id)}
+ function showSignup(){
+  var auth=$('auth-screen');if(auth){auth.style.display='flex';auth.classList&&auth.classList.add('open')}
+  var ob=$('onboard');if(ob)ob.style.display='none';
+  var ob11=$('gs-onboard-v11');if(ob11)ob11.remove();
+  if(typeof window._oldAuthShowViewFor11==='function')return window._oldAuthShowViewFor11('signup-s1');
+  ['landing','login','signup-s1','signup-s2','signup-s3'].forEach(function(v){var el=$('auth-view-'+v);if(el)el.style.display=(v==='signup-s1')?'':'none'});
+ }
+ function rewriteSignupButtons(){
+  document.querySelectorAll('button').forEach(function(btn){
+   var oc=btn.getAttribute('onclick')||'';
+   if(oc.indexOf('openSignup11()')!==-1||oc.indexOf('gsOpenSignupFlow()')!==-1){btn.setAttribute('onclick',"authShowView('signup-s1')");}
+  });
+ }
+ var prev=window.authShowView;
+ window.authShowView=function(view){
+  if(view==='signup'||view==='signup11')view='signup-s1';
+  if(view==='signup-s1')return showSignup();
+  if(view==='onboarding'){
+   if(window._supaUser&&typeof window.openOnboardingWizard==='function')return window.openOnboardingWizard(0);
+   return showSignup();
   }
-  function syncClient(client){if(!client)return false;window._supa=client;try{_supa=client}catch(e){}return !!(window._supa&&window._supa.auth)}
-  function cloudReady(){
-    try{if(window._supa&&window._supa.auth){try{_supa=window._supa}catch(e){};return true}}catch(e){}
-    var key=configuredKey(); if(!validKey(key))return false;
-    try{if(window.supabase&&window.supabase.createClient){var url=(typeof SUPABASE_URL==='string'&&SUPABASE_URL)||window.SUPABASE_URL||'';if(!/^https:\/\/[a-z0-9-]+\.supabase\.co/i.test(url))return false;return syncClient(window.supabase.createClient(url,key));}}catch(e){console.warn('Supabase init error:',e)}
-    return false;
-  }
-  function setSupaUser(user){window._supaUser=user||null;try{_supaUser=user||null}catch(e){}return window._supaUser}
-  async function getSessionUser(){
-    if(!cloudReady())return null;
-    try{var res=await window._supa.auth.getSession();var user=res&&res.data&&res.data.session&&res.data.session.user;return setSupaUser(user||null)}catch(e){console.warn('Supabase session error:',e);return setSupaUser(null)}
-  }
-  window.gsEnsureSupaUser=async function(){return await getSessionUser()};
-  function clearGuestMode(){
-    try{sessionStorage.removeItem('gs_guest_session')}catch(e){}
-    try{localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped')}catch(e){}
-    try{S().guestMode=false;save()}catch(e){}
-    var b=$('guest-banner');if(b)try{b.remove()}catch(e){}
-    try{document.body.classList.remove('gs-guest-confirmed')}catch(e){}
-  }
-  function showAuth(view){var auth=$('auth-screen');if(auth){auth.style.display='flex';auth.classList&&auth.classList.add('open')}var ob=$('onboard');if(ob)ob.style.display='none';var ob11=$('gs-onboard-v11');if(ob11)ob11.remove();try{if(typeof window.authShowView==='function')window.authShowView(view||'login')}catch(e){}}
-  function card(msg,ok){var auth=$('auth-screen');if(!auth)return;var panel=$('auth-view-login')||auth.querySelector('.auth-box')||auth;var old=$('gs-cloud-auth-card');if(old)old.remove();var html='<div id="gs-cloud-auth-card" class="gs-cloud-auth-card '+(ok?'ok':'')+'"><b>'+(ok?'Connexion cloud prête':'Connexion cloud inactive')+'</b><span>'+msg+'</span></div>';panel.insertAdjacentHTML('afterbegin',html)}
-  function showMissing(){showAuth('login');card('Le fichier ne contient pas de clé publique Supabase valide. Ajoute une clé <code>sb_publishable_...</code> ou une ancienne anon key JWT dans <code>SUPABASE_KEY</code> pour activer connexion, inscription, amis et sauvegarde cloud.',false);try{if(typeof window.authShowErr==='function')window.authShowErr('Supabase non configuré : ajoute une clé publique valide.')}catch(e){}}
-  function showLoginNeeded(){showAuth('login');card('Aucune session Supabase active sur ce navigateur. Connecte-toi ou crée un compte : le profil local seul ne suffit pas pour chercher des utilisateurs.',true)}
-  function showOnline(){var old=$('gs-cloud-auth-card');if(old)old.remove()}
-  function requireCloud(){if(cloudReady()){showOnline();return true}showMissing();return false}
-  var listenerInstalled=false;
-  function installAuthListener(){
-    if(listenerInstalled||!cloudReady())return;listenerInstalled=true;
-    try{window._supa.auth.onAuthStateChange(async function(event,session){
-      if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='USER_UPDATED'){var u=session&&session.user;if(u){clearGuestMode();setSupaUser(u);try{await window.afterAuth(u)}catch(e){console.warn('afterAuth state error:',e)}}}
-      if(event==='SIGNED_OUT'){setSupaUser(null);try{window.state={};localStorage.removeItem('ath7')}catch(e){}S();showAuth('login')}
-    })}catch(e){console.warn('auth listener error:',e)}
-  }
-  window.initAuth=async function(){
-    S();
-    try{if(typeof window.gsInstallOnboarding==='function')window.gsInstallOnboarding()}catch(e){console.error('onboarding install failed:',e)}
-    if(!requireCloud())return;
-    installAuthListener();
-    var user=await getSessionUser();
-    if(user){clearGuestMode();await window.afterAuth(user);return;}
-    setSupaUser(null);
-    showLoginNeeded();
+  if(typeof prev==='function')return prev.apply(this,arguments);
+  ['landing','login','signup-s1','signup-s2','signup-s3'].forEach(function(v){var el=$('auth-view-'+v);if(el)el.style.display=(v===(view||'landing'))?'':'none'});
+ };
+ window.gsOpenSignupFlow=showSignup;
+ window.openSignup11=showSignup;
+ var oldAfter=window.afterAuth;
+ if(typeof oldAfter==='function'){
+  window.afterAuth=async function(user){
+   var r=await oldAfter.apply(this,arguments);
+   try{if(user){window._supaUser=user;if(typeof _supaUser!=='undefined')_supaUser=user;}}catch(e){}
+   try{
+    var st=window.state||{};
+    if(user&&!st.onboarded){
+     var auth=$('auth-screen');if(auth)auth.style.display='none';
+     if(typeof window.openOnboardingWizard==='function')window.openOnboardingWizard(0);
+    }
+   }catch(e){}
+   return r;
   };
-  var oldLogin=window.doLogin;
-  if(typeof oldLogin==='function'){window.doLogin=async function(){clearGuestMode();if(!requireCloud())return;installAuthListener();return oldLogin.apply(this,arguments)}}
-  var oldSignup=window.doSignup;
-  if(typeof oldSignup==='function'){window.doSignup=async function(){clearGuestMode();if(!requireCloud())return;installAuthListener();return oldSignup.apply(this,arguments)}}
-  var oldAfter=window.afterAuth;
-  if(typeof oldAfter==='function'){window.afterAuth=async function(user){if(user){clearGuestMode();setSupaUser(user)}var r=await oldAfter.apply(this,arguments);if(user){setSupaUser(user);try{S().guestMode=false;save()}catch(e){}}return r}}
-  window.gsCloudAuthStatus=async function(){if(!cloudReady()){showMissing();return false}installAuthListener();var user=await getSessionUser();if(user){card('Supabase est initialisé. Session active : '+(user.email||user.id)+'.',true);return true}showLoginNeeded();return false};
-  async function bootCheck(){if(!cloudReady()){var guest=false;try{guest=sessionStorage.getItem('gs_guest_session')==='1'&&S().guestMode===true}catch(e){}if(!guest)showMissing()}else{installAuthListener();var user=await getSessionUser();if(user){showOnline();clearGuestMode()}else{setSupaUser(null)}}}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(bootCheck,80);setTimeout(bootCheck,700)});else{setTimeout(bootCheck,80);setTimeout(bootCheck,700)}
+ }
+ var oldSignup=window.doSignup;
+ if(typeof oldSignup==='function'){
+  window.doSignup=async function(){
+   try{sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');if(window.state)window.state.guestMode=false;}catch(e){}
+   return oldSignup.apply(this,arguments);
+  };
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(rewriteSignupButtons,60);setTimeout(rewriteSignupButtons,500);setTimeout(rewriteSignupButtons,1400);});
+ else{setTimeout(rewriteSignupButtons,60);setTimeout(rewriteSignupButtons,500);setTimeout(rewriteSignupButtons,1400);}
 })();
 </script>
+
 </body>
 </html>
