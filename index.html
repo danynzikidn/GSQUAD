@@ -9436,9 +9436,15 @@ var coachHistory=[];function saveCoachMemory(){try{state.coachMemory=[]}catch(e)
  var check=await window._supa.from('profiles').select('id').eq('username',username).maybeSingle();
  if(check&&check.data){try{setAuthLoading(false)}catch(e){};window.authShowView('signup-s3');authShowErr('Ce @username est déjà pris.');return}
  }catch(e){console.warn('username check skipped',e)}
+ try{
+ var emailCheck=await window._supa.from('profiles').select('id').eq('email',email).maybeSingle();
+ if(emailCheck&&emailCheck.data){try{setAuthLoading(false)}catch(e){};window.authShowView('signup-s1');authShowErr('Mail déjà utilisé.');return}
+ }catch(e){console.warn('email check skipped',e)}
  var res=await window._supa.auth.signUp({email:email,password:pass,options:{data:{username:username,display_name:username}}});
  try{if(typeof setAuthLoading==='function')setAuthLoading(false)}catch(e){}
- if(res.error){window.authShowView('signup-s3');authShowErr(res.error.message||'Création impossible.');return}
+ if(res.error){window.authShowView('signup-s1');authShowErr(/already|registered|exists|duplicate/i.test(res.error.message||'')?'Mail déjà utilisé.':(res.error.message||'Création impossible.'));return}
+ var signupUser=res.data&&res.data.user;
+ if(signupUser&&Array.isArray(signupUser.identities)&&signupUser.identities.length===0){window.authShowView('signup-s1');authShowErr('Mail déjà utilisé.');return}
  window._pendingUsername=username;
  ensureState().profil.email=email; ensureState().profil.username=username; save();
  var session=res.data&&res.data.session, user=res.data&&res.data.user;
@@ -15900,12 +15906,17 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
       if(check&&check.data){setStep(2,'Ce @username est déjà pris.');return false}
     }catch(e){console.warn('username check skipped',e)}
     try{
+      var emailCheck=await window._supa.from('profiles').select('id').eq('email',email).maybeSingle();
+      if(emailCheck&&emailCheck.data){setStep(0,'Mail déjà utilisé.');return false}
+    }catch(e){console.warn('email check skipped',e)}
+    try{
       var res=await window._supa.auth.signUp({email:email,password:pass,options:{data:{username:username,display_name:p.name||username}}});
-      if(res&&res.error){toast(res.error.message||'Création du compte impossible.');return false}
+      if(res&&res.error){if(/already|registered|exists|duplicate/i.test(res.error.message||'')){setStep(0,'Mail déjà utilisé.');return false}toast(res.error.message||'Création du compte impossible.');return false}
       var user=res&&res.data&&res.data.user?res.data.user:null;
+      if(user&&Array.isArray(user.identities)&&user.identities.length===0){setStep(0,'Mail déjà utilisé.');return false}
       if(user){
         window._supaUser=user;try{if(typeof _supaUser!=='undefined')_supaUser=user}catch(e){}
-        try{await window._supa.from('profiles').upsert({id:user.id,email:email,username:username,display_name:p.name||username,data:safeStateForSupabase(),updated_at:new Date().toISOString()},{onConflict:'id'})}catch(e){console.warn('profile upsert failed',e)}
+        try{await window._supa.from('profiles').upsert({id:user.id,email:email,username:username,display_name:p.name||username,data:safeStateForSupabase(),updated_at:new Date().toISOString()},{onConflict:'id'})}catch(e){if(/duplicate|profiles_email|email/i.test(String(e&&e.message||e||''))){setStep(0,'Mail déjà utilisé.');return false}console.warn('profile upsert failed',e)}
       }
       return true;
     }catch(e){console.error('signup failed',e);toast('Création du compte impossible. Réessaie.');return false}
