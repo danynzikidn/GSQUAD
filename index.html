@@ -15820,16 +15820,23 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
 
 
 
-<!-- G-SQUAD PATCH ciblé - bouton final inscription fonctionnel -->
+<!-- G-SQUAD PATCH ciblé - inscription uniquement: bouton final, skip étapes 5-10, libellés programme -->
 <script id="gs-signup-start-adventure-fix">
 (function(){
-  if(window.__gsSignupStartAdventureFix20260508)return;window.__gsSignupStartAdventureFix20260508=true;
+  if(window.__gsSignupStartAdventureFix20260508V2)return;window.__gsSignupStartAdventureFix20260508V2=true;
   function $(id){return document.getElementById(id)}
   function S(){window.state=window.state||{};window.state.profil=window.state.profil||{};return window.state}
   function P(){return S().profil}
   function toast(t){try{if(typeof window.notify==='function')window.notify(t);else if(typeof window.nt==='function')window.nt(t);else console.log(t)}catch(e){}}
   function save(){try{if(typeof window.sv==='function')window.sv();else localStorage.setItem('ath7',JSON.stringify(window.state||{}))}catch(e){}}
-  function cleanLocalSignupFlags(){try{sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped')}catch(e){}try{S().guestMode=false;delete P().localPasswordSet;delete P().passwordLastChangedAt}catch(e){}}
+  function overlay(){return $('gs-onboard-v11')||$('gs-onboard-v4')}
+  function isSignup(){return !!(window.OB11&&window.OB11.mode==='signup')}
+  function stepIndex(){return window.OB11&&typeof window.OB11.step==='number'?Number(window.OB11.step):0}
+  function totalSteps(){return Math.max(1,Number((window.OB11&&window.OB11.total)||12)||12)}
+  function cleanLocalSignupFlags(){
+    try{sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped')}catch(e){}
+    try{S().guestMode=false;delete P().localPasswordSet;delete P().passwordLastChangedAt}catch(e){}
+  }
   function safeStateForSupabase(){
     var base;
     try{base=(typeof window.gsSafeSupabaseState==='function')?window.gsSafeSupabaseState(S()):JSON.parse(JSON.stringify(S()))}catch(e){base={profil:{}}}
@@ -15839,16 +15846,20 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
   }
   function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim())}
   function validPassword(v){v=String(v||'');return v.length>=6&&/[A-ZÀ-ÖØ-Þ]/.test(v)&&/[^A-Za-z0-9]/.test(v)}
-  function setStep(i,msg){try{window.OB11=window.OB11||{step:0,total:12,password:''};window.OB11.total=12;window.OB11.step=i;if(typeof window.renderOb11==='function')window.renderOb11()}catch(e){}if(msg)toast(msg)}
+  function setStep(i,msg){
+    try{window.OB11=window.OB11||{step:0,total:12,password:'',mode:'signup'};window.OB11.total=12;window.OB11.mode='signup';window.OB11.step=i;if(typeof window.renderOb11==='function')window.renderOb11()}catch(e){}
+    if(msg)toast(msg);
+  }
   function finishAdventure(){
     cleanLocalSignupFlags();
     var s=S();s.onboarded=true;s.onboardingComplete=true;s.guestMode=false;
     try{if(window.OB11)window.OB11.password=''}catch(e){}
     save();
-    var ob=$('gs-onboard-v11');if(ob)ob.remove();
+    var ob=overlay();if(ob)ob.remove();
     var auth=$('auth-screen');if(auth){auth.style.display='none';if(auth.classList)auth.classList.remove('open')}
     try{if(typeof window.hideGates==='function')window.hideGates()}catch(e){}
     try{if(typeof window.bootApp==='function')window.bootApp()}catch(e){}
+    try{if(typeof window.goTab==='function')setTimeout(function(){window.goTab('accueil',$('nb-accueil'))},80)}catch(e){}
     toast('Bienvenue sur G-SQUAD');
   }
   async function createAccountIfNeeded(){
@@ -15879,31 +15890,74 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
     }catch(e){console.error('signup failed',e);toast('Création du compte impossible. Réessaie.');return false}
   }
   window.gsFinishSignupAdventure=async function(){
-    if(window.__gsFinishingSignupAdventure)return;
+    if(window.__gsFinishingSignupAdventure)return false;
     window.__gsFinishingSignupAdventure=true;
-    var btn=document.querySelector('#gs-onboard-v11 .gs-ob11-actions .primary');
+    var btn=document.querySelector('#gs-onboard-v11 .gs-ob11-actions .primary,#gs-onboard-v4 .gs-onboard-actions .primary');
     var oldTxt=btn?btn.textContent:'';
     try{
       if(btn){btn.disabled=true;btn.textContent='Création du compte...'}
       var ok=await createAccountIfNeeded();
-      if(!ok)return;
+      if(!ok)return false;
       finishAdventure();
+      return true;
     }finally{
       window.__gsFinishingSignupAdventure=false;
       if(btn&&document.body.contains(btn)){btn.disabled=false;btn.textContent=oldTxt||'Commencer l’aventure'}
-      setTimeout(patchStartButton,0);
+      setTimeout(applySignupOnlyPatch,0);
     }
   };
-  function patchStartButton(){
-    var ob=window.OB11||{},ov=$('gs-onboard-v11');
-    if(!ov||Number(ob.step)!==11)return;
-    var btn=ov.querySelector('.gs-ob11-actions .primary');
-    if(btn){btn.textContent='Commencer l’aventure';btn.setAttribute('onclick','gsFinishSignupAdventure()');btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}window.gsFinishSignupAdventure();return false};}
+  function replaceSaveProgramLabels(ov){
+    if(!ov)return;
+    var title=((ov.querySelector('.gs-ob11-title,.gs-onboard-title')||{}).textContent||'').toLowerCase();
+    var isProgram=title.indexOf('programme')>-1||title.indexOf('plan')>-1;
+    ov.querySelectorAll('button').forEach(function(btn){
+      var t=(btn.textContent||'').trim().toLowerCase();
+      if(isProgram&&(t.indexOf('sauvegarder')>-1||t.indexOf('valider cette base')>-1)){
+        btn.outerHTML='<div class="gs-ob11-edit-note">Modifiable après l\'inscription</div>';
+      }
+    });
+    if(isProgram){
+      ov.querySelectorAll('.gs-ob11-edit-note,.gs-ob11-static-note').forEach(function(el){
+        if((el.textContent||'').toLowerCase().indexOf('modifiable')>-1)el.textContent="Modifiable après l'inscription";
+      });
+    }
+  }
+  function applySignupOnlyPatch(){
+    var ov=overlay();
+    if(!ov||!isSignup())return;
+    var idx=stepIndex(),total=totalSteps();
+    var skip=ov.querySelector('.gs-ob11-skip,.gs-onboard-skip');
+    if(skip){
+      var visible=idx>=4&&idx<=9;
+      skip.textContent='Passer cette étape - retrouvable dans Profil';
+      skip.hidden=!visible;
+      skip.style.display=visible?'':'none';
+    }
+    replaceSaveProgramLabels(ov);
+    var primary=ov.querySelector('.gs-ob11-actions .primary,.gs-onboard-actions .primary');
+    if(primary&&idx>=total-1){
+      primary.textContent='Commencer l’aventure';
+      primary.setAttribute('onclick','return gsFinishSignupAdventure()');
+      primary.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation()}window.gsFinishSignupAdventure&&window.gsFinishSignupAdventure();return false};
+    }
   }
   var oldRender=window.renderOb11;
-  if(typeof oldRender==='function'&&!oldRender.__gsStartAdventureFix){window.renderOb11=function(){var r=oldRender.apply(this,arguments);setTimeout(patchStartButton,0);setTimeout(patchStartButton,80);return r};window.renderOb11.__gsStartAdventureFix=true;}
-  document.addEventListener('click',function(ev){var btn=ev.target&&ev.target.closest?ev.target.closest('#gs-onboard-v11 .gs-ob11-actions .primary'):null;if(!btn||!window.OB11||Number(window.OB11.step)!==11)return;ev.preventDefault();ev.stopPropagation();window.gsFinishSignupAdventure&&window.gsFinishSignupAdventure();},true);
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(patchStartButton,120)});else setTimeout(patchStartButton,120);
+  if(typeof oldRender==='function'&&!oldRender.__gsSignupOnlyFinalPatch){
+    window.renderOb11=function(){var r=oldRender.apply(this,arguments);setTimeout(applySignupOnlyPatch,0);setTimeout(applySignupOnlyPatch,80);return r};
+    window.renderOb11.__gsSignupOnlyFinalPatch=true;
+  }
+  var oldOpen=window.openOnboardingWizard;
+  if(typeof oldOpen==='function'&&!oldOpen.__gsSignupOnlyFinalPatch){
+    window.openOnboardingWizard=function(){var r=oldOpen.apply(this,arguments);setTimeout(applySignupOnlyPatch,0);setTimeout(applySignupOnlyPatch,80);return r};
+    window.openOnboardingWizard.__gsSignupOnlyFinalPatch=true;
+  }
+  document.addEventListener('click',function(ev){
+    var btn=ev.target&&ev.target.closest?ev.target.closest('#gs-onboard-v11 .gs-ob11-actions .primary,#gs-onboard-v4 .gs-onboard-actions .primary'):null;
+    if(!btn||!isSignup()||stepIndex()<totalSteps()-1)return;
+    ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();
+    window.gsFinishSignupAdventure&&window.gsFinishSignupAdventure();
+  },true);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(applySignupOnlyPatch,120)});else setTimeout(applySignupOnlyPatch,120);
 })();
 </script>
 
