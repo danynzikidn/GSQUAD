@@ -16491,6 +16491,7 @@ window.reprendreHier=function(){var d=new Date();d.setDate(d.getDate()-1);var k=
  function squadXp(sq){return memberObjects(sq).reduce(function(a,b){return a+Number(b.xp||0)},0)}
  function rankedSquads(){return squ().map(function(sq){return {sq:sq,xp:squadXp(sq)}}).sort(function(a,b){return b.xp-a.xp})}
  function currentSquad(){return (rankedSquads()[0]||{}).sq||squ()[0]||null}
+window.currentSquad=window.currentSquad||currentSquad;
  function pct(v,max){return Math.max(0,Math.min(100,Math.round((Number(v||0)/Math.max(1,Number(max||1)))*100)))}
  function miniBar(v,max,cls){return '<div class="gs-battle-bar"><div class="gs-battle-fill '+(cls||'amber')+'" style="width:'+pct(v,max)+'%"></div></div>'}
 
@@ -16865,7 +16866,12 @@ var oldPush=window.pushSquadEvent;window.pushSquadEvent=function(type,payload,op
   var perfTable=perfRows.length?'<table><thead><tr><th>Date</th><th>Top exercice</th><th>Charge max</th><th>Volume</th></tr></thead><tbody>'+perfRows.slice(-10).join('')+'</tbody></table>':'<p class="empty">Aucune performance loggée sur ce mois.</p>';
   var html=`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Journal G-SQUAD - ${esc(monthLabel)}</title><style>
    @page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;margin:0;color:#0B1220;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}button{display:none}.top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0B1220;padding-bottom:14px;margin-bottom:16px}.brand{font-size:30px;font-weight:900;letter-spacing:.08em}.kicker{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#64748B}.title{font-size:22px;font-weight:900;margin-top:4px;text-transform:capitalize}.date{font-size:11px;color:#64748B;text-align:right}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 16px}.card{border:1px solid #E2E8F0;border-radius:14px;padding:11px;background:#F8FAFC}.card span{display:block;font-size:9px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:#64748B}.card b{display:block;font-size:20px;margin-top:5px}.section{margin-top:16px;page-break-inside:avoid}.section h2{font-size:15px;margin:0 0 8px;letter-spacing:.02em}.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.wk{text-align:center;font-size:10px;color:#64748B;font-weight:900}.day{height:45px;border:1px solid #E2E8F0;border-radius:10px;padding:7px;background:#F8FAFC;position:relative}.day b{display:block;font-size:13px}.day span{display:block;font-size:9px;margin-top:3px;color:#475569}.day.done{background:#22C55E;color:#06120A;border-color:#22C55E}.day.missed{background:#EF4444;color:#fff;border-color:#EF4444}.day.planned{background:#168FEA;color:#fff;border-color:#168FEA}.day.sport{background:#F97316;color:#fff;border-color:#F97316}.day.done span,.day.missed span,.day.planned span,.day.sport span{color:inherit;opacity:.88}.day.hasSport:not(.sport)::after{content:'';position:absolute;right:7px;bottom:7px;width:7px;height:7px;border-radius:50%;background:#F97316}.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:9px;font-size:10px;color:#475569}.legend span{display:flex;align-items:center;gap:5px}.legend i{width:10px;height:10px;border-radius:50%;display:inline-block}.legend .done{background:#22C55E}.legend .missed{background:#EF4444}.legend .planned{background:#168FEA}.legend .sport{background:#F97316}table{width:100%;border-collapse:separate;border-spacing:0;margin-top:7px;font-size:11px;overflow:hidden;border:1px solid #E2E8F0;border-radius:12px}th,td{padding:9px 10px;text-align:left;border-bottom:1px solid #E2E8F0}th{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#64748B;background:#F8FAFC}tr:last-child td{border-bottom:0}.empty{font-size:11px;color:#64748B;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:12px;margin:0}.foot{margin-top:18px;padding-top:10px;border-top:1px solid #E2E8F0;font-size:10px;color:#64748B} 
-  </style></head><body><div class="top"><div><div class="brand">G-SQUAD</div><div class="kicker">Journal automatisé</div><div class="title">${esc(monthLabel)}</div></div><div class="date">Exporté le<br>${esc(new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}))}</div></div><div class="cards"><div class="card"><span>XP total</span><b>${esc(Math.round(xp))}</b></div><div class="card"><span>Séances</span><b>${esc(Math.round(sessions))}</b></div><div class="card"><span>Streak</span><b>${esc(Math.round(streak))}</b></div><div class="card"><span>Activité</span><b>${esc(nf(agg.distance||0,1))} km</b></div></div><div class="section"><h2>Calendrier du mois</h2><div class="calendar">${cells}</div>${legends}</div><div class="section"><h2>Activités sportives</h2>${outdoorTable}</div><div class="section"><h2>Performance musculation</h2>${perfTable}</div><div class="section"><h2>Nutrition moyenne</h2><div class="cards"><div class="card"><span>Calories / jour</span><b>${esc(nf(agg.kcal||0))}</b></div><div class="card"><span>Protéines / jour</span><b>${esc(nf(agg.prot||0))} g</b></div><div class="card"><span>Eau / jour</span><b>${esc(nf(agg.water||0,1))} L</b></div><div class="card"><span>Poids moyen</span><b>${agg.poids?esc(nf(agg.poids,1))+' kg':'-'}</b></div></div></div><div class="foot">PDF généré depuis le Journal G-SQUAD. Les activités orange viennent de l'historique Running / Randonnée / Marche.</div>
+  </style></head><body><div class="top"><div><div class="brand">G-SQUAD</div><div class="kicker">Journal automatisé</div><div class="title">${esc(monthLabel)}</div></div><div class="date">Exporté le<br>${esc(new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}))}</div></div><div class="cards"><div class="card"><span>XP total</span><b>${esc(Math.round(xp))}</b></div><div class="card"><span>Séances</span><b>${esc(Math.round(sessions))}</b></div><div class="card"><span>Streak</span><b>${esc(Math.round(streak))}</b></div><div class="card"><span>Activité</span><b>${esc(nf(agg.distance||0,1))} km</b></div></div><div class="section"><h2>Calendrier du mois</h2><div class="calendar">${cells}</div>${legends}</div><div class="section"><h2>Activités sportives</h2>${outdoorTable}</div><div class="section"><h2>Performance musculation</h2>${perfTable}</div><div class="section"><h2>Nutrition moyenne</h2><div class="cards"><div class="card"><span>Calories / jour</span><b>${esc(nf(agg.kcal||0))}</b></div><div class="card"><span>Protéines / jour</span><b>${esc(nf(agg.prot||0))} g</b></div><div class="card"><span>Eau / jour</span><b>${esc(nf(agg.water||0,1))} L</b></div><div class="card"><span>Poids moyen</span><b>${agg.poids?esc(nf(agg.poids,1))+' kg':'-'}</b></div></div></div><div class="foot">PDF généré depuis le Journal G-SQUAD. Les activités orange viennent de l'historique Running / Randonnée / Marche.</div></body></html>`;
+  try{w.document.open();w.document.write(html);w.document.close();setTimeout(function(){try{w.focus();w.print()}catch(e){}},350)}catch(e){if(w)try{w.document.write(html)}catch(e2){}}
+};
+})();
+</script>
+
 <!-- index-199: profil XP ledger fix + dots indicator -->
 
 <style id="gs-badges-20260514-fix-css">
@@ -17646,7 +17652,7 @@ setTimeout(refreshAll,450);
  function routeCache(){var st=S();st.routeCache=st.routeCache||{};return st.routeCache}
  function zoneKey(p){return p?Math.round(p.lat*200)/200+','+Math.round(p.lng*200)/200:''}
  function destKey(d){return (d.placeId||'')+'|'+Math.round(d.lat*10000)/10000+','+Math.round(d.lng*10000)/10000}
- function safeRe(v){return String(v||'').replace(/["\]/g,'').trim()}
+ function safeRe(v){return String(v||'').replace(/["\\]/g,'').trim()}
  function isCategoryQuery(q){q=String(q||'').toLowerCase();return /(boulanger|bakery|pain|pharmac|santé|sante|carrefour|supermarch|sup[ée]rette|commerce|market|courses|gare|train|m[ée]tro|metro|rer|station|parc|park|bois|jardin)/.test(q)}
  function isAddressQuery(q){q=String(q||'').toLowerCase();return /(rue|avenue|boulevard|bd|all[ée]e|impasse|place|route|chemin|quai|cours|passage|[0-9]{1,4})/.test(q)}
  function resultKind(tags,name,source){tags=tags||{};name=name||'';var shop=tags.shop||'',amenity=tags.amenity||'',railway=tags.railway||'',station=tags.station||'',leisure=tags.leisure||'',pt=tags.public_transport||'';if(shop==='bakery')return {kind:'bakery',icon:'B',label:'Boulangerie'};if(amenity==='pharmacy')return {kind:'pharmacy',icon:'+',label:'Pharmacie'};if(railway==='station'||railway==='halt'||railway==='subway_entrance'||station||/gare|métro|metro|station/i.test(name)||pt)return {kind:'transit',icon:'M',label:'Transport'};if(leisure==='park'||leisure==='garden')return {kind:'park',icon:'P',label:'Parc'};if(shop==='supermarket'||shop==='convenience'||shop==='greengrocer'||/carrefour|supermarch|market|city/i.test(name))return {kind:'market',icon:'C',label:'Commerce'};return {kind:source==='osm'?'market':'transit',icon:'•',label:'Lieu'}}
@@ -18922,7 +18928,8 @@ body #app-header .notif-dot[data-gs-visible="1"]{
  // FEATURE 1/2 — indicateur de saison + vue boss par saison.
  window.renderSeasonIndicator=function(squad){var b=squad&&squad.boss;var bossIdx=Number((squad&&(squad.bossIdx||squad.boss_idx))||0);var totalBosses=window.BOSS_ROSTER?window.BOSS_ROSTER.length:48;var season=b?(b.season||Math.ceil((bossIdx)/4)||1):(Math.ceil((bossIdx)/4)||1);var bossNumInSeason=b?(b.bossNum||b.boss||((bossIdx%4)||4)):((bossIdx%4)||4);var totalSeasons=12;var seasonEmojis=['🌱','🌿','🌳','🌊','❄️','🌲','🏜️','🔮','🦅','🐛','🌑','⚡'];var seasonNames=['Éveil','Jungle','Savane','Océan','Arctique','Forêt','Désert','Mythique','Prédateurs','Insectes','Profondeurs','Finale'];return '<div class="gs-battle-season-banner"><div class="gs-battle-season-left"><div class="gs-battle-season-emoji">'+(seasonEmojis[(season-1)%seasonEmojis.length]||'⚡')+'</div><div><div class="gs-battle-season-label">Saison '+season+' / '+totalSeasons+' — '+(seasonNames[(season-1)%seasonNames.length]||('Saison '+season))+'</div><div class="gs-battle-season-sub">Boss '+bossNumInSeason+'/4 de cette saison · Boss global '+bossIdx+'/'+totalBosses+'</div></div></div><button type="button" class="gs-battle-season-view-btn" onclick="openSeasonBossView('+season+')">Voir la saison →</button><button type="button" class="gs-battle-season-view-btn" style="margin-left:6px" onclick="openAllSeasonsView()">12 saisons</button></div>'};
  window.openSeasonBossView=function(season){var old=$('gs-season-view-ov');if(old)old.remove();var roster=window.BOSS_ROSTER||[];var seasonBosses=roster.filter(function(b){return b.season===season});var squad=(typeof window.getActiveSquad==='function'&&window.getActiveSquad())||(typeof window.currentSquad==='function'&&window.currentSquad())||null;var currentBossId=squad&&squad.boss&&squad.boss.rosterId;var seasonNames=['Éveil','Jungle','Savane','Océan','Arctique','Forêt','Désert','Mythique','Prédateurs','Insectes','Profondeurs','Finale'];var seasonName=seasonNames[(season-1)%seasonNames.length]||('Saison '+season);var bossCards=seasonBosses.map(function(boss){var idx=roster.findIndex(function(b){return b.id===boss.id});var isCurrent=boss.id===currentBossId;var isPast=squad&&squad.bossIdx&&idx<squad.bossIdx-1;var statusLabel=isPast?'✅ Vaincu':isCurrent?'⚔️ En cours':'🔒 À venir';var statusColor=isPast?'var(--grn)':isCurrent?'var(--acc)':'var(--mut)';var diffColors={facile:'#73D6A2',moyen:'#FFC75C','moyen+':'#FFC75C',difficile:'#FF8C42','très difficile':'#FF6B7A',légendaire:'#A855F7','légendaire+':'#7C3AED',boss_final:'#FFD700'};var diffColor=diffColors[boss.difficulty]||'var(--mut)';return '<div class="gs-season-boss-card'+(isCurrent?' active':'')+'"><div class="gs-season-boss-top"><div class="gs-season-boss-emoji">'+boss.emoji+'</div><div class="gs-season-boss-info"><div class="gs-season-boss-name">'+E(boss.name)+'</div><div class="gs-season-boss-trait">'+E(boss.trait)+'</div></div><div class="gs-season-boss-status" style="color:'+statusColor+'">'+statusLabel+'</div></div><div class="gs-season-boss-desc">'+E(boss.desc)+'</div><div class="gs-season-boss-mechanic"><b>Mécanique :</b> '+E(boss.mechanic)+'</div><div class="gs-season-boss-diff" style="color:'+diffColor+'">Difficulté : '+E(boss.difficulty)+(boss.seasonBonus?' · 🎁 +'+boss.seasonBonus+' XP si battu':'')+'</div></div>'}).join('');var html='<div id="gs-season-view-ov" style="position:fixed;inset:0;z-index:3600;background:rgba(0,0,0,.78);display:flex;align-items:flex-end" onclick="if(event.target===this)this.remove()"><div style="width:100%;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:28px 28px 0 0;border:1px solid rgba(255,255,255,.08);padding:18px;padding-bottom:calc(env(safe-area-inset-bottom,20px)+18px)"><div style="width:44px;height:5px;border-radius:99px;background:rgba(255,255,255,.16);margin:0 auto 14px"></div><div style="font-size:10px;font-weight:1000;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:6px">Saison '+season+' / 12</div><div style="font-size:22px;font-weight:1000;letter-spacing:-.04em;color:var(--txt);margin-bottom:16px">'+seasonName+'</div>'+bossCards+'<button style="width:100%;margin-top:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);color:var(--txt);border-radius:18px;padding:14px;font-weight:1000" onclick="document.getElementById(\'gs-season-view-ov\').remove()">Fermer</button></div></div>';document.body.insertAdjacentHTML('beforeend',html)};
- function injectSeasonBanner(){var page=$('battle-squad-page');if(!page||page.querySelector('.gs-battle-season-banner'))return;var sq=(typeof window.getActiveSquad==='function'&&window.getActiveSquad())||(typeof window.currentSquad==='function'&&window.currentSquad())||null;if(!sq)return;var target=page.querySelector('.gs-battle-page')||page;target.insertAdjacentHTML('afterbegin',window.renderSeasonIndicator(sq))}
+ function gsSeasonResolveSquad(){try{if(typeof window.getActiveSquad==='function'){var a=window.getActiveSquad();if(a)return a}}catch(e){}try{if(typeof window.currentSquad==='function'){var b=window.currentSquad();if(b)return b}}catch(e){}try{var s=S();var arr=s.privateSquads||s.squads||s.mySquads||[];if(Array.isArray(arr)&&arr.length)return arr[0]}catch(e){}return null}
+ function injectSeasonBanner(){var page=$('battle-squad-page');if(!page||page.querySelector('.gs-battle-season-banner'))return;var sq=gsSeasonResolveSquad();if(!sq)return;if(typeof window.renderSeasonIndicator!=='function')return;var target=page.querySelector('.gs-battle-page')||page;target.insertAdjacentHTML('afterbegin',window.renderSeasonIndicator(sq))}
  window.buildRecordsSection=window.buildRecordsSection||function(){var logs=S().logs||[],prMap={};logs.forEach(function(l){if(l&&l.ex&&l.charge){var c=parseFloat(String(l.charge).replace(',','.'))||0;if(!prMap[l.ex]||c>prMap[l.ex])prMap[l.ex]=c}});var top5=Object.keys(prMap).sort(function(a,b){return prMap[b]-prMap[a]}).slice(0,5);var streak=typeof getRealStreak==='function'?getRealStreak():(S().streak||0);var totalSess=typeof getTotalSess==='function'?getTotalSess():0;var now=new Date(),mKey=now.getMonth()+'-'+now.getFullYear(),volMois=0;logs.forEach(function(l){if(!l||!l.date)return;var d=new Date(String(l.date).split('/').reverse().join('-'));if(d.getMonth()+'-'+d.getFullYear()===mKey)volMois+=(parseFloat(String(l.charge||0).replace(',','.'))||0)*(parseFloat(String(l.reps||0).replace(',','.'))||0)});var prHtml=top5.map(function(ex){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,.06)"><div style="font-size:13px;font-weight:900;color:var(--txt)">'+E(ex)+'</div><div style="font-size:14px;font-weight:1000;color:var(--acc)">'+prMap[ex]+' kg</div></div>'}).join('');return '<div class="gs-card" id="gs-records-section" style="margin-top:12px"><div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="var b=document.getElementById(\'gs-records-body\');var a=document.getElementById(\'gs-records-arrow\');if(b){var h=b.style.display===\'none\';b.style.display=h?\'\':\'none\';if(a)a.style.transform=h?\'\':\' rotate(-90deg)\'}"><div class="gs-card-title">🏆 Progression</div><span id="gs-records-arrow" style="color:var(--mut);font-size:18px;transition:transform .2s">▾</span></div><div id="gs-records-body"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0"><div class="gs-stat"><b>'+streak+'</b><span>Streak actuel</span></div><div class="gs-stat"><b>'+totalSess+'</b><span>Séances totales</span></div><div class="gs-stat" style="grid-column:1/-1"><b>'+Math.round(volMois)+' kg</b><span>Volume ce mois</span></div></div>'+(prHtml||'<div style="color:var(--mut);font-size:12px;text-align:center;padding:10px 0">Aucun log de charge encore.</div>')+'</div></div>'};
  function injectRecords(){document.querySelectorAll('#records-section,#gs-records-section').forEach(function(n){n.remove()})}setInterval(injectRecords,1300);
 
@@ -20805,56 +20812,12 @@ setTimeout(function(){try{if($('p-seance')&&$('p-seance').classList.contains('ac
 #p-programme .gs-recovery-badge-v216{display:inline-flex;align-items:center;gap:6px;border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.045);padding:6px 9px;margin:6px 6px 0 0;color:var(--txt2);font-size:10px;font-weight:950;text-transform:uppercase;letter-spacing:.06em}
 </style>
 <script id="gs-v216-program-recovery-authority-js">
+/* G-SQUAD index-250 — v216 neutralisé proprement.
+   Raison : ce bloc avait une fermeture prématurée de applyRecoveryLogic(days) et cassait le parsing JS.
+   v218 reste l'autorité active Programme / récupération. */
 (function(){
- 'use strict';
- if(window.__gsV216ProgramRecovery)return;window.__gsV216ProgramRecovery=true;
- var W=window,D=document;
- function S(){W.state=W.state||{};return W.state}
- function P(){S().profil=S().profil||{};return S().profil}
- function n(v){return Number(v||0)||0}
- function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
- function save(){try{if(typeof W.sv==='function')W.sv();else if(typeof sv==='function')sv();else localStorage.setItem('ath7',JSON.stringify(S()))}catch(e){}}
- function notify(t){try{if(typeof W.notify==='function')W.notify(t);else if(typeof W.toast==='function')W.toast(t)}catch(e){}}
- function norm(v){try{return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}catch(e){return String(v||'').toLowerCase()}}
- function sportLabel(k){var map=W.SPORT_LABELS||{basket:'Basket',foot:'Football',mma:'MMA',jjb:'JJB / Lutte',tennis:'Tennis / Padel',rugby:'Rugby',footus:'Football US',escalade:'Escalade',danse:'Danse',running:'Running',randonnee:'Randonnée',badminton:'Badminton'};return map[k]||k||'Sport'}
- function externalForDay(di){return (S().programSports||[]).filter(function(sp){return (sp.days||[]).map(Number).indexOf(Number(di))>-1})}
- function hasAny(txt,keys){txt=norm(txt);return keys.some(function(k){return txt.indexOf(k)>-1})}
- function sportLoadForDay(di){var out={legs:0,upper:0,full:0,energy:0,labels:[]};externalForDay(di).forEach(function(sp){var raw=[sp.sport,sp.key,sp.label,sportLabel(sp.sport||sp.key)].join(' '),pow=sp.intensity==='intense'?3:(sp.intensity==='leger'?1:2);out.labels.push(sportLabel(sp.sport||sp.key||'sport'));if(hasAny(raw,['basket','football','foot','rugby','tennis','padel','badminton','handball','volley','hockey','course','running','run','sprint','athletisme','velo','cyclisme','ski']))out.legs=Math.max(out.legs,pow);if(hasAny(raw,['boxe','boxing','mma','muay','thai','kickboxing','combat','jjb','jiu','judo','lutte','grappling','escalade','climbing','natation','swim','tennis','padel','badminton','volley','hockey']))out.upper=Math.max(out.upper,pow);if(hasAny(raw,['mma','crossfit','hiit','rugby','combat','muay','kickboxing','judo','lutte','grappling','basket','football']))out.full=Math.max(out.full,pow);if(hasAny(raw,['course','running','run','sprint','basket','football','foot','rugby','tennis','padel','badminton','handball','volley','velo','cyclisme','crossfit','hiit','boxe','mma','combat','escalade']))out.energy=Math.max(out.energy,pow)});return out}
- function isSportItem(ex){var k=norm((ex&&ex.kind)||''),t=norm([ex&&ex.n,ex&&ex.s,ex&&ex.t,ex&&ex.g].join(' '));return !!(ex&&(ex.sport||k==='sport'||/sport externe|basket|football|running|course|boxe|mma|tennis|padel|rugby|escalade|natation/.test(t)))}
- function isWalkItem(ex){var k=norm((ex&&ex.kind)||''),t=norm([ex&&ex.n,ex&&ex.s,ex&&ex.t,ex&&ex.g].join(' '));return !!(ex&&(ex.walk||k==='walk'||/marche active|power walking/.test(t)))}
- function isMobility(ex){return ex&&(norm(ex.kind)==='mobility'||/mobilite|mobilité|echauff|échauff|warm up|warm-up/.test(norm([ex.n,ex.s,ex.t].join(' '))))}
- function isStretch(ex){return ex&&(norm(ex.kind)==='stretch'||/etirement|étirement|stretch|retour au calme/.test(norm([ex.n,ex.s,ex.t].join(' '))))}
- function isGymItem(ex){return ex&&!isSportItem(ex)&&!isWalkItem(ex)}
- function textOf(day){return norm([day&&day.type,day&&day.dur].concat(((day&&day.exercises)||[]).map(function(e){return [e.n,e.s,e.g,e.t,e.m].join(' ')})).join(' '))}
- function roleOf(day){var t=textOf(day);if(!day||!(day.exercises||[]).some(isGymItem))return 'rest';if(/bas du corps|jambes|lower|leg |legs|squat|presse a cuisses|leg press|rdl|romanian|hip thrust|fentes|leg curl|leg extension|mollets|abducteur|fessier/.test(t))return 'lower';if(/push|pectoraux|pecs|chest|bench|developpe|développé|shoulder|triceps/.test(t))return 'push';if(/pull|dos|back|row|rowing|tirage|lat pulldown|tractions|biceps/.test(t))return 'pull';if(/haut du corps|upper/.test(t))return 'upper';if(/full body|fullbody|gainage|core/.test(t))return 'full';return 'full'}
- function roleZone(role){if(role==='lower')return 'legs';if(role==='push'||role==='pull'||role==='upper')return 'upper';if(role==='full')return 'full';return 'rest'}
- function isHeavyLower(day){var r=roleOf(day),t=textOf(day);return r==='lower'||(/squat|leg press|presse a cuisses|rdl|romanian deadlift|souleve de terre|deadlift|hip thrust|fentes|leg curl|leg extension/.test(t)&&((day.exercises||[]).filter(isGymItem).length>=3))}
- function isHeavyUpper(day){var r=roleOf(day),t=textOf(day);return r==='upper'||r==='push'||r==='pull'||(/bench|developpe|développé|row|rowing|tirage|lat pulldown|shoulder|tractions|curl|triceps/.test(t)&&((day.exercises||[]).filter(isGymItem).length>=3))}
- function splitParts(day){var exs=(day&&day.exercises)||[];return {gym:exs.filter(isGymItem),external:exs.filter(function(e){return !isGymItem(e)})}}
- function orderForCard(exs){var rank={mobility:1,warmup:1,strength:2,core:2,stretch:3,walk:4,sport:4};return (exs||[]).slice().sort(function(a,b){return (rank[(a&&a.kind)||'strength']||2)-(rank[(b&&b.kind)||'strength']||2)})}
- function typeForRole(role,light){var map={lower:light?'Bas du corps léger':'Bas du corps',push:'Push',pull:'Pull',upper:'Haut du corps',full:'Full Body',rest:'Activité'};return map[role]||'Séance'}
- function applyGymToDay(day,gym,role,light){day=day||{};var ext=splitParts(day).external;day.exercises=orderForCard([].concat(gym||[],ext||[]));if((gym||[]).length){day.type=typeForRole(role,light);day.dur=light?'35–50 min · léger / technique':(day.dur&&String(day.dur).replace(/\s*\+ sport/g,'')||'55–75 min')+(ext.some(isSportItem)?' + sport':'')}else{day.type=ext.length?'Activité':'Repos';day.dur=ext.length?'Récupération active':'Repos'}return day}
- function setAsRecovery(day,reason){day=day||{};var ext=splitParts(day).external;day.type=ext.length?'Activité + récup':'Récupération';day.dur=ext.length?'Récupération + sport':'Récupération';var exs=[{n:'Mobilité générale / recovery',s:'10–15 min · hanches, épaules, respiration, déverrouillage',kind:'mobility',g:'global',t:'Mobilité',note:reason||''},{n:'Core léger / gainage facile',s:'2–3 x 25–35 s · sans forcer',kind:'core',g:'abdos',t:'Core'}].concat(ext);day.exercises=orderForCard(exs);return day}
- function lightenLowerDay(day,tag){var exs=(day.exercises||[]),seen=0;day.type='Bas du corps léger';day.dur='40–55 min · volume adapté';day.exercises=orderForCard(exs.map(function(ex){if(!isGymItem(ex))return ex;var t=norm([ex.n,ex.s,ex.g].join(' '));var y=Object.assign({},ex);if(isMobility(y)){y.n='Warm-up jambes / hanches-chevilles';y.s='Activation fessiers · ischios dynamiques · chevilles · séries de chauffe';y.kind='mobility';return y}if(isStretch(y)){y.n='Étirements jambes / ischios-quads-mollets';y.s='Retour au calme · 6–8 min';y.kind='stretch';return y}if(/squat|leg press|presse|rdl|romanian|deadlift|souleve|hip thrust|fentes/.test(t)){seen++;if(seen>2){y.n='Core ou mollets léger / remplacement fatigue';y.s='2–3 x 12–15 · sans charge lourde';y.g='abdos';y.kind='core'}else{y.s=String(y.s||'3 x 10–12').replace(/4\s*[x×]/i,'3 x').replace(/5\s*[x×]/i,'3 x')+' · contrôlé'}return y}return y}));day.gsRecoveryAdjusted=tag||'lower-light';return day}
- function polishLegWarmups(day){if(!isHeavyLower(day)&&roleOf(day)!=='lower')return;var hasWarm=false,hasStretch=false;day.exercises=(day.exercises||[]).map(function(ex){var y=Object.assign({},ex);if(isGymItem(y)&&isMobility(y)){hasWarm=true;y.n='Warm-up jambes / hanches-chevilles';y.s='Activation fessiers · ischios dynamiques · chevilles · séries de chauffe';y.kind='mobility'}if(isGymItem(y)&&isStretch(y)){hasStretch=true;y.n='Étirements jambes / ischios-quads-mollets';y.s='Retour au calme · 6–8 min';y.kind='stretch'}return y});if(!hasWarm)day.exercises.unshift({n:'Warm-up jambes / hanches-chevilles',s:'Activation fessiers · ischios dynamiques · chevilles · séries de chauffe',kind:'mobility',g:'jambes',t:'Mobilité'});if(!hasStretch)day.exercises.push({n:'Étirements jambes / ischios-quads-mollets',s:'Retour au calme · 6–8 min',kind:'stretch',g:'jambes',t:'Étirement'});day.exercises=orderForCard(day.exercises)}
- function conflict(day,di,prevDay){var load=sportLoadForDay(di),prevLoad=sportLoadForDay(di-1),role=roleOf(day),zone=roleZone(role),score=0,reasons=[];if(zone==='legs'&&(load.legs>=2||load.full>=2)){score+=90;reasons.push('jambes + sport jambes le même jour')}if(zone==='upper'&&(load.upper>=2||load.full>=2)){score+=90;reasons.push('haut du corps + sport bras/épaules le même jour')}if(zone==='full'&&load.full>=2){score+=85;reasons.push('full body + sport full body le même jour')}if(zone==='legs'&&(prevLoad.legs>=3||prevLoad.full>=3)){score+=50;reasons.push('jambes le lendemain d’un sport intense')}if(prevDay&&isHeavyLower(prevDay)&&isHeavyLower(day)){score+=80;reasons.push('deux séances jambes lourdes consécutives')}if(prevDay&&isHeavyUpper(prevDay)&&isHeavyUpper(day)&&(sportLoadForDay(di).upper>=1||sportLoadForDay(di-1).upper>=2)){score+=35;reasons.push('haut du corps rapproché d’un sport upper')}return {score:score,reasons:reasons}}
- function swapGymParts(days,a,b){var da=days[a],db=days[b],pa=splitParts(da),pb=splitParts(db),ra=roleOf(da),rb=roleOf(db);applyGymToDay(da,pb.gym,rb,false);applyGymToDay(db,pa.gym,ra,false);days[a]=da;days[b]=db}
- function findSwapTarget(days,idx){var day=days[idx],role=roleOf(day),zone=roleZone(role),best=-1,bestScore=999;for(var j=0;j<days.length;j++){if(j===idx)continue;var parts=splitParts(days[j]);var targetRole=roleOf(days[j]);if(parts.gym.length&&roleZone(targetRole)===zone)continue;var tmp=days.map(function(d){return JSON.parse(JSON.stringify(d||{}))});swapGymParts(tmp,idx,j);var c=conflict(tmp[idx],idx,tmp[idx-1]).score+conflict(tmp[j],j,tmp[j-1]).score+(tmp[j+1]?conflict(tmp[j+1],j+1,tmp[j]).score:0)+(tmp[idx+1]?conflict(tmp[idx+1],idx+1,tmp[idx]).score:0);var distance=Math.abs(j-idx);c+=distance*3;if(c<bestScore){bestScore=c;best=j}}return best}
- function countExternal(){var list=S().programSports||[];var score=0,days={};list.forEach(function(sp){(sp.days||[]).forEach(function(d){days[d]=1;score+=sp.intensity==='intense'?3:(sp.intensity==='leger'?1:2)})});return {items:list.length,days:Object.keys(days).length,score:score}}
- function cfgObjective(){return norm(P().objectif||P().goal||'maintien')}
- function cfgLevel(){var v=norm(P().level||P().niveau||'debutant');if(v.indexOf('avance')>-1||v.indexOf('expert')>-1)return 'avance';if(v.indexOf('inter')>-1)return 'intermediaire';return 'debutant'}
- function applyRecoveryLogic(days){if(!Array.isArray(days))return days;var changed=[],obj=cfgObjective(),lvl=cfgLevel(),extCount=countExternal();days.forEach(function(d){polishLegWarmups(d)});for(var pass=0;pass<2;pass++){for(var i=0;i<days.length;i++){var c=conflict(days[i],i,days[i-1]);if(c.score>=75){var tgt=findSwapTarget(days,i);if(tgt>-1){swapGymParts(days,i,tgt);changed.push((days[i].name||('Jour '+(i+1)))+' déplacé pour fatigue sport');}else if(isHeavyLower(days[i])){lightenLowerDay(days[i],'fatigue');changed.push((days[i].name||('Jour '+(i+1)))+' jambes allégé');}else{setAsRecovery(days[i],c.reasons.join(' · '));changed.push((days[i].name||('Jour '+(i+1)))+' transformé en récupération')}}}}
- }
- // Protection objectif : beaucoup de sport énergivore + prise de muscle = éviter une semaine robotique trop lourde.
- if(obj.indexOf('prise')>-1&&extCount.score>=5){var heavy=days.map(function(d,i){return {i:i,heavy:isHeavyLower(d)||isHeavyUpper(d),role:roleOf(d),conf:conflict(d,i,days[i-1]).score}}).filter(function(x){return x.heavy});var maxHeavy=(lvl==='debutant'?3:(lvl==='intermediaire'?4:5));if(heavy.length>maxHeavy){heavy.sort(function(a,b){return b.conf-a.conf||b.i-a.i});for(var h=0;h<heavy.length-maxHeavy;h++){var idx=heavy[h].i;if(roleOf(days[idx])==='lower')lightenLowerDay(days[idx],'prise+sport');else setAsRecovery(days[idx],'Prise de muscle + sport externe : récupération protégée');changed.push((days[idx].name||('Jour '+(idx+1)))+' allégé pour prise de muscle + sport')}}}
- days.forEach(function(d){polishLegWarmups(d);d.exercises=orderForCard(d.exercises||[])});S().programRecoveryAdjustments216=changed.slice(0,8);save();return days}
- function addProgramNote(){var root=D.querySelector('#p-programme .gs-r-prog');if(!root)return;var old=D.getElementById('gs-v216-recovery-note');if(old)old.remove();var changes=S().programRecoveryAdjustments216||[],ext=countExternal();if(!changes.length&&!ext.items)return;var obj=cfgObjective(),txt='Le planning tient compte des sports externes pour éviter jambes + basket, upper + boxe/MMA/escalade, et les doublons lourds deux jours de suite.';if(obj.indexOf('prise')>-1&&ext.score>=4)txt+=' En prise de muscle, le volume est protégé pour ne pas exploser le déficit et la fatigue.';var html='<div id="gs-v216-recovery-note" class="gs-prog-smart-note v216"><b>Récupération intelligente activée</b><span>'+esc(txt)+'</span>'+changes.map(function(c){return '<em class="gs-recovery-badge-v216">'+esc(c)+'</em>'}).join('')+'</div>';var hero=root.querySelector('.gs-r-prog-hero');if(hero)hero.insertAdjacentHTML('afterend',html);else root.insertAdjacentHTML('afterbegin',html)}
- function processAndRefresh(silent){try{if(Array.isArray(W.DAYS)){applyRecoveryLogic(W.DAYS);save()}}catch(e){console.warn('G-SQUAD v216 recovery',e)}try{if(typeof W.renderProgBody==='function'&&!silent)W.renderProgBody()}catch(e){}setTimeout(addProgramNote,30)}
- var oldApply=W.applyProgramCalculator;if(typeof oldApply==='function'&&!oldApply.__gs216){W.applyProgramCalculator=function(){var r=oldApply.apply(this,arguments);processAndRefresh(true);setTimeout(function(){if(typeof W.renderProgBody==='function')W.renderProgBody();addProgramNote()},80);notify('Programme créé · récupération prise en compte');return r};W.applyProgramCalculator.__gs216=true}
- var oldRender=W.renderProgBody;if(typeof oldRender==='function'&&!oldRender.__gs216){W.renderProgBody=function(){var r=oldRender.apply(this,arguments);setTimeout(addProgramNote,40);return r};W.renderProgBody.__gs216=true}
- var oldValidate=W.gsValidateProgramNow;if(typeof oldValidate==='function'&&!oldValidate.__gs216){W.gsValidateProgramNow=function(){if(Array.isArray(W.DAYS))applyRecoveryLogic(W.DAYS);return oldValidate.apply(this,arguments)};W.gsValidateProgramNow.__gs216=true}
- W.gsApplyProgramRecovery216=function(){processAndRefresh(false)};
- if(D.readyState==='loading')D.addEventListener('DOMContentLoaded',function(){setTimeout(processAndRefresh,350,true)});else setTimeout(function(){processAndRefresh(true)},350);
+ if(window.__gsV216ProgramRecoveryNeutralized)return;
+ window.__gsV216ProgramRecoveryNeutralized=true;
 })();
 </script>
 
@@ -21587,6 +21550,7 @@ function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
 function pct(v,m){return clamp(Math.round((Number(v||0)/Math.max(1,Number(m||1)))*100),0,100)}
 window.__bsv3=window.__bsv3||{};
 var BSV3=window.__bsv3;
+if(!Array.isArray(window.BOSS_ROSTER))window.BOSS_ROSTER=[];
 
 // ============================================================
 // 1. CALENDRIER GLOBAL DÉTERMINISTE
@@ -21988,15 +21952,19 @@ BSV3.currentBossState=currentBossState;
 // ============================================================
 // 8. CALCUL DÉGÂT : XP × multiplicateurs + plafond journalier
 // ============================================================
-function damageMultipliers(sq,memberRole,actionRole){
-  if(!sq||!actionRole)return {mult:1.0,role:false,weak:false};
-  var state=currentBossState(sq);if(!state||state.pre)return {mult:1.0,role:false,weak:false};
-  var roleMatch=false,weakMatch=false,mult=1.0;
+function damageMultipliers(sq,memberRole,actionRole,secondaryRole){
+  if(!sq||!actionRole)return {mult:1.0,role:false,secondary:false,weak:false};
+  var state=currentBossState(sq);if(!state||state.pre)return {mult:1.0,role:false,secondary:false,weak:false};
+  var primaryMatch=false,secondaryMatch=false,weakMatch=false,mult=1.0;
   // rôle principal du membre
-  if(memberRole===actionRole){mult*=1.3;roleMatch=true}
+  if(memberRole===actionRole){mult*=1.3;primaryMatch=true}
+  // rôle secondaire du membre
+  else if(secondaryRole&&secondaryRole===actionRole){mult*=1.15;secondaryMatch=true}
   // faiblesse du boss
   if(state.weaknesses.indexOf(actionRole)>-1){mult*=1.5;weakMatch=true}
-  return {mult:mult,role:roleMatch,weak:weakMatch};
+  // combo rôle + faiblesse = x2 exact, pas 1.95 arrondi
+  if((primaryMatch||secondaryMatch)&&weakMatch)mult=2.0;
+  return {mult:mult,role:(primaryMatch||secondaryMatch),primary:primaryMatch,secondary:secondaryMatch,weak:weakMatch};
 }
 BSV3.damageMultipliers=damageMultipliers;
 
@@ -22015,7 +21983,8 @@ function applyHit(sq,baseXP,actionRole,sourceLabel,userId){
   userId=userId||uid();
   var member=squadMembers(sq).filter(function(m){return String(m.id)===String(userId)})[0];
   var memberRole=member?member.role:'sculpteur';
-  var mults=damageMultipliers(sq,memberRole,actionRole);
+  var secondaryRole=member?(member.role2||member.secondaryRole||member.secondary_role||member.roleSecondary||''):'';
+  var mults=damageMultipliers(sq,memberRole,actionRole,secondaryRole);
   var dmgRaw=Math.round(Number(baseXP||0)*mults.mult);
   // Status modifiers
   var status=sq.bsv3.status||{};
@@ -22043,9 +22012,10 @@ function applyHit(sq,baseXP,actionRole,sourceLabel,userId){
     role:actionRole,
     weakness:mults.weak,
     roleMatch:mults.role,
+    secondaryRoleMatch:!!mults.secondary,
     ts:Date.now(),
     weekIdx:cal.weekIdx,
-    cycle:cal.cycle-1
+    cycle:cal.cycle
   });
   // Squad XP (toujours sur le squad, jamais perso)
   sq.bsv3.squadXP=Math.round(sq.bsv3.squadXP+effective);
@@ -22102,7 +22072,7 @@ function handleBossDefeated(sq){
   sq.bsv3.bossHistory.unshift({
     bossId:entry.id,name:entry.name,emoji:entry.emoji,
     season:entry.season,boss:entry.boss,
-    weekIdx:cal.weekIdx,cycle:cal.cycle-1,
+    weekIdx:cal.weekIdx,cycle:cal.cycle,
     defeatedAt:Date.now(),
     members:squadMembers(sq).map(function(m){return m.id})
   });
@@ -22236,7 +22206,7 @@ function checkBossExpiry(){
     if(!sq.bsv3.status[alreadyHandled]){
       sq.bsv3.status[alreadyHandled]=true;
       // Le boss de la semaine précédente a-t-il été battu ?
-      var battled=sq.bsv3.bossHistory.some(function(h){return h.weekIdx===prevWeekIdx&&h.cycle===cal.cycle-1});
+      var battled=sq.bsv3.bossHistory.some(function(h){return h.weekIdx===prevWeekIdx&&h.cycle===cal.cycle});
       if(!battled){
         var lostHits=sq.bsv3.hits.filter(function(h){return h.weekIdx===prevWeekIdx});
         if(lostHits.length>0){
@@ -22356,7 +22326,7 @@ BSV3.generateMissionsForBoss=generateMissionsForBoss;
 function updateMissionProgress(sq){
   var cal=BSV3.calendar();
   var missions=generateMissionsForBoss(sq,cal);
-  var hits=sq.bsv3.hits.filter(function(h){return h.weekIdx===cal.weekIdx&&h.cycle===cal.cycle-1});
+  var hits=sq.bsv3.hits.filter(function(h){return h.weekIdx===cal.weekIdx&&h.cycle===cal.cycle});
   var now=Date.now();
   missions.forEach(function(m){
     if(m.completed)return;
@@ -22911,8 +22881,9 @@ BSV3.refreshSeanceBossWidget=refreshSeanceBossWidget;
   if(typeof oldPush==='function'&&!oldPush.__bsv3Neutralized){
     window.pushSquadEvent=function(type,payload,opts){
       if(type==='boss_hit'){
-        // Neutralisé : le boss est géré par BSV3.applyHit, on n'applique pas de dégât en plus.
-        // On laisse passer l'event original pour le feed social/Supabase.
+        // Neutralisé : le boss est géré par BSV3.applyHit.
+        // Ne jamais rappeler l'ancien pushSquadEvent ici : il réapplique bossTakeDamage/applyBossDamage.
+        return null;
       }
       return oldPush.apply(this,arguments);
     };
@@ -22939,7 +22910,7 @@ window.__gsBossAnimalsFinalDisabled=true;
     window.fireXP=function(amount,source){
       var src=String(source||'');
       // Si la source ressemble à un bonus Battle, on bloque
-      if(/bonus\s*saison|boss\s*battu|coffre/i.test(src)){
+      if(/bonus\s*saison|saison\s*boss|boss\s*saison|boss\s*battu|boss\s*vaincu|coffre|battle\s*xp|squad\s*xp/i.test(src)){
         console.log('[BSV3] blocked fireXP from Battle source:',src,amount);
         return; // Ne pas créditer en XP perso. La squad XP est gérée séparément.
       }
