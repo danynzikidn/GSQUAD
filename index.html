@@ -6506,18 +6506,26 @@ document.addEventListener('DOMContentLoaded',function(){
  if(message) gsNotify(message);
  }
 
- // 1) Supabase est la source de vérité : pas de mode invité qui boot depuis le cache.
+ // 1) Continuer sans compte = mode invité direct, sans auth ni onboarding.
  window.skipAuth = function(){
- try{ window._supaUser = null; sessionStorage.removeItem('gs_guest_session'); localStorage.removeItem('gs_skip_auth'); localStorage.removeItem('gs_auth_skipped'); }catch(e){}
+ try{ window._supaUser = null; }catch(e){}
  gsEnsureState();
- state.onboarded=false; state.guestMode=false; state.profil={};
- try{ localStorage.setItem('ath7', JSON.stringify(state)); }catch(e){}
- var auth=document.getElementById('auth-screen'), onboard=document.getElementById('onboard');
- if(auth){auth.style.display='flex';auth.classList.add('open')}
- if(onboard)onboard.style.display='none';
- if(typeof authShowView==='function')authShowView('landing');
- gsNotify('Compte requis : connecte-toi pour accéder à G-SQUAD.');
- return false;
+ state.profil = state.profil && state.profil.name? state.profil: {
+ name:'Athlète',
+ username:'',
+ gender:'autre',
+ age:'',
+ taille:'',
+ poids:'',
+ gyms:[],
+ sports:[],
+ avatar:'',
+ objectif:'maintien',
+ level:'debutant',
+ frequency:3,
+ material:'salle'
+ };
+ gsEnterApp('Mode invité activé.');
  };
 
  // 2) Fréquence visée: sélection visible + valeur bien enregistrée.
@@ -6745,22 +6753,24 @@ document.addEventListener('DOMContentLoaded',function(){
 
  window.skipAuth = function(){
  ensureState(); window._supaUser=null;
- state.onboarded=false; state.guestMode=false; state.profil={};
- try{localStorage.setItem('ath7',JSON.stringify(state));sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped')}catch(e){}
- var auth=$('auth-screen'),onboard=$('onboard');if(auth){auth.style.display='flex';auth.classList.add('open')}if(onboard)onboard.style.display='none';
- if(typeof authShowView==='function')authShowView('landing');
- safeNotify('Compte requis : connecte-toi pour accéder à G-SQUAD.');
- return false;
+ state.profil = state.profil && state.profil.name? state.profil: {name:'Athlète',username:'',gender:'autre',age:'',taille:'',poids:'',gyms:[],sports:[],avatar:'',objectif:'maintien',level:'debutant',frequency:3,material:'salle',duration:60,split:'fullbody',trainingFocus:'physique'};
+ bootSafe('Mode invité activé.');
  };
 
  window.initAuth = async function(){
- if(typeof window.__gsStrictInitAuthProxy==='function')return window.__gsStrictInitAuthProxy();
- var auth=$('auth-screen'),onboard=$('onboard');
- try{state=baseState?baseState():{};window.state=state;localStorage.setItem('ath7',JSON.stringify(state));localStorage.removeItem('gs_auth_uid');sessionStorage.removeItem('gs_guest_session')}catch(e){}
- if(auth){auth.style.display='flex';auth.classList.add('open')}
- if(onboard)onboard.style.display='none';
- if(typeof authShowView==='function')authShowView('landing');
- return false;
+ ensureState();
+ try{ gsInstallOnboarding(); }catch(e){ console.error('onboarding install failed:', e); }
+ var auth=$('auth-screen'), onboard=$('onboard');
+ if(state.onboarded && state.profil && state.profil.name){ bootSafe(); return; }
+ if(auth) auth.style.display='flex'; if(onboard) onboard.style.display='none';
+ if(!_supa) return;
+ try{
+ var sess=await _supa.auth.getSession();
+ if(sess && sess.data && sess.data.session && sess.data.session.user){ await afterAuth(sess.data.session.user); }
+ _supa.auth.onAuthStateChange(async function(event, session){
+ if(event==='SIGNED_OUT'){ state={}; _supaUser=null; ensureState(); if(auth)auth.style.display='flex'; if(onboard)onboard.style.display='none'; }
+ });
+ }catch(e){ console.warn('Supabase auth unavailable:', e); }
  };
 
  document.addEventListener('DOMContentLoaded', function(){
@@ -9727,13 +9737,16 @@ document.addEventListener('DOMContentLoaded',function(){
  }
 
  window.skipAuth=function(){
- try{sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped')}catch(e){}
- var st=S();st.guestMode=false;st.onboarded=false;st.profil={};save();
- var onboard=$('onboard');if(onboard)onboard.style.display='none';
- var auth=$('auth-screen');if(auth){auth.style.display='flex';auth.classList.add('open')}
- if(typeof window.authShowView==='function')window.authShowView('landing');
- toast('Compte requis : connecte-toi pour accéder à G-SQUAD.');
- return false;
+ sessionStorage.setItem('gs_guest_session','1');
+ var st=S();st.guestMode=true;st.onboarded=true;
+ if(!st.profil.name)st.profil.name='Athlète';
+ if(!st.profil.objectif)st.profil.objectif='maintien';
+ if(!st.profil.frequency)st.profil.frequency=3;
+ save();
+ var auth=$('auth-screen');if(auth)auth.style.display='none';
+ hideOnboarding();
+ try{if(typeof window.bootApp==='function')window.bootApp();else if(typeof window.bootSafe==='function')window.bootSafe('Mode invité activé.')}catch(e){console.warn(e)}
+ toast('Mode invité activé');
  };
 
  async function hasSupabaseSession(){
@@ -16259,59 +16272,8 @@ var oldPush=window.pushSquadEvent;window.pushSquadEvent=function(type,payload,op
  function profileComplete(p){var d=(p&&p.data)||{},pr=d.profil||{};return normUsername((p&&p.username)||pr.username).length>=3}
  async function loadProfileStateStrict(id){var r=await selectProfile(id);if(r.data){var st=Object.assign(baseState(),r.data.data||{});st.profil=st.profil||{};if(r.data.username)st.profil.username=r.data.username;if(r.data.display_name)st.profil.name=r.data.display_name;if(r.data.email)st.profil.email=r.data.email;assignState(st);return r.data}assignState(baseState());return null}
  W.loadFromSupabase=async function(id){return !!(await loadProfileStateStrict(id))};
- W.afterAuth=async function(u){
- if(!u||!u.id){assignState(baseState());W._supaUser=null;try{_supaUser=null}catch(e){}var a=$('auth-screen'),ob=$('onboard');if(a){a.style.display='flex';a.classList.add('open')}if(ob)ob.style.display='none';if(typeof W.authShowView==='function')W.authShowView('landing');return false}
- var key=String(u.id)+'|'+String(u.email||'');
- if(W.__gsAfterAuthInFlightKey===key&&W.__gsAfterAuthPromise)return W.__gsAfterAuthPromise;
- W.__gsAfterAuthInFlightKey=key;
- W.__gsAfterAuthPromise=(async function(){
-  W._supaUser=u;try{_supaUser=u}catch(e){}
-  try{localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');localStorage.removeItem('gs_oauth_provider_pending');sessionStorage.removeItem('gs_guest_session')}catch(e){}
-  purgeOnlineCacheForSwitch(u.id);
-  var auth=$('auth-screen'),onboard=$('onboard');if(auth){auth.style.display='none';auth.classList.remove('open')}
-  var row=await loadProfileStateStrict(u.id),ensured=await ensureProfileRowStrict(u),p=ensured.profile||row;
-  if(!profileComplete(p)){
-   if(onboard)onboard.style.display='none';
-   if(typeof W.gsShowOAuthOnboarding==='function')W.gsShowOAuthOnboarding(u,p);else if(auth)auth.style.display='flex';
-   return 'onboarding-oauth';
-  }
-  S().profil=S().profil||{};S().profil.id=u.id;S().profil.user_id=u.id;S().user_id=u.id;
-  if(p.username)S().profil.username=p.username;if(p.display_name)S().profil.name=p.display_name;if(p.email)S().profil.email=p.email;
-  S().guestMode=false;save();
-  try{if(typeof W.hideGates==='function'&&(S().onboarded||S().onboardingComplete))W.hideGates()}catch(e){}
-  if(S().onboarded||S().onboardingComplete){try{if(typeof W.bootApp==='function')W.bootApp()}catch(e){console.warn(e)};return 'boot'}
-  if(onboard)onboard.style.display='flex';return 'onboarding-app';
- })();
- try{return await W.__gsAfterAuthPromise}finally{W.__gsAfterAuthInFlightKey='';W.__gsAfterAuthPromise=null}
-};
- W.initAuth=async function(){
- if(W.__gsAuthInitPromise)return W.__gsAuthInitPromise;
- W.__gsAuthInitPromise=(async function(){
-  try{if(typeof W.ensureState==='function')W.ensureState();if(typeof W.gsInstallOnboarding==='function')W.gsInstallOnboarding()}catch(e){}
-  var auth=$('auth-screen'),onboard=$('onboard');
-  function showAuthOnly(){
-   assignState(baseState());
-   W._supaUser=null;try{_supaUser=null}catch(e){}
-   try{localStorage.removeItem('gs_auth_uid');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');localStorage.removeItem('gs_oauth_provider_pending');sessionStorage.removeItem('gs_guest_session')}catch(e){}
-   if(auth){auth.style.display='flex';auth.classList.add('open')}
-   if(onboard)onboard.style.display='none';
-   if(typeof W.authShowView==='function')W.authShowView('landing');
-  }
-  if(!sb()||!sb().auth){showAuthOnly();return false}
-  try{
-   var sess=await sb().auth.getSession(),session=sess&&sess.data&&sess.data.session;
-   try{if(W.__gsAuthSubscription&&typeof W.__gsAuthSubscription.unsubscribe==='function')W.__gsAuthSubscription.unsubscribe()}catch(e){}
-   var sub=sb().auth.onAuthStateChange(async function(ev,session){
-    if((ev==='SIGNED_IN'||ev==='INITIAL_SESSION'||ev==='TOKEN_REFRESHED')&&session&&session.user){await W.afterAuth(session.user);return}
-    if(ev==='SIGNED_OUT'){showAuthOnly()}
-   });
-   W.__gsAuthSubscription=sub&&sub.data&&sub.data.subscription?sub.data.subscription:null;
-   if(session&&session.user){await W.afterAuth(session.user);return true}
-   showAuthOnly();return false;
-  }catch(e){console.warn('initAuth Supabase truth failed',e);showAuthOnly();return false}
- })();
- return W.__gsAuthInitPromise;
-};
+ W.afterAuth=async function(u){if(!u)return;W._supaUser=u;try{_supaUser=u}catch(e){}purgeOnlineCacheForSwitch(u.id);var auth=$('auth-screen');if(auth)auth.style.display='none';var row=await loadProfileStateStrict(u.id);var ensured=await ensureProfileRowStrict(u);var p=ensured.profile||row;if(!profileComplete(p)){if(typeof W.gsShowOAuthOnboarding==='function'){W.gsShowOAuthOnboarding(u,p)}else{var a=$('auth-screen');if(a)a.style.display='flex'}return}S().profil=S().profil||{};if(p.username)S().profil.username=p.username;if(p.display_name)S().profil.name=p.display_name;if(p.email)S().profil.email=p.email;S().guestMode=false;save();try{if(typeof W.hideGates==='function')W.hideGates()}catch(e){}if(S().onboarded){try{if(typeof W.bootApp==='function')W.bootApp();else if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){console.warn(e)}}else{var ob=$('onboard');if(ob)ob.style.display='flex'}};
+ W.initAuth=async function(){try{if(typeof W.ensureState==='function')W.ensureState();if(typeof W.gsInstallOnboarding==='function')W.gsInstallOnboarding()}catch(e){}var auth=$('auth-screen'),onboard=$('onboard');if(auth)auth.style.display='flex';if(onboard)onboard.style.display='none';if(!sb()||!sb().auth){if(S().onboarded&&S().profil&&S().profil.name){try{if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}}return}try{var sess=await sb().auth.getSession();if(sess&&sess.data&&sess.data.session&&sess.data.session.user){await W.afterAuth(sess.data.session.user);return}try{sb().auth.onAuthStateChange(async function(ev,session){if((ev==='SIGNED_IN'||ev==='INITIAL_SESSION'||ev==='TOKEN_REFRESHED')&&session&&session.user){await W.afterAuth(session.user)}if(ev==='SIGNED_OUT'){assignState(baseState());W._supaUser=null;try{_supaUser=null}catch(e){}try{localStorage.removeItem('gs_auth_uid')}catch(e){}if(auth)auth.style.display='flex';if(onboard)onboard.style.display='none';if(typeof W.authShowView==='function')W.authShowView('landing')}})}catch(e){}if(S().onboarded&&S().profil&&S().profil.name){try{if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}}else if(typeof W.authShowView==='function')W.authShowView('landing')}catch(e){console.warn('initAuth 193 failed',e)}};
  async function resolveLoginIdentifier(input){var raw=String(input||'').trim();if(!sb())return {email:null,profile:null,error:'supabase_missing'};if(raw.indexOf('@')>-1&&!raw.startsWith('@'))return {email:raw.toLowerCase(),profile:null,error:null};var u=normUsername(raw);if(!u)return {email:null,profile:null,error:'empty'};try{var rpc=await sb().rpc('resolve_login_username',{p_login:u});if(rpc&&!rpc.error){var row=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;if(row&&row.email)return {email:String(row.email).toLowerCase(),profile:row,error:null,via:'rpc'}}}catch(e){}
   try{var q=await sb().from('profiles').select('id,email,username,display_name,data').eq('username',u).maybeSingle();if(q.data&&q.data.email)return {email:q.data.email,profile:q.data,error:null,via:'select'}}catch(e){}
   return {email:null,profile:null,error:'not_found'} }
@@ -22720,36 +22682,85 @@ if(document.readyState==='loading'){
  W.gsValidateProgramNow=function(){var s=S();if(!Array.isArray(W.DAYS)||!W.DAYS.length)W.DAYS=emptyWeek();syncDays(W.DAYS);s.programValidatedAt=Date.now();P().programValidatedAt=s.programValidatedAt;s.programSource='assistant';P().programSource='assistant';save();try{if(typeof W.renderProgBody==='function')W.renderProgBody();if(typeof W.renderJournal==='function')W.renderJournal()}catch(e){}toast('Programme validé');return false};
  W.gsResetProgramNow=function(){if(!confirm('Réinitialiser le programme actuel ? Tous les jours seront vidés.'))return false;var s=S(),p=P();W.DAYS=emptyWeek();s.customDays={0:[],1:[],2:[],3:[],4:[],5:[],6:[]};s.program7Days=W.DAYS;s.smartProgram=W.DAYS;s.journalPlannedWeek=W.DAYS.map(function(d,i){return {dayIndex:i,day:d.name,title:'Repos',planned:false,done:false,exercises:[]}});delete s.programValidatedAt;delete p.programValidatedAt;delete s.programWeeklyLayout;delete s.programSessionSlots;delete s.programGeneratedAt;s.checks={};W.cDay=0;W.cEx=0;save();try{if(typeof W.renderProgBody==='function')W.renderProgBody();if(typeof W.renderSeance==='function')W.renderSeance();if(typeof W.renderJournal==='function')W.renderJournal()}catch(e){}toast('Programme réinitialisé · 7 jours vides');return false};
  // Auth/onboarding : mêmes étapes programme après email / mot de passe / username.
- var AUTH_STEPS=['email','password','username','mode','objective','level','freq','priority','split','sports','gym','create'];
+ var AUTH_STEPS=['email','password','username','gender','body','mode','objective','level','freq','priority','split','sports','gym','create'];
+ W.GS_AUTH_STEPS=AUTH_STEPS;
+ W.GS_AUTH_STEP_INDEX=function(name){return AUTH_STEPS.indexOf(name)};
+ function isOAuthMode(){return !!(W.OB11&&W.OB11.mode==='oauth')}
+ function authStepIndex(name){var i=AUTH_STEPS.indexOf(name);return i<0?0:i}
  function renderAuthChoices(map,current,attr){return Object.keys(map).map(function(k){return '<button type="button" class="gs-ob11-choice '+(current===k?'sel':'')+'" '+attr+'="'+E(k)+'"><b>'+E(map[k][0])+'</b><span>'+E(map[k][1])+'</span></button>'}).join('')}
+ function renderGenderChoices(){var p=P(),g=String(p.gender||p.sexe||'').toLowerCase();var map={homme:['Homme','Calcul BMR formule homme.'],femme:['Femme','Calcul BMR formule femme.'],autre:['Autre','Estimation neutre, ajustable plus tard.']};return renderAuthChoices(map,g,'data-auth-gender')}
+ function physicalNumbers(){var p=P(),age=parseFloat(p.age||0),height=parseFloat(p.taille||p.height||0),weight=parseFloat(p.poids||p.weight||0),gender=String(p.gender||p.sexe||'autre').toLowerCase();return {age:age,height:height,weight:weight,gender:gender}}
+ function calcIMC258(weight,height){weight=parseFloat(weight||0);height=parseFloat(height||0);if(!weight||!height)return null;var m=height/100;if(!m)return null;return weight/(m*m)}
+ function calcBMR258(weight,height,age,gender){weight=parseFloat(weight||0);height=parseFloat(height||0);age=parseFloat(age||0);gender=String(gender||'autre').toLowerCase();if(!weight||!height||!age)return null;var offset=gender==='homme'?5:(gender==='femme'?-161:-78);return (10*weight)+(6.25*height)-(5*age)+offset}
+ function imcLabel258(v){if(!v)return '—';if(v<18.5)return 'Bas';if(v<25)return 'Normal';if(v<30)return 'Élevé';return 'Très élevé'}
+ function bodySummaryHtml(){var n=physicalNumbers(),imc=calcIMC258(n.weight,n.height),bmr=calcBMR258(n.weight,n.height,n.age,n.gender);return '<div id="auth-body-summary" class="gs-sp-card" style="margin-top:12px"><div class="gs-sp-kicker">Calcul automatique</div><div class="gs-sp-grid"><div class="gs-sp-metric"><b>'+E(imc?imc.toFixed(1):'—')+'</b><span>IMC</span></div><div class="gs-sp-metric"><b>'+E(bmr?Math.round(bmr):'—')+'</b><span>BMR kcal</span></div><div class="gs-sp-metric"><b>'+E(imcLabel258(imc))+'</b><span>repère</span></div></div><div class="gs-sp-sub">Ces valeurs servent de base à Nutrition et au Programme. Elles restent modifiables dans le profil.</div></div>'}
+ function syncBodyMetrics(){var p=P(),n=physicalNumbers(),imc=calcIMC258(n.weight,n.height),bmr=calcBMR258(n.weight,n.height,n.age,n.gender);p.gender=p.gender||p.sexe||'autre';p.sexe=p.gender;p.age=n.age||'';p.taille=n.height||'';p.poids=n.weight||'';if(imc){p.imc=Number(imc.toFixed(1));p.bmi=p.imc}if(bmr){p.bmr=Math.round(bmr);p.metabolismeBase=p.bmr}return {imc:imc,bmr:bmr}}
  function authBody(step){var p=P(),cfg=getCfg(),body='',title='',sub='';
-  if(step==='email'){title='Email';sub='Compte en ligne G-SQUAD.';body='<input id="ob11-main-input" class="gs-ob11-input" type="email" autocomplete="email" placeholder="ton@email.com" value="'+E(p.email||'')+'"><div id="ob11-email-error" class="gs-ob11-field-error"></div>'}
+  if(step==='email'){title='Email';sub=isOAuthMode()?'Email validé par Google.':'Compte en ligne G-SQUAD.';body='<input id="ob11-main-input" class="gs-ob11-input" type="email" autocomplete="email" placeholder="ton@email.com" value="'+E(p.email||'')+'" '+(isOAuthMode()?'readonly':'')+'><div id="ob11-email-error" class="gs-ob11-field-error"></div>'}
   if(step==='password'){title='Mot de passe';sub='Minimum 6 caractères.';body='<div class="gs-ob11-passwrap"><input id="ob11-password-input" class="gs-ob11-input gs-ob11-password-field" type="password" autocomplete="new-password" placeholder="Mot de passe"><input id="ob11-password-confirm" class="gs-ob11-input gs-ob11-password-field" type="password" autocomplete="new-password" placeholder="Confirmer le mot de passe"></div>'}
-  if(step==='username'){title='Username';sub='Visible dans ta Squad.';body='<input id="ob11-main-input" class="gs-ob11-input" type="text" placeholder="@username" value="'+E(p.username||'')+'">'}
+  if(step==='username'){title='Username';sub=isOAuthMode()?'Étape 2 : ton compte Google est déjà reconnu. Choisis maintenant ton identité G-SQUAD.':'Visible dans ta Squad et dans la recherche.';body='<input id="ob11-main-input" class="gs-ob11-input" type="text" placeholder="@username" value="'+E(p.username||'')+'"><div id="ob11-username-error" class="gs-ob11-field-error"></div>'}
+  if(step==='gender'){title='Sexe';sub='Utilisé uniquement pour adapter les estimations IMC / BMR et Nutrition.';body='<div class="gs-ob11-grid">'+renderGenderChoices()+'</div>'}
+  if(step==='body'){title='Mensurations';sub='On remet le calcul IMC et BMR dans le setup, avec tes valeurs réelles.';var n=physicalNumbers();body='<div class="gs-pa-select-row" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:10px"><input id="auth-age" class="gs-ob11-input" type="number" min="10" max="100" inputmode="numeric" placeholder="Âge" value="'+E(n.age||'')+'"><input id="auth-height" class="gs-ob11-input" type="number" min="100" max="230" inputmode="decimal" placeholder="Taille cm" value="'+E(n.height||'')+'"><input id="auth-weight" class="gs-ob11-input" type="number" min="30" max="250" inputmode="decimal" placeholder="Poids kg" value="'+E(n.weight||'')+'"></div>'+bodySummaryHtml()}
   if(step==='mode'){title='Mode d’entraînement';sub='Même première étape que l’Assistant Programme.';body='<div class="gs-ob11-grid">'+renderAuthChoices(MODE_INFO,cfg.trainingMode,'data-auth-mode')+'</div>'}
-  if(step==='freq'){title='Séances par semaine';sub='Quatrième étape officielle : choisis ton volume réel.';body='<div class="gs-ob11-grid gs-ob11-grid-auto">'+[1,2,3,4,5,6].map(function(n){return '<button type="button" class="gs-ob11-choice '+(cfg.freq===n?'sel':'')+'" data-auth-freq="'+n+'"><b>'+n+'</b><span>Séance'+(n>1?'s':'')+' / semaine</span></button>'}).join('')+'</div>'}
-  if(step==='objective'){title='Objectif';sub='Deuxième étape officielle.';body='<div class="gs-ob11-grid">'+renderAuthChoices(OBJ_INFO,cfg.objectif,'data-auth-obj')+'</div>'}
-  if(step==='level'){title='Niveau';sub='Troisième étape officielle.';body='<div class="gs-ob11-grid">'+renderAuthChoices(LEVEL_INFO,cfg.level,'data-auth-level')+'</div>'}
+  if(step==='freq'){title='Séances par semaine';sub='Choisis ton volume réel.';body='<div class="gs-ob11-grid gs-ob11-grid-auto">'+[1,2,3,4,5,6].map(function(n){return '<button type="button" class="gs-ob11-choice '+(cfg.freq===n?'sel':'')+'" data-auth-freq="'+n+'"><b>'+n+'</b><span>Séance'+(n>1?'s':'')+' / semaine</span></button>'}).join('')+'</div>'}
+  if(step==='objective'){title='Objectif';sub='Objectif principal du programme.';body='<div class="gs-ob11-grid">'+renderAuthChoices(OBJ_INFO,cfg.objectif,'data-auth-obj')+'</div>'}
+  if(step==='level'){title='Niveau';sub='Niveau réel actuel.';body='<div class="gs-ob11-grid">'+renderAuthChoices(LEVEL_INFO,cfg.level,'data-auth-level')+'</div>'}
   if(step==='priority'){title='Priorité physique';sub='Jusqu’à 3 zones.';body='<div class="gs-ob11-grid gs-ob11-grid-auto">'+PRIO_KEYS.map(function(k){return '<button type="button" class="gs-ob11-choice '+(cfg.priorities.indexOf(k)>-1?'sel':'')+'" data-auth-prio="'+E(k)+'"><b>'+E(PRIO_LABELS[k])+'</b><span>'+(cfg.priorities.indexOf(k)>-1?'Sélectionné':'Ajouter')+'</span></button>'}).join('')+'</div>'}
-  if(step==='split'){title='Organisation';sub='Sixième étape officielle.';body='<div class="gs-ob11-grid">'+renderAuthChoices(SPLIT_INFO,cfg.split,'data-auth-split')+'</div>'}
-  if(step==='sports'){title='Sport déjà pratiqué';sub='Septième étape officielle.';body='<div class="gs-pa-select-row"><select id="auth-sport" class="gs-pa-select">'+SPORT_KEYS.map(function(k){return '<option value="'+E(k)+'">'+E(SPORT_LABELS[k])+'</option>'}).join('')+'</select><select id="auth-intensity" class="gs-pa-select"><option value="leger">Intensité légère</option><option value="moyenne" selected>Intensité moyenne</option><option value="intense">Intensité forte</option></select><button type="button" class="gs-pa-add" onclick="gsAuthAddSport258()">Ajouter</button></div><div class="gs-pa-days" id="auth-days">'+daysButtons([])+'</div><div class="gs-pa-summary" id="auth-sport-summary"></div>'}
-  if(step==='gym'){title='Salle d’entraînement';sub='Dernière étape avant création du programme.';body='<div class="gs-ob11-grid gs-ob11-grid-auto">'+gymKeys().map(function(k){return '<button type="button" class="gs-ob11-choice '+(cfg.gym===k?'sel':'')+'" data-auth-gym="'+E(k)+'"><b>'+E(gymName(k))+'</b><span>'+E(gymSub(k))+'</span></button>'}).join('')+'</div>'}
-  if(step==='create'){title='Créer le programme intelligent';sub='Auth et Programme utilisent maintenant exactement la même configuration.';body='<div class="gs-sp-card"><div class="gs-sp-kicker">Résumé programme</div><div class="gs-sp-title">'+E(MODE_INFO[cfg.trainingMode][0])+' · '+cfg.freq+' séances</div><div class="gs-sp-sub">'+E(OBJ_INFO[cfg.objectif][0])+' · '+E(LEVEL_INFO[cfg.level][0])+' · '+E(SPLIT_INFO[cfg.split][0])+'</div><div class="gs-sp-grid"><div class="gs-sp-metric"><b>'+cfg.freq+'</b><span>séances</span></div><div class="gs-sp-metric"><b>'+E((cfg.priorities||[]).length||0)+'</b><span>priorités</span></div><div class="gs-sp-metric"><b>'+E((S().programSports||[]).length||0)+'</b><span>sports</span></div></div></div>'}
+  if(step==='split'){title='Organisation';sub='Organisation conseillée selon ton profil.';body='<div class="gs-ob11-grid">'+renderAuthChoices(SPLIT_INFO,cfg.split,'data-auth-split')+'</div>'}
+  if(step==='sports'){title='Sport déjà pratiqué';sub='Activité sportive externe à intégrer au programme.';body='<div class="gs-pa-select-row"><select id="auth-sport" class="gs-pa-select">'+SPORT_KEYS.map(function(k){return '<option value="'+E(k)+'">'+E(SPORT_LABELS[k])+'</option>'}).join('')+'</select><select id="auth-intensity" class="gs-pa-select"><option value="leger">Intensité légère</option><option value="moyenne" selected>Intensité moyenne</option><option value="intense">Intensité forte</option></select><button type="button" class="gs-pa-add" onclick="gsAuthAddSport258()">Ajouter</button></div><div class="gs-pa-days" id="auth-days">'+daysButtons([])+'</div><div class="gs-pa-summary" id="auth-sport-summary"></div>'}
+  if(step==='gym'){title='Salle d’entraînement';sub='Dernière étape avant création du compte.';body='<div class="gs-ob11-grid gs-ob11-grid-auto">'+gymKeys().map(function(k){return '<button type="button" class="gs-ob11-choice '+(cfg.gym===k?'sel':'')+'" data-auth-gym="'+E(k)+'"><b>'+E(gymName(k))+'</b><span>'+E(gymSub(k))+'</span></button>'}).join('')+'</div>'}
+  if(step==='create'){syncBodyMetrics();title='Créer mon compte';sub='Ton compte devient actif uniquement maintenant. Avant ça, il reste provisoire.';body='<div class="gs-sp-card"><div class="gs-sp-kicker">Résumé compte</div><div class="gs-sp-title">@'+E(p.username||'username')+' · '+E((p.gender||p.sexe||'autre'))+'</div><div class="gs-sp-sub">'+E(MODE_INFO[cfg.trainingMode][0])+' · '+cfg.freq+' séances · '+E(OBJ_INFO[cfg.objectif][0])+' · '+E(LEVEL_INFO[cfg.level][0])+'</div><div class="gs-sp-grid"><div class="gs-sp-metric"><b>'+E(p.imc||'—')+'</b><span>IMC</span></div><div class="gs-sp-metric"><b>'+E(p.bmr||'—')+'</b><span>BMR kcal</span></div><div class="gs-sp-metric"><b>'+E((S().programSports||[]).length||0)+'</b><span>sports</span></div></div><div class="gs-sp-sub">En cliquant sur Créer mon compte, le profil Supabase est finalisé et le programme est créé.</div></div>'}
   return {title:title,sub:sub,body:body}
  }
- function bindAuth(step){D.querySelectorAll('[data-auth-mode]').forEach(function(b){b.onclick=function(){P().programTrainingMode=modeKey(b.getAttribute('data-auth-mode'));S().programTrainingMode=P().programTrainingMode;save();renderOb258()}});D.querySelectorAll('[data-auth-freq]').forEach(function(b){b.onclick=function(){P().frequency=clamp(b.getAttribute('data-auth-freq'),1,6);P().frequence=P().frequency;save();renderOb258()}});D.querySelectorAll('[data-auth-obj]').forEach(function(b){b.onclick=function(){P().objectif=objKey(b.getAttribute('data-auth-obj'));save();renderOb258()}});D.querySelectorAll('[data-auth-level]').forEach(function(b){b.onclick=function(){P().level=levelKey(b.getAttribute('data-auth-level'));P().niveau=P().level;save();renderOb258()}});D.querySelectorAll('[data-auth-prio]').forEach(function(b){b.onclick=function(){var arr=(P().programPriorities||S().programPriorities||[]).slice(0,3),k=b.getAttribute('data-auth-prio'),i=arr.indexOf(k);if(i>-1)arr.splice(i,1);else{if(arr.length>=3){toast('Maximum 3 groupes musculaires.');return}arr.push(k)}P().programPriorities=arr;S().programPriorities=arr;save();renderOb258()}});D.querySelectorAll('[data-auth-split]').forEach(function(b){b.onclick=function(){P().split=splitKey(b.getAttribute('data-auth-split'));P().programme=P().split;save();renderOb258()}});D.querySelectorAll('[data-auth-gym]').forEach(function(b){b.onclick=function(){P().programGym=b.getAttribute('data-auth-gym');S().programGym=P().programGym;save();renderOb258()}});D.querySelectorAll('#auth-days [data-pa-day]').forEach(function(b){b.onclick=function(){b.classList.toggle('sel')}});renderAuthSports()}
+ function bindAuth(step){
+  D.querySelectorAll('[data-auth-gender]').forEach(function(b){b.onclick=function(){var g=b.getAttribute('data-auth-gender')||'autre';P().gender=g;P().sexe=g;syncBodyMetrics();save();renderOb258()}});
+  ['auth-age','auth-height','auth-weight'].forEach(function(id){var el=$(id);if(!el||el.__gsBodyBind)return;el.__gsBodyBind=true;el.addEventListener('input',function(){var p=P();p.age=String(($('auth-age')||{}).value||'');p.taille=String(($('auth-height')||{}).value||'');p.poids=String(($('auth-weight')||{}).value||'');syncBodyMetrics();var box=$('auth-body-summary');if(box)box.outerHTML=bodySummaryHtml();save()})});
+  D.querySelectorAll('[data-auth-mode]').forEach(function(b){b.onclick=function(){P().programTrainingMode=modeKey(b.getAttribute('data-auth-mode'));S().programTrainingMode=P().programTrainingMode;save();renderOb258()}});
+  D.querySelectorAll('[data-auth-freq]').forEach(function(b){b.onclick=function(){P().frequency=clamp(b.getAttribute('data-auth-freq'),1,6);P().frequence=P().frequency;save();renderOb258()}});
+  D.querySelectorAll('[data-auth-obj]').forEach(function(b){b.onclick=function(){P().objectif=objKey(b.getAttribute('data-auth-obj'));save();renderOb258()}});
+  D.querySelectorAll('[data-auth-level]').forEach(function(b){b.onclick=function(){P().level=levelKey(b.getAttribute('data-auth-level'));P().niveau=P().level;save();renderOb258()}});
+  D.querySelectorAll('[data-auth-prio]').forEach(function(b){b.onclick=function(){var arr=(P().programPriorities||S().programPriorities||[]).slice(0,3),k=b.getAttribute('data-auth-prio'),i=arr.indexOf(k);if(i>-1)arr.splice(i,1);else{if(arr.length>=3){toast('Maximum 3 groupes musculaires.');return}arr.push(k)}P().programPriorities=arr;S().programPriorities=arr;save();renderOb258()}});
+  D.querySelectorAll('[data-auth-split]').forEach(function(b){b.onclick=function(){P().split=splitKey(b.getAttribute('data-auth-split'));P().programme=P().split;save();renderOb258()}});
+  D.querySelectorAll('[data-auth-gym]').forEach(function(b){b.onclick=function(){P().programGym=b.getAttribute('data-auth-gym');S().programGym=P().programGym;save();renderOb258()}});
+  D.querySelectorAll('#auth-days [data-pa-day]').forEach(function(b){b.onclick=function(){b.classList.toggle('sel')}});
+  renderAuthSports()
+ }
  function renderAuthSports(){var el=$('auth-sport-summary');if(!el)return;var list=S().programSports||[];el.innerHTML=list.length?list.map(function(s,i){return '<span class="gs-pa-pill">'+E(SPORT_LABELS[s.sport]||s.sport)+' <button type="button" onclick="gsAuthRemoveSport258('+i+')" style="border:0;background:transparent;color:inherit;font-weight:1000">×</button></span>'}).join(''):'<span class="gs-pa-pill">Aucun sport ajouté</span>'}
  W.gsAuthAddSport258=function(){var sport=($('auth-sport')||{}).value||'basket',intensity=($('auth-intensity')||{}).value||'moyenne',days=Array.prototype.slice.call(D.querySelectorAll('#auth-days [data-pa-day].sel')).map(function(b){return parseInt(b.getAttribute('data-pa-day'),10)});if(!days.length){toast('Choisis au moins un jour.');return}S().programSports=S().programSports||[];S().programSports.push({sport:sport,intensity:intensity,days:days});save();renderOb258()};
  W.gsAuthRemoveSport258=function(i){S().programSports=S().programSports||[];S().programSports.splice(i,1);save();renderOb258()};
- function captureAuthStep(){var step=AUTH_STEPS[(W.OB11&&W.OB11.step)||0],p=P();if(step==='email'){var v=String(($('ob11-main-input')||{}).value||'').trim().toLowerCase();if(v)p.email=v}if(step==='password'){W.OB11=W.OB11||{};W.OB11.password=($('ob11-password-input')||{}).value||W.OB11.password||'';W.OB11.passwordConfirm=($('ob11-password-confirm')||{}).value||W.OB11.passwordConfirm||''}if(step==='username'){var u=String(($('ob11-main-input')||{}).value||'').trim().replace(/^@/,'').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();if(u)p.username=u}save()}
- async function finishAuth258(){captureAuthStep();var p=P();var cfg=getCfg();W.gsOfficialApplyProgram258(cfg,{silent:true});if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(p.email||''))){W.OB11.step=0;renderOb258();toast('Ajoute un email valide.');return}if(!W._supaUser){if(!W.OB11.password||W.OB11.password.length<6){W.OB11.step=1;renderOb258();toast('Mot de passe : 6 caractères minimum.');return}if(W.OB11.password!==W.OB11.passwordConfirm){W.OB11.step=1;renderOb258();toast('Les deux mots de passe ne correspondent pas.');return}if(!p.username||p.username.length<3){W.OB11.step=2;renderOb258();toast('Choisis un username de 3 caractères minimum.');return}if(!W._supa||!W._supa.auth){toast('Supabase indisponible.');return}try{var res=await W._supa.auth.signUp({email:p.email,password:W.OB11.password,options:{data:{username:p.username,display_name:p.name||p.username}}});if(res.error){toast(res.error.message||'Création du compte impossible.');return}W._supaUser=res.data&&res.data.user?res.data.user:W._supaUser;try{if(typeof _supaUser!=='undefined')_supaUser=W._supaUser}catch(e){}}catch(e){console.error(e);toast('Création du compte impossible.');return}}
-  if(W._supaUser&&W._supa){try{await W._supa.from('profiles').upsert({id:W._supaUser.id,email:p.email||W._supaUser.email||'',username:p.username||'',display_name:p.name||p.username||'',data:(typeof W.gsSafeSupabaseState==='function'?W.gsSafeSupabaseState(S()):S()),updated_at:new Date().toISOString()},{onConflict:'id'})}catch(e){console.warn('profile upsert failed',e)}}S().onboarded=true;S().onboardingComplete=true;P().onboarded=true;S().guestMode=false;save();try{localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');sessionStorage.removeItem('gs_guest_session')}catch(e){}var ov=$('gs-onboard-v11');if(ov)ov.remove();var a=$('auth-screen');if(a){a.style.display='none';a.classList.remove('open')}try{if(typeof W.hideGates==='function')W.hideGates()}catch(e){}try{if(typeof W.bootApp==='function')W.bootApp();else if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}try{if(typeof W.goTab==='function')W.goTab('accueil',$('nb-accueil'))}catch(e){}toast('Bienvenue dans G-SQUAD')}
- function renderOb258(){var idx=clamp((W.OB11&&W.OB11.step)||0,0,AUTH_STEPS.length-1),step=AUTH_STEPS[idx],info=authBody(step);var old=$('gs-onboard-v11');if(old)old.remove();var bars=AUTH_STEPS.map(function(_,i){return '<i class="'+(i<=idx?'on':'')+'"></i>'}).join('');var next=step==='create'?'Créer le programme intelligent':'Continuer';var html='<div class="gs-onboard-v11 gs-auth-102 gs-ob11-noemoji" id="gs-onboard-v11"><div class="gs-ob11-shell"><aside class="gs-ob11-aside"><div><div class="gs-ob11-logo">G-SQUAD</div><h2 class="gs-ob11-aside-title">Ton setup complet.</h2><p class="gs-ob11-aside-sub">Auth et Programme utilisent maintenant les mêmes étapes. Pas deux calculateurs différents.</p></div><div class="gs-ob11-stepcount">Étape '+(idx+1)+' / '+AUTH_STEPS.length+'</div></aside><main class="gs-ob11-main"><div class="gs-ob11-box"><div class="gs-ob11-progress">'+bars+'</div><h1 class="gs-ob11-title">'+E(info.title)+'</h1><div class="gs-ob11-sub">'+E(info.sub)+'</div>'+info.body+'<div class="gs-ob11-actions"><button type="button" onclick="ob11Prev()" '+(idx===0?'disabled':'')+'>Retour</button><button type="button" class="primary" onclick="ob11Next()">'+next+'</button></div></div></main></div></div>';D.body.insertAdjacentHTML('beforeend',html);bindAuth(step);var inp=$('ob11-main-input')||$('ob11-password-input');if(inp)setTimeout(function(){try{inp.focus()}catch(e){}},40)}
+ function captureAuthStep(){var step=AUTH_STEPS[(W.OB11&&W.OB11.step)||0],p=P();if(step==='email'){var v=String(($('ob11-main-input')||{}).value||'').trim().toLowerCase();if(v)p.email=v}if(step==='password'){W.OB11=W.OB11||{};W.OB11.password=($('ob11-password-input')||{}).value||W.OB11.password||'';W.OB11.passwordConfirm=($('ob11-password-confirm')||{}).value||W.OB11.passwordConfirm||''}if(step==='username'){var u=String(($('ob11-main-input')||{}).value||'').trim().replace(/^@/,'').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();if(u)p.username=u}if(step==='body'){p.age=String(($('auth-age')||{}).value||p.age||'');p.taille=String(($('auth-height')||{}).value||p.taille||'');p.poids=String(($('auth-weight')||{}).value||p.poids||'');syncBodyMetrics()}if(isOAuthMode()&&W._supaUser&&W._supaUser.email)p.email=String(W._supaUser.email||'').toLowerCase();save()}
+ async function finishAuth258(){
+  captureAuthStep();
+  var p=P(),s=S(),cfg=getCfg(),oauth=isOAuthMode(),user=W._supaUser||null;
+  if(oauth&&user&&user.email)p.email=String(user.email||'').trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(p.email||''))){W.OB11.step=authStepIndex('email');renderOb258();toast('Ajoute un email valide.');return}
+  if(!p.username||String(p.username).length<3){W.OB11.step=authStepIndex('username');renderOb258();toast('Choisis un username de 3 caractères minimum.');return}
+  if(!p.gender&&!p.sexe){W.OB11.step=authStepIndex('gender');renderOb258();toast('Choisis Homme, Femme ou Autre.');return}
+  syncBodyMetrics();
+  if(!p.age||!p.taille||!p.poids||!p.imc||!p.bmr){W.OB11.step=authStepIndex('body');renderOb258();toast('Renseigne âge, taille et poids pour calculer IMC / BMR.');return}
+  if(W._supa&&W._supa.from){try{var uq=await W._supa.from('profiles').select('id').eq('username',p.username).limit(1);if(user&&user.id)uq=await W._supa.from('profiles').select('id').eq('username',p.username).neq('id',user.id).limit(1);if(uq&&uq.data&&uq.data.length){W.OB11.step=authStepIndex('username');renderOb258();toast('Identifiant déjà pris, choisis-en un autre.');return}}catch(e){}}
+  if(!user){
+   if(!W.OB11.password||W.OB11.password.length<6){W.OB11.step=authStepIndex('password');renderOb258();toast('Mot de passe : 6 caractères minimum.');return}
+   if(W.OB11.password!==W.OB11.passwordConfirm){W.OB11.step=authStepIndex('password');renderOb258();toast('Les deux mots de passe ne correspondent pas.');return}
+   if(!W._supa||!W._supa.auth){toast('Supabase indisponible.');return}
+   try{var res=await W._supa.auth.signUp({email:p.email,password:W.OB11.password,options:{data:{username:p.username,display_name:p.name||p.username}}});if(res.error){toast(res.error.message||'Création du compte impossible.');return}W._supaUser=res.data&&res.data.user?res.data.user:W._supaUser;user=W._supaUser;try{if(typeof _supaUser!=='undefined')_supaUser=W._supaUser}catch(e){}}catch(e){console.error(e);toast('Création du compte impossible.');return}
+  }
+  W.gsOfficialApplyProgram258(cfg,{silent:true});
+  s.onboarded=true;s.onboardingComplete=true;s.authSetupStatus='completed';s.guestMode=false;
+  p.onboardingComplete=true;p.authSetupStatus='completed';p.email=p.email||((user&&user.email)||'');
+  syncBodyMetrics();
+  if(user&&W._supa){try{var data=(typeof W.gsSafeSupabaseState==='function'?W.gsSafeSupabaseState(S()):JSON.parse(JSON.stringify(S())));data.onboardingComplete=true;data.onboarded=true;data.authSetupStatus='completed';data.profil=data.profil||{};data.profil.onboardingComplete=true;data.profil.authSetupStatus='completed';await W._supa.from('profiles').upsert({id:user.id,email:p.email||user.email||'',username:p.username||'',display_name:p.name||p.username||'',data:data,updated_at:new Date().toISOString()},{onConflict:'id'})}catch(e){console.warn('profile upsert failed',e);toast('Profil Supabase non finalisé. Réessaie.');return}}
+  save();try{localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');localStorage.removeItem('gs_oauth_provider_pending');sessionStorage.removeItem('gs_guest_session')}catch(e){}
+  var ov=$('gs-onboard-v11');if(ov)ov.remove();var a=$('auth-screen');if(a){a.style.display='none';a.classList.remove('open')}try{if(typeof W.hideGates==='function')W.hideGates()}catch(e){}try{if(typeof W.bootApp==='function')W.bootApp();else if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}try{if(typeof W.goTab==='function')W.goTab('accueil',$('nb-accueil'))}catch(e){}toast('Bienvenue dans G-SQUAD')
+ }
+ function renderOb258(){var idx=clamp((W.OB11&&W.OB11.step)||0,0,AUTH_STEPS.length-1),step=AUTH_STEPS[idx],info=authBody(step);var old=$('gs-onboard-v11');if(old)old.remove();var flowSteps=isOAuthMode()?AUTH_STEPS.filter(function(x){return x!=='password'}):AUTH_STEPS;var displayIndex=isOAuthMode()?Math.max(1,flowSteps.indexOf(step)+1):(idx+1);var bars=flowSteps.map(function(x){var real=AUTH_STEPS.indexOf(x);return '<i class="'+(real<=idx?'on':'')+'"></i>'}).join('');var next=step==='create'?'Créer mon compte':'Continuer';var backDisabled=(!isOAuthMode()&&idx===0)?'disabled':'';var html='<div class="gs-onboard-v11 gs-auth-102 gs-ob11-noemoji" id="gs-onboard-v11"><div class="gs-ob11-shell"><aside class="gs-ob11-aside"><div><div class="gs-ob11-logo">G-SQUAD</div><h2 class="gs-ob11-aside-title">Ton setup complet.</h2><p class="gs-ob11-aside-sub">Auth, Profil, IMC/BMR et Programme avancent dans le même tunnel.</p></div><div class="gs-ob11-stepcount">Étape '+displayIndex+' / '+flowSteps.length+'</div></aside><main class="gs-ob11-main"><div class="gs-ob11-box"><div class="gs-ob11-progress">'+bars+'</div><h1 class="gs-ob11-title">'+E(info.title)+'</h1><div class="gs-ob11-sub">'+E(info.sub)+'</div>'+info.body+'<div class="gs-ob11-actions"><button type="button" onclick="ob11Prev()" '+backDisabled+'>Retour</button><button type="button" class="primary" onclick="ob11Next()">'+next+'</button></div>'+(isOAuthMode()?'<button type="button" class="gs-ob11-skip" onclick="gsCancelOAuthOnboarding()">Annuler la création du compte</button>':'')+'</div></main></div></div>';D.body.insertAdjacentHTML('beforeend',html);bindAuth(step);var inp=$('ob11-main-input')||$('ob11-password-input')||$('auth-age');if(inp)setTimeout(function(){try{inp.focus()}catch(e){}},40)}
  W.renderOb11=renderOb258;
- W.openOnboardingWizard=function(step){W.OB11=W.OB11||{step:0,total:AUTH_STEPS.length,password:'',passwordConfirm:'',mode:'signup'};W.OB11.total=AUTH_STEPS.length;W.OB11.mode='signup';W.OB11.step=typeof step==='number'?clamp(step,0,AUTH_STEPS.length-1):0;renderOb258()};
- W.ob11Prev=function(){captureAuthStep();W.OB11=W.OB11||{};if(Number(W.OB11.step||0)<=0){var ov=$('gs-onboard-v11');if(ov)ov.remove();var a=$('auth-screen');if(a){a.style.display='flex';a.classList.add('open')}try{if(typeof W.authShowView==='function')W.authShowView('landing')}catch(e){}return false}W.OB11.step=Math.max(0,Number(W.OB11.step||0)-1);renderOb258();return false};
- W.ob11Next=async function(){captureAuthStep();var step=AUTH_STEPS[(W.OB11&&W.OB11.step)||0];if(step==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(P().email||''))){toast('Ajoute un email valide.');return}if(step==='password'&&(!W.OB11.password||W.OB11.password.length<6)){toast('Mot de passe : 6 caractères minimum.');return}if(step==='password'&&W.OB11.password!==W.OB11.passwordConfirm){toast('Les deux mots de passe ne correspondent pas.');return}if(step==='username'&&(!P().username||P().username.length<3)){toast('Choisis un username de 3 caractères minimum.');return}if(step==='create'){await finishAuth258();return}W.OB11.step=Math.min(AUTH_STEPS.length-1,Number(W.OB11.step||0)+1);renderOb258()};
- W.ob11SkipStep=function(){if(!W.OB11)W.OB11={step:0};var step=AUTH_STEPS[W.OB11.step||0];if(step==='email'||step==='password'||step==='username'){toast('Cette étape est obligatoire pour créer un compte.');return false}W.OB11.step=Math.min(AUTH_STEPS.length-1,Number(W.OB11.step||0)+1);renderOb258();return false};
+ W.renderAuth258=renderOb258;
+ W.openOnboardingWizard=function(step,opts){opts=opts||{};var mode=opts.mode||((W.OB11&&W.OB11.mode)||'signup');W.OB11=W.OB11||{step:0,total:AUTH_STEPS.length,password:'',passwordConfirm:'',mode:mode};W.OB11.total=AUTH_STEPS.length;W.OB11.mode=mode;if(mode==='oauth'&&(step==null||step<authStepIndex('username')))step=authStepIndex('username');W.OB11.step=typeof step==='number'?clamp(step,0,AUTH_STEPS.length-1):0;if(mode==='oauth'&&W.OB11.step<authStepIndex('username'))W.OB11.step=authStepIndex('username');renderOb258()};
+ W.ob11Prev=function(){captureAuthStep();W.OB11=W.OB11||{};var current=Number(W.OB11.step||0);if(isOAuthMode()&&current<=authStepIndex('username')){if(typeof W.gsCancelOAuthOnboarding==='function')return W.gsCancelOAuthOnboarding();return false}if(current<=0){var ov=$('gs-onboard-v11');if(ov)ov.remove();var a=$('auth-screen');if(a){a.style.display='flex';a.classList.add('open')}try{if(typeof W.authShowView==='function')W.authShowView('landing')}catch(e){}return false}W.OB11.step=Math.max(0,current-1);renderOb258();return false};
+ W.ob11Next=async function(){captureAuthStep();var step=AUTH_STEPS[(W.OB11&&W.OB11.step)||0];if(step==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(P().email||''))){toast('Ajoute un email valide.');return false}if(step==='password'&&!isOAuthMode()&&(!W.OB11.password||W.OB11.password.length<6)){toast('Mot de passe : 6 caractères minimum.');return false}if(step==='password'&&!isOAuthMode()&&W.OB11.password!==W.OB11.passwordConfirm){toast('Les deux mots de passe ne correspondent pas.');return false}if(step==='username'&&(!P().username||P().username.length<3)){toast('Choisis un username de 3 caractères minimum.');return false}if(step==='gender'&&!(P().gender||P().sexe)){toast('Choisis Homme, Femme ou Autre.');return false}if(step==='body'){syncBodyMetrics();if(!P().age||!P().taille||!P().poids||!P().imc||!P().bmr){toast('Renseigne âge, taille et poids.');return false}}if(step==='create'){await finishAuth258();return false}var next=Math.min(AUTH_STEPS.length-1,Number(W.OB11.step||0)+1);if(isOAuthMode()&&next===authStepIndex('password'))next=authStepIndex('username');W.OB11.step=next;renderOb258();return false};
+ W.ob11SkipStep=function(){if(!W.OB11)W.OB11={step:0};var step=AUTH_STEPS[W.OB11.step||0];if(['email','password','username','gender','body'].indexOf(step)>-1){toast('Cette étape est obligatoire pour créer un compte complet.');return false}W.OB11.step=Math.min(AUTH_STEPS.length-1,Number(W.OB11.step||0)+1);renderOb258();return false};
+
 })();
 </script>
 
@@ -22810,15 +22821,17 @@ if(document.readyState==='loading'){
  function clearErrors(keepOk){D.querySelectorAll('.gs-auth-field-error,.gs-ob11-field-error').forEach(function(e){e.textContent='';e.classList.remove('show')});D.querySelectorAll('.gs-ob11-input').forEach(function(i){i.classList.remove('err','gs-auth-input-error');if(!keepOk)i.classList.remove('ok')});if(!keepOk)D.querySelectorAll('.gs-auth-field-ok').forEach(function(e){e.textContent=''})}
  function showError(step,msg){clearErrors(true);var input=null,el=null;if(step==='password'){input=$('ob11-password-input');var c=$('ob11-password-confirm');var wrap=D.querySelector('.gs-ob11-passwrap')||(input&&input.parentNode);el=ensureIn(wrap,'ob11-password-error','gs-auth-field-error');if(input)input.classList.add('err','gs-auth-input-error');if(c)c.classList.add('err','gs-auth-input-error')}else{input=$('ob11-main-input');el=ensureAfter(input,step==='username'?'ob11-username-error':'ob11-email-error','gs-auth-field-error');if(input)input.classList.add('err','gs-auth-input-error')}if(el)el.textContent=msg;toast(msg)}
  function showOk(step,msg){var input=$('ob11-main-input');if(step==='password')input=$('ob11-password-input');if(input){input.classList.remove('err','gs-auth-input-error');input.classList.add('ok')}var el=step==='password'?ensureIn(D.querySelector('.gs-ob11-passwrap')||(input&&input.parentNode),'ob11-password-ok','gs-auth-field-ok'):ensureAfter(input,step==='username'?'ob11-username-ok':'ob11-email-ok','gs-auth-field-ok');if(el)el.textContent=msg||''}
- function fieldStep(){var st=(W.OB11&&W.OB11.step)||0,steps=['email','password','username','mode','objective','level','freq','priority','split','sports','gym','create'];return steps[st]||''}
- function mailVal(){return String((($('ob11-main-input')||{}).value)||P().email||'').trim().toLowerCase()}
- function userVal(){return String((($('ob11-main-input')||{}).value)||P().username||'').trim().replace(/^@/,'').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()}
- async function existsInProfiles(col,val){if(!W._supa||!W._supa.from||!val)return false;try{var res=await W._supa.from('profiles').select('id').eq(col,val).limit(1).maybeSingle();if(res&&res.error)return false;return !!(res&&res.data&&res.data.id)}catch(e){return false}}
- var liveTimer=null;
- function scheduleLiveValidation(){clearTimeout(liveTimer);liveTimer=setTimeout(function(){validateAuthStep(fieldStep(),true)},260)}
- async function validateAuthStep(step,live){clearErrors(true);if(step==='email'){var mail=mailVal();if(!mail){return false}if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){showError('email','Entre un mail valide');return false}if(await existsInProfiles('email',mail)){showError('email','Mail déjà existant');return false}if(live)showOk('email','Mail valide');return true}
-  if(step==='username'){var u=userVal();if(!u){return false}if(u.length<3){showError('username','Identifiant trop court');return false}if(await existsInProfiles('username',u)){showError('username','Identifiant déjà pris, choisis-en un autre');return false}if(live)showOk('username','Identifiant disponible');return true}
-  if(step==='password'){var p1=String((($('ob11-password-input')||{}).value)||''),p2=String((($('ob11-password-confirm')||{}).value)||'');if(!p1&&!p2)return false;if(p1.length<6){showError('password','Mot de passe trop court');return false}if(p2&&p1!==p2){showError('password','Les deux mots de passe ne correspondent pas');return false}if(live&&p2&&p1===p2)showOk('password','Mot de passe confirmé');return true}
+ function fieldStep(){var st=(W.OB11&&W.OB11.step)||0,steps=(W.GS_AUTH_STEPS||['email','password','username','gender','body','mode','objective','level','freq','priority','split','sports','gym','create']);return steps[st]||''}
+ function clearErrors(soft){['email','username','password'].forEach(function(k){var e=$('ob11-'+k+'-error');if(e&&!soft)e.remove()});D.querySelectorAll('.gs-ob11-input').forEach(function(i){i.classList.remove('gs-ok','gs-bad')})}
+ function showError(kind,msg){var input=$('ob11-main-input')||$('ob11-password-input');if(input)input.classList.add('gs-bad');var id='ob11-'+kind+'-error',el=$(id);if(!el&&input){el=D.createElement('div');el.id=id;el.className='gs-ob11-field-error';input.insertAdjacentElement('afterend',el)}if(el)el.textContent=msg}
+ function showOk(kind,msg){var input=$('ob11-main-input')||$('ob11-password-input');if(input){input.classList.add('gs-ok');input.classList.remove('gs-bad')}var id='ob11-'+kind+'-error',el=$(id);if(!el&&input){el=D.createElement('div');el.id=id;el.className='gs-ob11-field-ok';input.insertAdjacentElement('afterend',el)}if(el){el.className='gs-ob11-field-ok';el.textContent=msg}}
+ function mailVal(){return String(($('ob11-main-input')||{}).value||'').trim().toLowerCase()}
+ function userVal(){return String(($('ob11-main-input')||{}).value||'').trim().replace(/^@/,'').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()}
+ async function existsInProfiles(col,val,excludeId){if(!W._supa||!W._supa.from||!val)return false;try{var q=W._supa.from('profiles').select('id').eq(col,val).limit(1);if(excludeId)q=q.neq('id',excludeId);var res=await q.maybeSingle();if(res&&res.error)return false;return !!(res&&res.data&&res.data.id)}catch(e){return false}}
+ var liveTimer=null;function scheduleLiveValidation(){clearTimeout(liveTimer);liveTimer=setTimeout(function(){validateAuthStep(fieldStep(),true)},450)}
+ async function validateAuthStep(step,live){clearErrors(true);var currentId=(W._supaUser&&W._supaUser.id)||'';if(step==='email'){var mail=mailVal();if(!mail){return false}if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){showError('email','Entre un mail valide');return false}if(W._supaUser&&String(W._supaUser.email||'').toLowerCase()===mail){if(live)showOk('email','Email validé par Supabase');return true}if(await existsInProfiles('email',mail,currentId)){showError('email','Mail déjà existant');return false}if(live)showOk('email','Mail valide');return true}
+  if(step==='username'){var u=userVal();if(!u){return false}if(u.length<3){showError('username','Identifiant trop court');return false}if(await existsInProfiles('username',u,currentId)){showError('username','Identifiant déjà pris, choisis-en un autre');return false}if(live)showOk('username','Identifiant disponible');return true}
+  if(step==='password'){if(W.OB11&&W.OB11.mode==='oauth')return true;var p1=String((($('ob11-password-input')||{}).value)||''),p2=String((($('ob11-password-confirm')||{}).value)||'');if(!p1&&!p2)return false;if(p1.length<6){showError('password','Mot de passe trop court');return false}if(p2&&p1!==p2){showError('password','Les deux mots de passe ne correspondent pas');return false}if(live&&p2&&p1===p2)showOk('password','Mot de passe confirmé');return true}
   return true}
  function bindAuthFields(){try{var step=fieldStep(),input=$('ob11-main-input'),p1=$('ob11-password-input'),p2=$('ob11-password-confirm');[input,p1,p2].forEach(function(el){if(!el||el.__gs260Bind)return;el.__gs260Bind=true;el.addEventListener('input',function(){scheduleLiveValidation()});el.addEventListener('blur',function(){validateAuthStep(fieldStep(),true)})});if(step==='username'&&input){input.placeholder='@username';input.addEventListener('input',function(){this.value=this.value.replace(/^@/,'').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()})}if(step==='email'&&input&&input.value)validateAuthStep('email',true)}catch(e){}}
  var oldOpen=W.openProgramCalculator;if(typeof oldOpen==='function'&&!oldOpen.__gs260){W.openProgramCalculator=function(){var r=oldOpen.apply(this,arguments);setTimeout(decorateRecommended,0);setTimeout(decorateRecommended,80);return r};W.openProgramCalculator.__gs260=true}
@@ -27083,6 +27096,7 @@ el.innerHTML=chunks.join('');D.querySelectorAll('[data-gs-follow-id]').forEach(a
  function scoreProfile(u,raw){var q=norm(raw),c=normCompact(raw),un=norm(usernameOf(u)),unc=normCompact(usernameOf(u)),dn=norm(displayName(u)),email=norm(u.email);if(un===q||unc===c)return 1;if(un.indexOf(q)===0||unc.indexOf(c)===0)return 2;if(dn===q)return 3;if(dn.indexOf(q)===0)return 4;if(email===q)return 5;if(un.indexOf(q)>-1||unc.indexOf(c)>-1)return 6;if(dn.indexOf(q)>-1)return 7;if(email.indexOf(q)>-1)return 8;return 20}
  async function ensureOnlineProfileStrict(){
   if(!online())return {ok:false,reason:'offline'};
+  if(S().authSetupStatus==='pending_setup'||(S().onboardingComplete===false&&!S().onboarded))return {ok:false,reason:'pending_setup'};
   var p=P(),u=user(),m=meta(),client=sb();
   try{
    var existing=await client.from('profiles').select('id,email,username,display_name,data').eq('id',uid()).maybeSingle();
@@ -27166,85 +27180,21 @@ el.innerHTML=chunks.join('');D.querySelectorAll('[data-gs-follow-id]').forEach(a
  function markUid(u){try{localStorage.setItem('gs_auth_uid',String(u||''))}catch(e){}}
  function isolateIfUserChanged(user){if(!user||!user.id)return;var last='';try{last=localStorage.getItem('gs_auth_uid')||''}catch(e){}if(last&&last!==user.id){try{localStorage.setItem('ath7_guest_backup_'+last,localStorage.getItem('ath7')||'{}')}catch(e){}assignState(baseState())}markUid(user.id)}
  async function selectProfile(userId){if(!sb()||!userId)return {data:null,error:null};return await sb().from('profiles').select('id,email,username,display_name,data').eq('id',userId).maybeSingle()}
- async function ensureProfileRow(user){if(!sb()||!user)return {ok:false,profile:null,error:'supabase_missing'};var me=await selectProfile(user.id),p=me.data||null;if(me.error&&me.error.code!=='PGRST116')return {ok:false,profile:null,error:me.error.message};var localP=(S().profil||{}),data=(p&&p.data)||{};data.profil=data.profil||{};var username=normUsername((p&&p.username)||data.profil.username||localP.username||'');var display=(p&&p.display_name)||data.profil.name||localP.name||metaName(user);var email=normEmail((p&&p.email)||user.email||'');var payload={id:user.id,email:email||null,display_name:display||null,data:Object.assign({},data,{profil:Object.assign({},data.profil,{username:username||data.profil.username||'',name:display||data.profil.name||''})}),updated_at:new Date().toISOString()};if(username)payload.username=username;if(p){var needs=false;if(!p.email&&email)needs=true;if(!p.display_name&&display)needs=true;if(!p.username&&username)needs=true;if(needs){await sb().from('profiles').update(payload).eq('id',user.id);me=await selectProfile(user.id);p=me.data||p}}else{await sb().from('profiles').insert(payload);me=await selectProfile(user.id);p=me.data||payload}return {ok:true,profile:p,error:null}}
- function profileComplete(p){var data=(p&&p.data)||{},pr=data.profil||{};return !!(p&&normUsername(p.username||pr.username).length>=3)}
+ async function ensureProfileRow(user){if(!sb()||!user)return {ok:false,profile:null,error:'supabase_missing'};var me=await selectProfile(user.id),p=me.data||null;if(me.error&&me.error.code!=='PGRST116')return {ok:false,profile:null,error:me.error.message};var data=(p&&p.data)||{};data.profil=data.profil||{};var username=normUsername((p&&p.username)||data.profil.username||'');var display=(p&&p.display_name)||data.profil.name||metaName(user);var email=normEmail((p&&p.email)||user.email||'');if(!p){data.authSetupStatus='pending_setup';data.onboardingComplete=false;data.onboarded=false;data.profil=Object.assign({},data.profil,{username:'',name:display||'',email:email||'',authSetupStatus:'pending_setup',onboardingComplete:false});var payloadNew={id:user.id,email:email||null,display_name:display||null,data:data,updated_at:new Date().toISOString()};await sb().from('profiles').insert(payloadNew);me=await selectProfile(user.id);p=me.data||payloadNew}else{var payload={id:user.id,email:email||null,display_name:display||null,data:Object.assign({},data,{profil:Object.assign({},data.profil,{username:username||data.profil.username||'',name:display||data.profil.name||'',email:email||data.profil.email||''})}),updated_at:new Date().toISOString()};if(username)payload.username=username;var needs=false;if(!p.email&&email)needs=true;if(!p.display_name&&display)needs=true;if(needs){await sb().from('profiles').update(payload).eq('id',user.id);me=await selectProfile(user.id);p=me.data||p}}return {ok:true,profile:p,error:null}}
+ function profileComplete(p){var data=(p&&p.data)||{},pr=data.profil||{};var hasUsername=!!(p&&normUsername(p.username||pr.username).length>=3);var done=!!(data.onboardingComplete||data.onboarding_complete||data.onboarded||data.authSetupStatus==='completed'||pr.onboardingComplete||pr.authSetupStatus==='completed');return !!(hasUsername&&done)}
  var oldLoad=W.loadFromSupabase;
  W.loadFromSupabase=async function(userId){if(!sb())return false;var res=await selectProfile(userId);if(res.data&&res.data.data){var st=Object.assign(baseState(),res.data.data||{});st.profil=st.profil||{};if(res.data.username)st.profil.username=res.data.username;if(res.data.display_name)st.profil.name=res.data.display_name;if(res.data.email)st.profil.email=res.data.email;assignState(st);return true}return false};
- function oauthOverlayHtml(user,profile){var name=E((profile&&profile.display_name)||metaName(user)||'');return '<div id="gs-oauth-onboarding" style="position:fixed;inset:0;z-index:12000;background:rgba(5,7,10,.96);display:flex;align-items:center;justify-content:center;padding:24px"><div style="width:100%;max-width:430px;background:rgba(18,24,33,.98);border:1px solid rgba(255,255,255,.09);border-radius:30px;padding:26px;box-shadow:0 30px 90px rgba(0,0,0,.45)"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--acc);font-weight:900;margin-bottom:8px">Compte Google</div><div style="font-size:30px;line-height:1;font-weight:950;letter-spacing:-.06em;margin-bottom:8px;color:var(--txt)">Crée ton profil G-SQUAD</div><div style="font-size:13px;line-height:1.45;color:var(--txt2);font-weight:700;margin-bottom:18px">Choisis un @username public. C’est ce qui permet aux autres de te trouver dans la recherche.</div><label style="display:block;font-size:11px;color:var(--mut);font-weight:900;text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px">Username</label><div style="position:relative"><span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--mut);font-weight:950">@</span><input id="gs-oauth-username" style="width:100%;padding:15px 16px 15px 36px;border-radius:17px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:var(--txt);font-size:16px;font-weight:900;outline:none" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="spidergraph"></div><div id="gs-oauth-username-hint" style="min-height:20px;margin:8px 0 12px;color:var(--mut);font-size:12px;font-weight:800"></div><label style="display:block;font-size:11px;color:var(--mut);font-weight:900;text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px">Nom affiché</label><input id="gs-oauth-display" value="'+name+'" style="width:100%;padding:15px 16px;border-radius:17px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:var(--txt);font-size:16px;font-weight:850;outline:none" placeholder="Ton nom"><button type="button" onclick="gsCompleteOAuthOnboarding()" style="width:100%;margin-top:18px;padding:17px;border-radius:18px;border:0;background:var(--txt);color:#071018;font-weight:950;font-size:15px">Continuer</button><button type="button" onclick="gsCancelOAuthOnboarding()" style="width:100%;margin-top:10px;padding:13px;border-radius:18px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--txt2);font-weight:900;font-size:13px">Changer de compte</button></div></div>'}
- W.gsShowOAuthOnboarding=function(user,profile){var old=$('gs-oauth-onboarding');if(old)old.remove();D.body.insertAdjacentHTML('beforeend',oauthOverlayHtml(user,profile));var i=$('gs-oauth-username'),h=$('gs-oauth-username-hint');if(i){i.oninput=function(){this.value=normUsername(this.value);if(h){h.textContent=this.value.length<3?'Minimum 3 caractères':'';h.style.color='var(--mut)'}};setTimeout(function(){try{i.focus()}catch(e){}},50)}};
- W.gsCancelOAuthOnboarding=async function(){try{await sb().auth.signOut()}catch(e){}var o=$('gs-oauth-onboarding');if(o)o.remove();var a=$('auth-screen');if(a)a.style.display='flex';if(typeof W.authShowView==='function')W.authShowView('landing')};
- W.gsCompleteOAuthOnboarding=async function(){var user=W._supaUser;if(!sb()||!user){toast('Connexion indisponible.');return}var u=normUsername(($('gs-oauth-username')||{}).value||''),name=String(($('gs-oauth-display')||{}).value||'').trim()||metaName(user),hint=$('gs-oauth-username-hint');if(u.length<3){if(hint){hint.textContent='Username trop court.';hint.style.color='var(--red)'}return}var check=await sb().from('profiles').select('id').eq('username',u).neq('id',user.id).maybeSingle();if(check.data){if(hint){hint.textContent='@'+u+' est déjà pris.';hint.style.color='var(--red)'}return}var st=S();st.profil=st.profil||{};st.profil.username=u;st.profil.name=name;st.profil.email=user.email||st.profil.email||'';var data=Object.assign({},st,{profil:Object.assign({},st.profil,{username:u,name:name})});var res=await sb().from('profiles').upsert({id:user.id,email:user.email||null,username:u,display_name:name,data:data,updated_at:new Date().toISOString()});if(res.error){if(hint){hint.textContent=res.error.message;hint.style.color='var(--red)'}return}assignState(data);var o=$('gs-oauth-onboarding');if(o)o.remove();var auth=$('auth-screen');if(auth)auth.style.display='none';if(!S().onboarded){var ob=$('onboard');if(ob)ob.style.display='flex'}else if(typeof W.bootApp==='function')W.bootApp()};
+ async function markPendingSetup(user,profile){try{if(!sb()||!user)return;var st=S(),p=st.profil||{};var data=Object.assign({},st,{onboarded:false,onboardingComplete:false,authSetupStatus:'pending_setup',profil:Object.assign({},p,{email:user.email||p.email||'',name:p.name||((profile&&profile.display_name)||metaName(user)||''),authSetupStatus:'pending_setup',onboardingComplete:false})});await sb().from('profiles').upsert({id:user.id,email:user.email||null,display_name:data.profil.name||null,data:data,updated_at:new Date().toISOString()},{onConflict:'id'})}catch(e){console.warn('pending setup mark failed',e)}}
+ async function deletePendingSupabaseUser(reason){if(!sb()||!uid())return false;try{var res=await sb().functions.invoke('delete-pending-user',{body:{reason:reason||'setup_cancelled'}});if(res&&res.error){console.warn('delete-pending-user error',res.error);return false}return true}catch(e){console.warn('delete-pending-user unavailable',e);return false}}
+ W.gsShowOAuthOnboarding=function(user,profile){var old=$('gs-oauth-onboarding');if(old)old.remove();var auth=$('auth-screen');if(auth){auth.style.display='none';auth.classList.remove('open')}var ob=$('onboard');if(ob)ob.style.display='none';var st=S();st.onboarded=false;st.onboardingComplete=false;st.authSetupStatus='pending_setup';st.guestMode=false;st.profil=st.profil||{};st.profil.email=user&&user.email||st.profil.email||'';st.profil.name=st.profil.name||((profile&&profile.display_name)||metaName(user)||'');st.profil.username=normUsername((profile&&profile.username)||((profile&&profile.data&&profile.data.profil&&profile.data.profil.username)||st.profil.username||''));st.profil.authSetupStatus='pending_setup';st.profil.onboardingComplete=false;assignState(st);W.OB11={step:(W.GS_AUTH_STEP_INDEX?W.GS_AUTH_STEP_INDEX('username'):2),total:(W.GS_AUTH_STEPS||[]).length||14,password:'',passwordConfirm:'',mode:'oauth',oauthPending:true};markPendingSetup(user,profile);if(typeof W.renderOb11==='function')W.renderOb11()};
+ W.gsCancelOAuthOnboarding=async function(){await deletePendingSupabaseUser('oauth_setup_cancelled');try{await sb().auth.signOut()}catch(e){}try{localStorage.removeItem('ath7');localStorage.removeItem('gs_auth_uid');localStorage.removeItem('gs_oauth_provider_pending')}catch(e){}assignState(baseState());var o=$('gs-oauth-onboarding');if(o)o.remove();var ov=$('gs-onboard-v11');if(ov)ov.remove();var a=$('auth-screen');if(a){a.style.display='flex';a.classList.add('open')}if(typeof W.authShowView==='function')W.authShowView('landing');toast('Création du compte annulée.')};
+ W.gsCompleteOAuthOnboarding=async function(){if(typeof W.ob11Next==='function')return W.ob11Next()};
  async function findProfileForLogin(raw){var input=String(raw||'').trim(),name=normUsername(input);if(!sb())return {profile:null,error:'supabase_missing'};if(input.indexOf('@')>-1&&!input.startsWith('@')){var byEmail=await sb().from('profiles').select('id,email,username,display_name,data').eq('email',normEmail(input)).maybeSingle();if(byEmail.data)return {profile:byEmail.data,error:null}}
  if(!name)return {profile:null,error:null};try{var rpc=await sb().rpc('resolve_login_username',{p_login:name});if(rpc&&!rpc.error){var row=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;if(row&&row.email)return {profile:row,error:null}}}catch(e){}var q1=await sb().from('profiles').select('id,email,username,display_name,data').eq('username',name).maybeSingle();if(q1.data)return {profile:q1.data,error:null};var q2=await sb().from('profiles').select('id,email,username,display_name,data').ilike('username',name).limit(5);if(q2.data&&q2.data.length)return {profile:q2.data[0],error:null};try{var q3=await sb().from('profiles').select('id,email,username,display_name,data').filter('data->profil->>username','eq',name).limit(5);if(q3.data&&q3.data.length)return {profile:q3.data[0],error:null}}catch(e){}var q4=await sb().from('profiles').select('id,email,username,display_name,data').ilike('display_name','%'+input.replace(/^@/,'')+'%').limit(5);if(q4.data&&q4.data.length){var exact=q4.data.find(function(p){return normUsername((p.data&&p.data.profil&&p.data.profil.username)||p.username||p.display_name)===name});if(exact)return {profile:exact,error:null}}return {profile:null,error:null}}
  W.doLogin=async function(){var inp=$('auth-email'),pwd=$('auth-password'),input=String(inp&&inp.value||'').trim(),pass=String(pwd&&pwd.value||'');if(!input||!pass){if(typeof W.authShowView==='function')W.authShowView('login');if(typeof W.authShowErr==='function')W.authShowErr('Remplis tous les champs.');return}if(!sb()){W.authShowErr&&W.authShowErr('Connexion indisponible.');return}if(typeof W.setAuthLoading==='function')W.setAuthLoading(true);var email=input,usedUsername=false;if(!input.includes('@')||input.startsWith('@')){usedUsername=true;var found=await findProfileForLogin(input);if(!found.profile||!found.profile.email){if(typeof W.setAuthLoading==='function')W.setAuthLoading(false);W.authShowErr&&W.authShowErr('Utilisateur introuvable. Vérifie que le profil public G-SQUAD possède bien ce @username.');return}email=found.profile.email}var res=await sb().auth.signInWithPassword({email:email,password:pass});if(typeof W.setAuthLoading==='function')W.setAuthLoading(false);if(res.error){var msg=usedUsername?'Ce @username existe, mais la connexion par mot de passe a échoué. Si ce compte a été créé avec Google, utilise “Continuer avec Google”. Sinon vérifie le mot de passe.':'Email ou mot de passe incorrect.';W.authShowErr&&W.authShowErr(msg);return}await W.afterAuth(res.data.user)};
  W.doLoginGoogle=async function(){if(!sb()){W.authShowErr&&W.authShowErr('Connexion indisponible.');return}try{localStorage.setItem('gs_oauth_provider_pending','google')}catch(e){}var r=await sb().auth.signInWithOAuth({provider:'google',options:{redirectTo:W.location.origin,queryParams:{prompt:'select_account'}}});if(r.error){W.authShowErr&&W.authShowErr(r.error.message)}};
  W.doLoginApple=async function(){if(!sb()){W.authShowErr&&W.authShowErr('Connexion indisponible.');return}try{localStorage.setItem('gs_oauth_provider_pending','apple')}catch(e){}var r=await sb().auth.signInWithOAuth({provider:'apple',options:{redirectTo:W.location.origin}});if(r.error){W.authShowErr&&W.authShowErr(r.error.message)}};
- function showAuthOnly(){
-  assignState(baseState());
-  W._supaUser=null;try{_supaUser=null}catch(e){}
-  try{localStorage.removeItem('gs_auth_uid');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');localStorage.removeItem('gs_oauth_provider_pending');sessionStorage.removeItem('gs_guest_session')}catch(e){}
-  var oauth=$('gs-oauth-onboarding');if(oauth)oauth.remove();
-  var auth=$('auth-screen'),onboard=$('onboard');
-  if(auth){auth.style.display='flex';auth.classList.add('open')}
-  if(onboard)onboard.style.display='none';
-  if(typeof W.authShowView==='function')W.authShowView('landing');
- }
- W.afterAuth=async function(user){
-  if(!user||!user.id){showAuthOnly();return false}
-  var key=String(user.id)+'|'+String(user.email||'');
-  if(W.__gsAfterAuthInFlightKey===key&&W.__gsAfterAuthPromise)return W.__gsAfterAuthPromise;
-  W.__gsAfterAuthInFlightKey=key;
-  W.__gsAfterAuthPromise=(async function(){
-   W._supaUser=user;try{_supaUser=user}catch(e){}
-   var auth=$('auth-screen'),onboard=$('onboard');
-   if(auth){auth.style.display='none';auth.classList.remove('open')}
-   try{localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');localStorage.removeItem('gs_oauth_provider_pending');sessionStorage.removeItem('gs_guest_session')}catch(e){}
-   if(!sameUid(user.id))assignState(baseState());
-   isolateIfUserChanged(user);
-   var loaded=false;
-   try{loaded=await W.loadFromSupabase(user.id)}catch(e){console.warn('loadFromSupabase failed',e);loaded=false}
-   if(!loaded)assignState(baseState());
-   var ensured=await ensureProfileRow(user),p=ensured.profile||null;
-   if(!profileComplete(p)){
-    if(onboard)onboard.style.display='none';
-    if(auth)auth.style.display='none';
-    W.gsShowOAuthOnboarding(user,p);return 'onboarding-oauth';
-   }
-   S().profil=S().profil||{};
-   S().profil.id=user.id;S().profil.user_id=user.id;S().user_id=user.id;
-   if(p.username)S().profil.username=p.username;
-   if(p.display_name)S().profil.name=p.display_name;
-   if(p.email)S().profil.email=p.email;
-   S().guestMode=false;
-   try{localStorage.setItem('ath7',JSON.stringify(S()))}catch(e){}
-   if(onboard)onboard.style.display='none';
-   if(S().onboarded||S().onboardingComplete){if(typeof W.bootApp==='function')W.bootApp();return 'boot'}
-   if(onboard)onboard.style.display='flex';
-   return 'onboarding-app';
-  })();
-  try{return await W.__gsAfterAuthPromise}
-  finally{W.__gsAfterAuthDoneKey=key;W.__gsAfterAuthDoneAt=Date.now();W.__gsAfterAuthInFlightKey='';W.__gsAfterAuthPromise=null}
- };
- W.initAuth=async function(){
-  if(W.__gsAuthInitPromise)return W.__gsAuthInitPromise;
-  W.__gsAuthInitPromise=(async function(){
-   try{if(typeof W.ensureState==='function')W.ensureState();if(typeof W.gsInstallOnboarding==='function')W.gsInstallOnboarding()}catch(e){}
-   if(!sb()||!sb().auth){showAuthOnly();return false}
-   try{
-    var sess=await sb().auth.getSession(),session=sess&&sess.data&&sess.data.session;
-    try{if(W.__gsAuthSubscription&&typeof W.__gsAuthSubscription.unsubscribe==='function')W.__gsAuthSubscription.unsubscribe()}catch(e){}
-    var sub=sb().auth.onAuthStateChange(async function(ev,session){
-     if((ev==='SIGNED_IN'||ev==='INITIAL_SESSION'||ev==='TOKEN_REFRESHED')&&session&&session.user){await W.afterAuth(session.user);return}
-     if(ev==='SIGNED_OUT'){showAuthOnly()}
-    });
-    W.__gsAuthSubscription=sub&&sub.data&&sub.data.subscription?sub.data.subscription:null;
-    if(session&&session.user){await W.afterAuth(session.user);return true}
-    showAuthOnly();return false;
-   }catch(e){console.warn('initAuth Supabase truth failed',e);showAuthOnly();return false}
-  })();
-  return W.__gsAuthInitPromise;
- };
- try{initAuth=W.initAuth}catch(e){}
+ W.afterAuth=async function(user){if(!user)return;W._supaUser=user;try{_supaUser=user}catch(e){}isolateIfUserChanged(user);var auth=$('auth-screen');if(auth)auth.style.display='none';await W.loadFromSupabase(user.id);var ensured=await ensureProfileRow(user);if(!profileComplete(ensured.profile)){W.gsShowOAuthOnboarding(user,ensured.profile);return}var p=ensured.profile||{},data=p.data||{},pr=data.profil||{};S().profil=S().profil||{};if(p.username||pr.username)S().profil.username=p.username||pr.username;if(p.display_name||pr.name)S().profil.name=p.display_name||pr.name;if(p.email||pr.email)S().profil.email=p.email||pr.email;S().onboarded=true;S().onboardingComplete=true;S().authSetupStatus='completed';S().guestMode=false;try{localStorage.setItem('ath7',JSON.stringify(S()))}catch(e){}if(typeof W.bootApp==='function')W.bootApp()};
  // Neutralise l'ancienne afterAuth globale (ancien listener initAuth ligne 6375)
  try{if(typeof afterAuth==='function'&&!afterAuth.__gsPatched){afterAuth=async function(user){if(typeof W.afterAuth==='function')return W.afterAuth(user)};afterAuth.__gsPatched=true}}catch(e){}
  var oldHealth=W.gsSocialHealthCheck;
