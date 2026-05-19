@@ -6506,26 +6506,18 @@ document.addEventListener('DOMContentLoaded',function(){
  if(message) gsNotify(message);
  }
 
- // 1) Continuer sans compte = mode invité direct, sans auth ni onboarding.
+ // 1) Supabase est la source de vérité : pas de mode invité qui boot depuis le cache.
  window.skipAuth = function(){
- try{ window._supaUser = null; }catch(e){}
+ try{ window._supaUser = null; sessionStorage.removeItem('gs_guest_session'); localStorage.removeItem('gs_skip_auth'); localStorage.removeItem('gs_auth_skipped'); }catch(e){}
  gsEnsureState();
- state.profil = state.profil && state.profil.name? state.profil: {
- name:'Athlète',
- username:'',
- gender:'autre',
- age:'',
- taille:'',
- poids:'',
- gyms:[],
- sports:[],
- avatar:'',
- objectif:'maintien',
- level:'debutant',
- frequency:3,
- material:'salle'
- };
- gsEnterApp('Mode invité activé.');
+ state.onboarded=false; state.guestMode=false; state.profil={};
+ try{ localStorage.setItem('ath7', JSON.stringify(state)); }catch(e){}
+ var auth=document.getElementById('auth-screen'), onboard=document.getElementById('onboard');
+ if(auth){auth.style.display='flex';auth.classList.add('open')}
+ if(onboard)onboard.style.display='none';
+ if(typeof authShowView==='function')authShowView('landing');
+ gsNotify('Compte requis : connecte-toi pour accéder à G-SQUAD.');
+ return false;
  };
 
  // 2) Fréquence visée: sélection visible + valeur bien enregistrée.
@@ -6753,24 +6745,22 @@ document.addEventListener('DOMContentLoaded',function(){
 
  window.skipAuth = function(){
  ensureState(); window._supaUser=null;
- state.profil = state.profil && state.profil.name? state.profil: {name:'Athlète',username:'',gender:'autre',age:'',taille:'',poids:'',gyms:[],sports:[],avatar:'',objectif:'maintien',level:'debutant',frequency:3,material:'salle',duration:60,split:'fullbody',trainingFocus:'physique'};
- bootSafe('Mode invité activé.');
+ state.onboarded=false; state.guestMode=false; state.profil={};
+ try{localStorage.setItem('ath7',JSON.stringify(state));sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped')}catch(e){}
+ var auth=$('auth-screen'),onboard=$('onboard');if(auth){auth.style.display='flex';auth.classList.add('open')}if(onboard)onboard.style.display='none';
+ if(typeof authShowView==='function')authShowView('landing');
+ safeNotify('Compte requis : connecte-toi pour accéder à G-SQUAD.');
+ return false;
  };
 
  window.initAuth = async function(){
- ensureState();
- try{ gsInstallOnboarding(); }catch(e){ console.error('onboarding install failed:', e); }
- var auth=$('auth-screen'), onboard=$('onboard');
- if(state.onboarded && state.profil && state.profil.name){ bootSafe(); return; }
- if(auth) auth.style.display='flex'; if(onboard) onboard.style.display='none';
- if(!_supa) return;
- try{
- var sess=await _supa.auth.getSession();
- if(sess && sess.data && sess.data.session && sess.data.session.user){ await afterAuth(sess.data.session.user); }
- _supa.auth.onAuthStateChange(async function(event, session){
- if(event==='SIGNED_OUT'){ state={}; _supaUser=null; ensureState(); if(auth)auth.style.display='flex'; if(onboard)onboard.style.display='none'; }
- });
- }catch(e){ console.warn('Supabase auth unavailable:', e); }
+ if(typeof window.__gsStrictInitAuthProxy==='function')return window.__gsStrictInitAuthProxy();
+ var auth=$('auth-screen'),onboard=$('onboard');
+ try{state=baseState?baseState():{};window.state=state;localStorage.setItem('ath7',JSON.stringify(state));localStorage.removeItem('gs_auth_uid');sessionStorage.removeItem('gs_guest_session')}catch(e){}
+ if(auth){auth.style.display='flex';auth.classList.add('open')}
+ if(onboard)onboard.style.display='none';
+ if(typeof authShowView==='function')authShowView('landing');
+ return false;
  };
 
  document.addEventListener('DOMContentLoaded', function(){
@@ -9737,16 +9727,13 @@ document.addEventListener('DOMContentLoaded',function(){
  }
 
  window.skipAuth=function(){
- sessionStorage.setItem('gs_guest_session','1');
- var st=S();st.guestMode=true;st.onboarded=true;
- if(!st.profil.name)st.profil.name='Athlète';
- if(!st.profil.objectif)st.profil.objectif='maintien';
- if(!st.profil.frequency)st.profil.frequency=3;
- save();
- var auth=$('auth-screen');if(auth)auth.style.display='none';
- hideOnboarding();
- try{if(typeof window.bootApp==='function')window.bootApp();else if(typeof window.bootSafe==='function')window.bootSafe('Mode invité activé.')}catch(e){console.warn(e)}
- toast('Mode invité activé');
+ try{sessionStorage.removeItem('gs_guest_session');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped')}catch(e){}
+ var st=S();st.guestMode=false;st.onboarded=false;st.profil={};save();
+ var onboard=$('onboard');if(onboard)onboard.style.display='none';
+ var auth=$('auth-screen');if(auth){auth.style.display='flex';auth.classList.add('open')}
+ if(typeof window.authShowView==='function')window.authShowView('landing');
+ toast('Compte requis : connecte-toi pour accéder à G-SQUAD.');
+ return false;
  };
 
  async function hasSupabaseSession(){
@@ -16272,8 +16259,59 @@ var oldPush=window.pushSquadEvent;window.pushSquadEvent=function(type,payload,op
  function profileComplete(p){var d=(p&&p.data)||{},pr=d.profil||{};return normUsername((p&&p.username)||pr.username).length>=3}
  async function loadProfileStateStrict(id){var r=await selectProfile(id);if(r.data){var st=Object.assign(baseState(),r.data.data||{});st.profil=st.profil||{};if(r.data.username)st.profil.username=r.data.username;if(r.data.display_name)st.profil.name=r.data.display_name;if(r.data.email)st.profil.email=r.data.email;assignState(st);return r.data}assignState(baseState());return null}
  W.loadFromSupabase=async function(id){return !!(await loadProfileStateStrict(id))};
- W.afterAuth=async function(u){if(!u)return;W._supaUser=u;try{_supaUser=u}catch(e){}purgeOnlineCacheForSwitch(u.id);var auth=$('auth-screen');if(auth)auth.style.display='none';var row=await loadProfileStateStrict(u.id);var ensured=await ensureProfileRowStrict(u);var p=ensured.profile||row;if(!profileComplete(p)){if(typeof W.gsShowOAuthOnboarding==='function'){W.gsShowOAuthOnboarding(u,p)}else{var a=$('auth-screen');if(a)a.style.display='flex'}return}S().profil=S().profil||{};if(p.username)S().profil.username=p.username;if(p.display_name)S().profil.name=p.display_name;if(p.email)S().profil.email=p.email;S().guestMode=false;save();try{if(typeof W.hideGates==='function')W.hideGates()}catch(e){}if(S().onboarded){try{if(typeof W.bootApp==='function')W.bootApp();else if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){console.warn(e)}}else{var ob=$('onboard');if(ob)ob.style.display='flex'}};
- W.initAuth=async function(){try{if(typeof W.ensureState==='function')W.ensureState();if(typeof W.gsInstallOnboarding==='function')W.gsInstallOnboarding()}catch(e){}var auth=$('auth-screen'),onboard=$('onboard');if(auth)auth.style.display='flex';if(onboard)onboard.style.display='none';if(!sb()||!sb().auth){if(S().onboarded&&S().profil&&S().profil.name){try{if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}}return}try{var sess=await sb().auth.getSession();if(sess&&sess.data&&sess.data.session&&sess.data.session.user){await W.afterAuth(sess.data.session.user);return}try{sb().auth.onAuthStateChange(async function(ev,session){if((ev==='SIGNED_IN'||ev==='INITIAL_SESSION'||ev==='TOKEN_REFRESHED')&&session&&session.user){await W.afterAuth(session.user)}if(ev==='SIGNED_OUT'){assignState(baseState());W._supaUser=null;try{_supaUser=null}catch(e){}try{localStorage.removeItem('gs_auth_uid')}catch(e){}if(auth)auth.style.display='flex';if(onboard)onboard.style.display='none';if(typeof W.authShowView==='function')W.authShowView('landing')}})}catch(e){}if(S().onboarded&&S().profil&&S().profil.name){try{if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}}else if(typeof W.authShowView==='function')W.authShowView('landing')}catch(e){console.warn('initAuth 193 failed',e)}};
+ W.afterAuth=async function(u){
+ if(!u||!u.id){assignState(baseState());W._supaUser=null;try{_supaUser=null}catch(e){}var a=$('auth-screen'),ob=$('onboard');if(a){a.style.display='flex';a.classList.add('open')}if(ob)ob.style.display='none';if(typeof W.authShowView==='function')W.authShowView('landing');return false}
+ var key=String(u.id)+'|'+String(u.email||'');
+ if(W.__gsAfterAuthInFlightKey===key&&W.__gsAfterAuthPromise)return W.__gsAfterAuthPromise;
+ W.__gsAfterAuthInFlightKey=key;
+ W.__gsAfterAuthPromise=(async function(){
+  W._supaUser=u;try{_supaUser=u}catch(e){}
+  try{localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');localStorage.removeItem('gs_oauth_provider_pending');sessionStorage.removeItem('gs_guest_session')}catch(e){}
+  purgeOnlineCacheForSwitch(u.id);
+  var auth=$('auth-screen'),onboard=$('onboard');if(auth){auth.style.display='none';auth.classList.remove('open')}
+  var row=await loadProfileStateStrict(u.id),ensured=await ensureProfileRowStrict(u),p=ensured.profile||row;
+  if(!profileComplete(p)){
+   if(onboard)onboard.style.display='none';
+   if(typeof W.gsShowOAuthOnboarding==='function')W.gsShowOAuthOnboarding(u,p);else if(auth)auth.style.display='flex';
+   return 'onboarding-oauth';
+  }
+  S().profil=S().profil||{};S().profil.id=u.id;S().profil.user_id=u.id;S().user_id=u.id;
+  if(p.username)S().profil.username=p.username;if(p.display_name)S().profil.name=p.display_name;if(p.email)S().profil.email=p.email;
+  S().guestMode=false;save();
+  try{if(typeof W.hideGates==='function'&&(S().onboarded||S().onboardingComplete))W.hideGates()}catch(e){}
+  if(S().onboarded||S().onboardingComplete){try{if(typeof W.bootApp==='function')W.bootApp()}catch(e){console.warn(e)};return 'boot'}
+  if(onboard)onboard.style.display='flex';return 'onboarding-app';
+ })();
+ try{return await W.__gsAfterAuthPromise}finally{W.__gsAfterAuthInFlightKey='';W.__gsAfterAuthPromise=null}
+};
+ W.initAuth=async function(){
+ if(W.__gsAuthInitPromise)return W.__gsAuthInitPromise;
+ W.__gsAuthInitPromise=(async function(){
+  try{if(typeof W.ensureState==='function')W.ensureState();if(typeof W.gsInstallOnboarding==='function')W.gsInstallOnboarding()}catch(e){}
+  var auth=$('auth-screen'),onboard=$('onboard');
+  function showAuthOnly(){
+   assignState(baseState());
+   W._supaUser=null;try{_supaUser=null}catch(e){}
+   try{localStorage.removeItem('gs_auth_uid');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');localStorage.removeItem('gs_oauth_provider_pending');sessionStorage.removeItem('gs_guest_session')}catch(e){}
+   if(auth){auth.style.display='flex';auth.classList.add('open')}
+   if(onboard)onboard.style.display='none';
+   if(typeof W.authShowView==='function')W.authShowView('landing');
+  }
+  if(!sb()||!sb().auth){showAuthOnly();return false}
+  try{
+   var sess=await sb().auth.getSession(),session=sess&&sess.data&&sess.data.session;
+   try{if(W.__gsAuthSubscription&&typeof W.__gsAuthSubscription.unsubscribe==='function')W.__gsAuthSubscription.unsubscribe()}catch(e){}
+   var sub=sb().auth.onAuthStateChange(async function(ev,session){
+    if((ev==='SIGNED_IN'||ev==='INITIAL_SESSION'||ev==='TOKEN_REFRESHED')&&session&&session.user){await W.afterAuth(session.user);return}
+    if(ev==='SIGNED_OUT'){showAuthOnly()}
+   });
+   W.__gsAuthSubscription=sub&&sub.data&&sub.data.subscription?sub.data.subscription:null;
+   if(session&&session.user){await W.afterAuth(session.user);return true}
+   showAuthOnly();return false;
+  }catch(e){console.warn('initAuth Supabase truth failed',e);showAuthOnly();return false}
+ })();
+ return W.__gsAuthInitPromise;
+};
  async function resolveLoginIdentifier(input){var raw=String(input||'').trim();if(!sb())return {email:null,profile:null,error:'supabase_missing'};if(raw.indexOf('@')>-1&&!raw.startsWith('@'))return {email:raw.toLowerCase(),profile:null,error:null};var u=normUsername(raw);if(!u)return {email:null,profile:null,error:'empty'};try{var rpc=await sb().rpc('resolve_login_username',{p_login:u});if(rpc&&!rpc.error){var row=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;if(row&&row.email)return {email:String(row.email).toLowerCase(),profile:row,error:null,via:'rpc'}}}catch(e){}
   try{var q=await sb().from('profiles').select('id,email,username,display_name,data').eq('username',u).maybeSingle();if(q.data&&q.data.email)return {email:q.data.email,profile:q.data,error:null,via:'select'}}catch(e){}
   return {email:null,profile:null,error:'not_found'} }
@@ -27141,7 +27179,72 @@ el.innerHTML=chunks.join('');D.querySelectorAll('[data-gs-follow-id]').forEach(a
  W.doLogin=async function(){var inp=$('auth-email'),pwd=$('auth-password'),input=String(inp&&inp.value||'').trim(),pass=String(pwd&&pwd.value||'');if(!input||!pass){if(typeof W.authShowView==='function')W.authShowView('login');if(typeof W.authShowErr==='function')W.authShowErr('Remplis tous les champs.');return}if(!sb()){W.authShowErr&&W.authShowErr('Connexion indisponible.');return}if(typeof W.setAuthLoading==='function')W.setAuthLoading(true);var email=input,usedUsername=false;if(!input.includes('@')||input.startsWith('@')){usedUsername=true;var found=await findProfileForLogin(input);if(!found.profile||!found.profile.email){if(typeof W.setAuthLoading==='function')W.setAuthLoading(false);W.authShowErr&&W.authShowErr('Utilisateur introuvable. Vérifie que le profil public G-SQUAD possède bien ce @username.');return}email=found.profile.email}var res=await sb().auth.signInWithPassword({email:email,password:pass});if(typeof W.setAuthLoading==='function')W.setAuthLoading(false);if(res.error){var msg=usedUsername?'Ce @username existe, mais la connexion par mot de passe a échoué. Si ce compte a été créé avec Google, utilise “Continuer avec Google”. Sinon vérifie le mot de passe.':'Email ou mot de passe incorrect.';W.authShowErr&&W.authShowErr(msg);return}await W.afterAuth(res.data.user)};
  W.doLoginGoogle=async function(){if(!sb()){W.authShowErr&&W.authShowErr('Connexion indisponible.');return}try{localStorage.setItem('gs_oauth_provider_pending','google')}catch(e){}var r=await sb().auth.signInWithOAuth({provider:'google',options:{redirectTo:W.location.origin,queryParams:{prompt:'select_account'}}});if(r.error){W.authShowErr&&W.authShowErr(r.error.message)}};
  W.doLoginApple=async function(){if(!sb()){W.authShowErr&&W.authShowErr('Connexion indisponible.');return}try{localStorage.setItem('gs_oauth_provider_pending','apple')}catch(e){}var r=await sb().auth.signInWithOAuth({provider:'apple',options:{redirectTo:W.location.origin}});if(r.error){W.authShowErr&&W.authShowErr(r.error.message)}};
- W.afterAuth=async function(user){W._supaUser=user;if(!user)return;isolateIfUserChanged(user);var auth=$('auth-screen');if(auth)auth.style.display='none';await W.loadFromSupabase(user.id);var ensured=await ensureProfileRow(user);if(!profileComplete(ensured.profile)){W.gsShowOAuthOnboarding(user,ensured.profile);return}var p=ensured.profile||{};S().profil=S().profil||{};if(p.username)S().profil.username=p.username;if(p.display_name)S().profil.name=p.display_name;if(p.email)S().profil.email=p.email;try{localStorage.setItem('ath7',JSON.stringify(S()))}catch(e){}if(!S().onboarded){var ob=$('onboard');if(ob)ob.style.display='flex'}else if(typeof W.bootApp==='function')W.bootApp()};
+ function showAuthOnly(){
+  assignState(baseState());
+  W._supaUser=null;try{_supaUser=null}catch(e){}
+  try{localStorage.removeItem('gs_auth_uid');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');localStorage.removeItem('gs_oauth_provider_pending');sessionStorage.removeItem('gs_guest_session')}catch(e){}
+  var oauth=$('gs-oauth-onboarding');if(oauth)oauth.remove();
+  var auth=$('auth-screen'),onboard=$('onboard');
+  if(auth){auth.style.display='flex';auth.classList.add('open')}
+  if(onboard)onboard.style.display='none';
+  if(typeof W.authShowView==='function')W.authShowView('landing');
+ }
+ W.afterAuth=async function(user){
+  if(!user||!user.id){showAuthOnly();return false}
+  var key=String(user.id)+'|'+String(user.email||'');
+  if(W.__gsAfterAuthInFlightKey===key&&W.__gsAfterAuthPromise)return W.__gsAfterAuthPromise;
+  W.__gsAfterAuthInFlightKey=key;
+  W.__gsAfterAuthPromise=(async function(){
+   W._supaUser=user;try{_supaUser=user}catch(e){}
+   var auth=$('auth-screen'),onboard=$('onboard');
+   if(auth){auth.style.display='none';auth.classList.remove('open')}
+   try{localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');localStorage.removeItem('gs_oauth_provider_pending');sessionStorage.removeItem('gs_guest_session')}catch(e){}
+   if(!sameUid(user.id))assignState(baseState());
+   isolateIfUserChanged(user);
+   var loaded=false;
+   try{loaded=await W.loadFromSupabase(user.id)}catch(e){console.warn('loadFromSupabase failed',e);loaded=false}
+   if(!loaded)assignState(baseState());
+   var ensured=await ensureProfileRow(user),p=ensured.profile||null;
+   if(!profileComplete(p)){
+    if(onboard)onboard.style.display='none';
+    if(auth)auth.style.display='none';
+    W.gsShowOAuthOnboarding(user,p);return 'onboarding-oauth';
+   }
+   S().profil=S().profil||{};
+   S().profil.id=user.id;S().profil.user_id=user.id;S().user_id=user.id;
+   if(p.username)S().profil.username=p.username;
+   if(p.display_name)S().profil.name=p.display_name;
+   if(p.email)S().profil.email=p.email;
+   S().guestMode=false;
+   try{localStorage.setItem('ath7',JSON.stringify(S()))}catch(e){}
+   if(onboard)onboard.style.display='none';
+   if(S().onboarded||S().onboardingComplete){if(typeof W.bootApp==='function')W.bootApp();return 'boot'}
+   if(onboard)onboard.style.display='flex';
+   return 'onboarding-app';
+  })();
+  try{return await W.__gsAfterAuthPromise}
+  finally{W.__gsAfterAuthDoneKey=key;W.__gsAfterAuthDoneAt=Date.now();W.__gsAfterAuthInFlightKey='';W.__gsAfterAuthPromise=null}
+ };
+ W.initAuth=async function(){
+  if(W.__gsAuthInitPromise)return W.__gsAuthInitPromise;
+  W.__gsAuthInitPromise=(async function(){
+   try{if(typeof W.ensureState==='function')W.ensureState();if(typeof W.gsInstallOnboarding==='function')W.gsInstallOnboarding()}catch(e){}
+   if(!sb()||!sb().auth){showAuthOnly();return false}
+   try{
+    var sess=await sb().auth.getSession(),session=sess&&sess.data&&sess.data.session;
+    try{if(W.__gsAuthSubscription&&typeof W.__gsAuthSubscription.unsubscribe==='function')W.__gsAuthSubscription.unsubscribe()}catch(e){}
+    var sub=sb().auth.onAuthStateChange(async function(ev,session){
+     if((ev==='SIGNED_IN'||ev==='INITIAL_SESSION'||ev==='TOKEN_REFRESHED')&&session&&session.user){await W.afterAuth(session.user);return}
+     if(ev==='SIGNED_OUT'){showAuthOnly()}
+    });
+    W.__gsAuthSubscription=sub&&sub.data&&sub.data.subscription?sub.data.subscription:null;
+    if(session&&session.user){await W.afterAuth(session.user);return true}
+    showAuthOnly();return false;
+   }catch(e){console.warn('initAuth Supabase truth failed',e);showAuthOnly();return false}
+  })();
+  return W.__gsAuthInitPromise;
+ };
+ try{initAuth=W.initAuth}catch(e){}
  // Neutralise l'ancienne afterAuth globale (ancien listener initAuth ligne 6375)
  try{if(typeof afterAuth==='function'&&!afterAuth.__gsPatched){afterAuth=async function(user){if(typeof W.afterAuth==='function')return W.afterAuth(user)};afterAuth.__gsPatched=true}}catch(e){}
  var oldHealth=W.gsSocialHealthCheck;
