@@ -3384,19 +3384,7 @@ async function initAuth() {
   }
   return false;
  }
- _supa.auth.onAuthStateChange(async function(event, session) {
-  if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session && session.user) {
-   await handleSession(session);
-   return;
-  }
-  if (event === 'SIGNED_OUT') {
-   handled=false;
-   state = {}; _supaUser = null;
-   if(authEl)authEl.style.display = 'flex';
-   if (typeof authShowView === 'function') authShowView('landing');
-   if(onboardEl)onboardEl.style.display = 'none';
-  }
- });
+ /* GS social refactor: legacy auth listener removed; gs264 initAuth owns Supabase auth. */
  var sess = await _supa.auth.getSession();
  if (await handleSession(sess.data && sess.data.session)) return;
  setTimeout(async function(){
@@ -6887,9 +6875,7 @@ document.addEventListener('DOMContentLoaded',function(){
  try{
  var sess=await _supa.auth.getSession();
  if(sess && sess.data && sess.data.session && sess.data.session.user){ await afterAuth(sess.data.session.user); }
- _supa.auth.onAuthStateChange(async function(event, session){
- if(event==='SIGNED_OUT'){ state={}; _supaUser=null; ensureState(); if(auth)auth.style.display='flex'; if(onboard)onboard.style.display='none'; }
- });
+ /* GS social refactor: legacy signed-out listener removed; gs264 initAuth owns Supabase auth. */
  }catch(e){ console.warn('Supabase auth unavailable:', e); }
  };
 
@@ -10072,7 +10058,7 @@ document.addEventListener('DOMContentLoaded',function(){
     window.bootSafe=function(){var r=oldBootSafe.apply(this,arguments);setTimeout(function(){fixGuestState();openSeanceFirst();},100);return r;};
   }
   document.addEventListener('DOMContentLoaded',function(){setTimeout(fixGuestState,180);setTimeout(openSeanceFirst,900);setTimeout(fixGuestState,1800)});
-  if(window._supa&&window._supa.auth){try{window._supa.auth.onAuthStateChange(function(ev,session){if(session&&session.user){window._supaUser=session.user;S().guestMode=false;sessionStorage.removeItem('gs_guest_session');save();setTimeout(fixGuestState,50);}})}catch(e){}}
+  /* GS social refactor: legacy guest/auth listener removed. */
 
   function dataLogo(k){
     try{ if(window.GYM_DATA&&window.GYM_DATA[k]&&/^data:image/.test(window.GYM_DATA[k].logo||''))return window.GYM_DATA[k].logo; }catch(e){}
@@ -15814,9 +15800,9 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
 
  // SECTION B — OAuth Google / Apple, injecté sans casser email/mdp.
  window.doLoginGoogle=async function(){if(!window._supa){if(typeof authShowErr==='function')authShowErr('Connexion indisponible.');else notify('Connexion indisponible.');return}var r=await window._supa.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin}});if(r.error){if(typeof authShowErr==='function')authShowErr(r.error.message);else notify(r.error.message)}};
- window.doLoginApple=async function(){if(!window._supa){if(typeof authShowErr==='function')authShowErr('Connexion indisponible.');else notify('Connexion indisponible.');return}var r=await window._supa.auth.signInWithOAuth({provider:'apple',options:{redirectTo:window.location.origin}});if(r.error){if(typeof authShowErr==='function')authShowErr(r.error.message);else notify(r.error.message)}};
+ window.doLoginApple=async function(){if(typeof authShowErr==='function')authShowErr('Connexion Apple indisponible pour le moment. Utilise Google ou email.');else notify('Connexion Apple indisponible pour le moment.');};
  function oauthSvg(t){return t==='google'?'<svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9c-.3 1.4-1 2.5-2.1 3.3v2.7h3.4c2-1.8 3.4-4.6 3.4-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.4-2.7c-.9.6-2.2 1-3.8 1-2.9 0-5.3-1.9-6.2-4.6H2.3v2.8C4.1 20.5 7.8 23 12 23z"/><path fill="#FBBC05" d="M5.8 14c-.2-.6-.4-1.3-.4-2s.1-1.4.4-2V7.2H2.3C1.5 8.6 1 10.2 1 12s.5 3.4 1.3 4.8L5.8 14z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.1-3.1C17.5 2.1 15 1 12 1 7.8 1 4.1 3.5 2.3 7.2L5.8 10c.9-2.7 3.3-4.6 6.2-4.6z"/></svg>':'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.4 1.9c0 1-.4 1.9-1.1 2.6-.8.8-1.7 1.2-2.6 1.1-.1-1 .4-1.9 1.1-2.6.7-.7 1.8-1.2 2.6-1.1zM20.4 17.5c-.5 1.1-.8 1.6-1.5 2.6-1 1.5-2.4 3.3-4.1 3.3-1.5 0-1.9-1-3.9-1s-2.5 1-3.9 1c-1.7 0-3-1.6-4-3.1C.3 16.2.1 11.5 1.7 9.1c1.1-1.7 2.9-2.7 4.6-2.7 1.8 0 2.9 1 4.4 1 1.4 0 2.3-1 4.4-1 1.5 0 3.1.8 4.2 2.2-3.7 2-3.1 7.3 1.1 8.9z"/></svg>'}
- function injectOAuth(){document.querySelectorAll('.auth-box,[id^="auth-view-"]').forEach(function(box){if(!box||box.querySelector('.gs-oauth-sep'))return;var btn=box.querySelector('.auth-btn');if(!btn)return;btn.insertAdjacentHTML('afterend','<div class="gs-oauth-sep">ou</div><button type="button" class="gs-oauth-btn google" onclick="doLoginGoogle()">'+oauthSvg('google')+' Continuer avec Google</button><button type="button" class="gs-oauth-btn apple" onclick="doLoginApple()">'+oauthSvg('apple')+' Continuer avec Apple</button>')})}
+ function injectOAuth(){document.querySelectorAll('.auth-box,[id^="auth-view-"]').forEach(function(box){if(!box||box.querySelector('.gs-oauth-sep'))return;var btn=box.querySelector('.auth-btn');if(!btn)return;btn.insertAdjacentHTML('afterend','<div class="gs-oauth-sep">ou</div><button type="button" class="gs-oauth-btn google" onclick="doLoginGoogle()">'+oauthSvg('google')+' Continuer avec Google</button>')})}
  setTimeout(injectOAuth,300);document.addEventListener('click',function(){setTimeout(injectOAuth,80)},true);
 
  // SECTION C — Charges : dernier log, PR, +/- 2.5, suggestion semaine.
@@ -16405,7 +16391,7 @@ var oldPush=window.pushSquadEvent;window.pushSquadEvent=function(type,payload,op
  async function loadProfileStateStrict(id){var r=await selectProfile(id);if(r.data){var st=Object.assign(baseState(),r.data.data||{});st.profil=st.profil||{};if(r.data.username)st.profil.username=r.data.username;if(r.data.display_name)st.profil.name=r.data.display_name;if(r.data.email)st.profil.email=r.data.email;assignState(st);return r.data}assignState(baseState());return null}
  W.loadFromSupabase=async function(id){return !!(await loadProfileStateStrict(id))};
  W.afterAuth=async function(u){if(!u)return;W._supaUser=u;try{_supaUser=u}catch(e){}purgeOnlineCacheForSwitch(u.id);var auth=$('auth-screen');if(auth)auth.style.display='none';var row=await loadProfileStateStrict(u.id);var ensured=await ensureProfileRowStrict(u);var p=ensured.profile||row;if(!profileComplete(p)){if(typeof W.gsShowOAuthOnboarding==='function'){W.gsShowOAuthOnboarding(u,p)}else{var a=$('auth-screen');if(a)a.style.display='flex'}return}S().profil=S().profil||{};if(p.username)S().profil.username=p.username;if(p.display_name)S().profil.name=p.display_name;if(p.email)S().profil.email=p.email;S().guestMode=false;save();try{if(typeof W.hideGates==='function')W.hideGates()}catch(e){}if(S().onboarded){try{if(typeof W.bootApp==='function')W.bootApp();else if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){console.warn(e)}}else{var ob=$('onboard');if(ob)ob.style.display='flex'}};
- W.initAuth=async function(){try{if(typeof W.ensureState==='function')W.ensureState();if(typeof W.gsInstallOnboarding==='function')W.gsInstallOnboarding()}catch(e){}var auth=$('auth-screen'),onboard=$('onboard');if(auth)auth.style.display='flex';if(onboard)onboard.style.display='none';if(!sb()||!sb().auth){if(S().onboarded&&S().profil&&S().profil.name){try{if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}}return}try{var sess=await sb().auth.getSession();if(sess&&sess.data&&sess.data.session&&sess.data.session.user){await W.afterAuth(sess.data.session.user);return}try{sb().auth.onAuthStateChange(async function(ev,session){if((ev==='SIGNED_IN'||ev==='INITIAL_SESSION'||ev==='TOKEN_REFRESHED')&&session&&session.user){await W.afterAuth(session.user)}if(ev==='SIGNED_OUT'){assignState(baseState());W._supaUser=null;try{_supaUser=null}catch(e){}try{localStorage.removeItem('gs_auth_uid')}catch(e){}if(auth)auth.style.display='flex';if(onboard)onboard.style.display='none';if(typeof W.authShowView==='function')W.authShowView('landing')}})}catch(e){}if(S().onboarded&&S().profil&&S().profil.name){try{if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}}else if(typeof W.authShowView==='function')W.authShowView('landing')}catch(e){console.warn('initAuth 193 failed',e)}};
+ W.initAuth=async function(){try{if(typeof W.ensureState==='function')W.ensureState();if(typeof W.gsInstallOnboarding==='function')W.gsInstallOnboarding()}catch(e){}var auth=$('auth-screen'),onboard=$('onboard');if(auth)auth.style.display='flex';if(onboard)onboard.style.display='none';if(!sb()||!sb().auth){if(S().onboarded&&S().profil&&S().profil.name){try{if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}}return}try{var sess=await sb().auth.getSession();if(sess&&sess.data&&sess.data.session&&sess.data.session.user){await W.afterAuth(sess.data.session.user);return}try{/* GS266: legacy auth listener removed; gs264 initAuth owns Supabase auth. */}catch(e){}if(S().onboarded&&S().profil&&S().profil.name){try{if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}}else if(typeof W.authShowView==='function')W.authShowView('landing')}catch(e){console.warn('initAuth 193 failed',e)}};
  async function resolveLoginIdentifier(input){var raw=String(input||'').trim();if(!sb())return {email:null,profile:null,error:'supabase_missing'};if(raw.indexOf('@')>-1&&!raw.startsWith('@'))return {email:raw.toLowerCase(),profile:null,error:null};var u=normUsername(raw);if(!u)return {email:null,profile:null,error:'empty'};try{var rpc=await sb().rpc('resolve_login_username',{p_login:u});if(rpc&&!rpc.error){var row=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;if(row&&row.email)return {email:String(row.email).toLowerCase(),profile:row,error:null,via:'rpc'}}}catch(e){}
   try{var q=await sb().from('profiles').select('id,email,username,display_name,data').eq('username',u).maybeSingle();if(q.data&&q.data.email)return {email:q.data.email,profile:q.data,error:null,via:'select'}}catch(e){}
   return {email:null,profile:null,error:'not_found'} }
@@ -16428,7 +16414,7 @@ var oldPush=window.pushSquadEvent;window.pushSquadEvent=function(type,payload,op
  function empty(t,s){return '<div class="gs193-empty"><b>'+E(t)+'</b>'+E(s||'')+'</div>'}
  async function getFollowStatus(id){if(!sb()||!uid()||!id||String(id)===String(uid()))return 'self';try{var r=await sb().from('follows').select('id,status').eq('follower_id',uid()).eq('following_id',id).maybeSingle();return r.data&&(r.data.status||'accepted')||''}catch(e){return ''}}
  async function fetchFollowMap(ids){var map={};ids=(ids||[]).filter(Boolean);if(!ids.length||!sb()||!uid())return map;try{var r=await sb().from('follows').select('following_id,status').eq('follower_id',uid()).in('following_id',ids);(r.data||[]).forEach(function(x){map[String(x.following_id)]=x.status||'accepted'})}catch(e){}return map}
- function setFollowBtn(btn,status){if(!btn)return;btn.disabled=false;btn.classList.remove('primary','following','pending','loading');btn.removeAttribute('aria-busy');if(status==='accepted'){btn.textContent='Abonné';btn.classList.add('following')}else if(status==='pending'){btn.textContent='Demande envoyée';btn.classList.add('pending')}else if(status==='self'){btn.textContent='Toi';btn.disabled=true}else{btn.textContent='S’abonner';btn.classList.add('primary')}}
+ function setFollowBtn(btn,status){if(!btn)return;btn.disabled=false;btn.classList.remove('primary','following','pending','loading');btn.removeAttribute('aria-busy');if(status==='accepted'){btn.textContent='Abonné';btn.classList.add('following')}else if(status==='pending'){btn.textContent='Abonné';btn.classList.add('following')}else if(status==='self'){btn.textContent='Toi';btn.disabled=true}else{btn.textContent='Suivre';btn.classList.add('primary')}}
  function profileRow(p,fmap,i){var obj=publicObj(p),key='gs193_prof_'+Date.now()+'_'+i;W[key]=obj;var gyms=profileGyms(p);var status=fmap[String(p.id)]||'';return '<div class="gs193-row" onclick="gs193OpenProfile(\''+JS(key)+'\')"><div class="gs193-av">'+avatarHtml(obj.name,obj.avatar)+'</div><div class="gs193-main"><b>'+E(obj.name)+'</b><span>'+(obj.username?'@'+E(obj.username):'@username non défini')+'</span><em>'+E((gyms.length?gyms.join(' · '):'Salle non renseignée')+' · '+((p.data&&p.data.xp)||0)+' XP')+'</em></div><div class="gs193-actions"><button type="button" onclick="event.stopPropagation();gs193OpenProfile(\''+JS(key)+'\')">Voir</button><button type="button" data-gs-follow-id="'+E(p.id)+'" onclick="event.stopPropagation();gsSocialToggleFollow(\''+JS(p.id)+'\',\''+JS(obj.name)+'\',this)"></button></div></div>'}
  function squadRow(s){var logo=s.avatar_url||s.squad_logo||'',ico=logo?'<img src="'+E(logo)+'" alt="">':E((s.squad_emoji||s.emblem||'S').charAt(0));return '<div class="gs193-row" onclick="if(window.gsRequestJoinSquad)gsRequestJoinSquad(\''+JS(s.id)+'\');else if(window.openMaSquad)openMaSquad()"><div class="gs193-av">'+ico+'</div><div class="gs193-main"><b>'+E(s.name||'Squad')+'</b><span>'+E((s.members_count||0)+' membre(s)')+'</span><em>'+E(s.owner_name?'Hôte : '+s.owner_name:'Squad privée')+'</em></div><div class="gs193-actions"><button type="button">Demander</button></div></div>'}
  function exoRow(e){return '<div class="gs193-row" onclick="closeSearchModal(); if(window.openExerciseDetail)openExerciseDetail(\''+JS(e.n)+'\'); else if(window.openBibliotheque)openBibliotheque()"><div class="gs193-av">⚡</div><div class="gs193-main"><b>'+E(e.n||'Exercice')+'</b><span>'+E((e.g||'')+' · '+(e.t||''))+'</span><em>'+E(e.m||'')+'</em><div><span class="gs193-exo-tag">'+E(e.g||'Groupe')+'</span><span class="gs193-exo-tag">'+E(e.t||'Type')+'</span></div></div></div>'}
@@ -18685,7 +18671,7 @@ window.openChargesSelector=function(){
  W.gsAddSuppToNutri=function(id){var s=(W.SUPPLS_DB||[]).find(function(x){return x.id===id});if(!s)return;var st=S(),today=todayKey();st.journal=st.journal||{};st.journal[today]=st.journal[today]||{};var nutri=st.journal[today].nutri=st.journal[today].nutri||{kcal:0,prot:0,carbs:0,fat:0,repas:[]};var kcal=Math.round((s.per100.kcal||0)*s.dose/100),prot=Math.round((s.per100.p||0)*s.dose/100*10)/10,carbs=Math.round((s.per100.c||0)*s.dose/100*10)/10,fat=Math.round((s.per100.f||0)*s.dose/100*10)/10;nutri.kcal+=kcal;nutri.prot+=prot;nutri.carbs+=carbs;nutri.fat+=fat;nutri.repas.push({name:s.name,kcal:kcal,prot:prot,carbs:carbs,fat:fat,type:'complément',ts:Date.now()});st.nutriMeals=st.nutriMeals||[];st.nutriMeals.push({desc:s.name,name:s.name,kcal:kcal,prot:prot,glucides:carbs,lipides:fat,type:'complément',ts:Date.now()});save();var ov=$('gs-suppl-search-ov');if(ov)ov.remove();if(typeof W.renderNutri==='function')W.renderNutri();if(typeof W.renderNutriPanel==='function')W.renderNutriPanel();toast(s.name+' ajouté à la nutrition')};
 
  function renderSuppBase(){var old=D.querySelector('#p-nutri .gs-nutri-suppl');if(!old||old.getAttribute('data-gs-base')==='1')return;var cats=['Tous'].concat(Array.from(new Set(SUPPLEMENT_DB.map(function(s){return s.c}))));old.className='gs-supp-base';old.setAttribute('data-gs-base','1');old.innerHTML='<input id="gs-supp-search" class="gs-supp-search" placeholder="Rechercher un complément" oninput="gsFilterSupplements()"><div class="gs-supp-chips">'+cats.map(function(c,i){return '<button type="button" class="'+(i===0?'on':'')+'" onclick="gsSetSuppCat(\''+JS(c)+'\')">'+E(c)+'</button>'}).join('')+'</div><div class="gs-supp-results" id="gs-supp-results"></div>';W._gsSuppCat='Tous';W.gsFilterSupplements()}if(typeof W.renderNutriPanel==='function'&&!W.renderNutriPanel.__gsV93SuppBase){var oldNutri=W.renderNutriPanel;W.renderNutriPanel=function(){var r=oldNutri.apply(this,arguments);setTimeout(renderSuppBase,0);setTimeout(renderSuppBase,160);return r};W.renderNutriPanel.__gsV93SuppBase=true}
- async function sendFriend(id,name,btn){try{if(typeof W.sendFriendRequest==='function'){await W.sendFriendRequest(id,name,btn);return}var st=S();st.friendRequests=st.friendRequests||[];st.friendRequests.push({to_id:id,to_name:name,status:'pending',created_at:new Date().toISOString()});save();toast('Demande envoyée')}catch(e){toast('Impossible d’ajouter cet ami')}}
+ async function sendFriend(id,name,btn){if(W.SocialService&&typeof W.SocialService.followUser==='function'){try{await W.SocialService.followUser(id,name,btn)}catch(e){toast(e&&e.message?e.message:'Connexion requise')}}else{toast('Connexion requise')}}
  async function sendSquadInvite(id,name,btn){var sq=activeSquad();if(!sq){toast('Crée une squad privée avant');return}sq.invites=sq.invites||[];if(sq.invites.indexOf(id)<0)sq.invites.push(id);save();try{if(W._supa&&uid()){await W._supa.from('private_squad_requests').insert({squad_id:sq.id,from_id:uid(),to_id:id,status:'pending',payload:{squadName:sq.name,name:name}});await W._supa.from('notifications').insert({user_id:id,from_id:uid(),type:'squad_invite',title:'Invitation squad',body:'Tu as reçu une invitation pour '+(sq.name||'une squad'),payload:{squad_id:sq.id,squad_name:sq.name}})}}catch(e){}if(btn){btn.textContent='Invite envoyée';btn.disabled=true}toast('Invitation squad envoyée')}
  W.gsSendSquadInvite=sendSquadInvite;
  async function queryUsers(q){if(!W._supa||!W._supaUser)return {login:true,users:[]};var clean=String(q||'').replace(/^@/,'').trim();if(clean.length<2)return {users:[]};var res=await W._supa.from('profiles').select('id,email,username,display_name,data,xp').or('username.ilike.%'+clean+'%,display_name.ilike.%'+clean+'%,email.ilike.%'+clean+'%').neq('id',W._supaUser.id).limit(12);return {users:res.data||[],error:res.error}}
@@ -27156,7 +27142,7 @@ if(D.readyState==='loading'){
  function avatarHtml(name,av){return av?'<img src="'+E(av)+'" alt="">':E(String(name||'U').charAt(0).toUpperCase())}
  function iconSearch(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>'}
  function publicUserObj(u){var name=displayName(u),un=username(u),av=avatar(u);return {id:u.id,name:name,display_name:name,username:un,avatar:av,xp:Number((u.data&&u.data.xp)||0),data:u.data||{}}}
- function setBtn(btn,status){if(!btn)return;btn.classList.remove('following','pending','loading','primary');btn.disabled=false;btn.removeAttribute('aria-busy');if(status==='accepted'){btn.textContent='Abonné';btn.classList.add('following')}else if(status==='pending'){btn.textContent='Demande envoyée';btn.classList.add('pending')}else{btn.textContent='S’abonner';btn.classList.add('primary')}}
+ function setBtn(btn,status){if(!btn)return;btn.classList.remove('following','pending','loading','primary');btn.disabled=false;btn.removeAttribute('aria-busy');if(status==='accepted'){btn.textContent='Abonné';btn.classList.add('following')}else if(status==='pending'){btn.textContent='Abonné';btn.classList.add('following')}else{btn.textContent='Suivre';btn.classList.add('primary')}}
  function refreshSameFollowButtons(id,status){D.querySelectorAll('[data-gs-follow-id="'+String(id).replace(/"/g,'')+'"]').forEach(function(b){setBtn(b,status)})}
  async function getFollowStatus(id){if(!online()||!id||String(id)===uid())return 'self';try{var r=await supa().from('follows').select('status').eq('follower_id',uid()).eq('following_id',id).maybeSingle();if(r&&r.data&&r.data.status)return r.data.status}catch(e){}return ''}
  async function createNotif(userId,type,title,body,related,payload){try{if(!online()||!userId||String(userId)===uid())return;var sb=supa();var existing=await sb.from('notifications').select('id').eq('user_id',userId).eq('actor_id',uid()).eq('type',type).eq('related_id',String(related||'')).neq('status','deleted').limit(1);if(existing.data&&existing.data.length)return;await sb.from('notifications').insert({user_id:userId,actor_id:uid(),from_id:uid(),type:type,status:'unread',title:title||'G-SQUAD',body:body||'',related_id:String(related||''),payload:payload||{}})}catch(e){}}
@@ -27236,7 +27222,7 @@ el.innerHTML=chunks.join('');D.querySelectorAll('[data-gs-follow-id]').forEach(a
  function empty(t,b){return '<div class="gs-sc-empty"><b>'+E(t)+'</b>'+E(b||'')+'</div>'}
  function section(t,n){return '<div class="gs-sc-section"><b>'+E(t)+'</b><span>'+E(n||'')+'</span></div>'}
  function publicUserObj(u){var name=displayName(u),un=usernameOf(u),av=avatarOf(u);return {id:u.id,name:name,display_name:name,username:un,avatar:av,xp:Number((u.data&&u.data.xp)||0),data:u.data||{},email:u.email||''}}
- function setBtn(btn,status){if(!btn)return;btn.classList.remove('following','pending','loading','primary');btn.disabled=false;btn.removeAttribute('aria-busy');if(status==='accepted'){btn.textContent='Abonné';btn.classList.add('following')}else if(status==='pending'){btn.textContent='Demande envoyée';btn.classList.add('pending')}else{btn.textContent='S’abonner';btn.classList.add('primary')}}
+ function setBtn(btn,status){if(!btn)return;btn.classList.remove('following','pending','loading','primary');btn.disabled=false;btn.removeAttribute('aria-busy');if(status==='accepted'){btn.textContent='Abonné';btn.classList.add('following')}else if(status==='pending'){btn.textContent='Abonné';btn.classList.add('following')}else{btn.textContent='Suivre';btn.classList.add('primary')}}
  function refreshSameFollowButtons(id,status){D.querySelectorAll('[data-gs-follow-id="'+String(id).replace(/"/g,'')+'"]').forEach(function(b){setBtn(b,status)})}
  function profileMatches(u,raw){var q=norm(raw),compact=normCompact(raw),tk=tokens(raw);if(!q)return false;var vals=[u.email,u.username,u.display_name,displayName(u),usernameOf(u),profileInner(u).username,profileInner(u).name,profileInner(u).display_name,profileInner(u).full_name].map(norm);var compVals=vals.map(function(x){return normCompact(x)});if(vals.some(function(v){return v===q||v.indexOf(q)>-1}))return true;if(compact&&compVals.some(function(v){return v===compact||v.indexOf(compact)>-1}))return true;return tk.length&&tk.every(function(t){return vals.concat(compVals).some(function(v){return v.indexOf(t)>-1})})}
  function scoreProfile(u,raw){var q=norm(raw),c=normCompact(raw),un=norm(usernameOf(u)),unc=normCompact(usernameOf(u)),dn=norm(displayName(u)),email=norm(u.email);if(un===q||unc===c)return 1;if(un.indexOf(q)===0||unc.indexOf(c)===0)return 2;if(dn===q)return 3;if(dn.indexOf(q)===0)return 4;if(email===q)return 5;if(un.indexOf(q)>-1||unc.indexOf(c)>-1)return 6;if(dn.indexOf(q)>-1)return 7;if(email.indexOf(q)>-1)return 8;return 20}
@@ -27339,7 +27325,7 @@ el.innerHTML=chunks.join('');D.querySelectorAll('[data-gs-follow-id]').forEach(a
  if(!name)return {profile:null,error:null};try{var rpc=await sb().rpc('resolve_login_username',{p_login:name});if(rpc&&!rpc.error){var row=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;if(row&&row.email)return {profile:row,error:null}}}catch(e){}var q1=await sb().from('profiles').select('id,email,username,display_name,data').eq('username',name).maybeSingle();if(q1.data)return {profile:q1.data,error:null};var q2=await sb().from('profiles').select('id,email,username,display_name,data').ilike('username',name).limit(5);if(q2.data&&q2.data.length)return {profile:q2.data[0],error:null};try{var q3=await sb().from('profiles').select('id,email,username,display_name,data').filter('data->profil->>username','eq',name).limit(5);if(q3.data&&q3.data.length)return {profile:q3.data[0],error:null}}catch(e){}var q4=await sb().from('profiles').select('id,email,username,display_name,data').ilike('display_name','%'+input.replace(/^@/,'')+'%').limit(5);if(q4.data&&q4.data.length){var exact=q4.data.find(function(p){return normUsername((p.data&&p.data.profil&&p.data.profil.username)||p.username||p.display_name)===name});if(exact)return {profile:exact,error:null}}return {profile:null,error:null}}
  W.doLogin=async function(){var inp=$('auth-email'),pwd=$('auth-password'),input=String(inp&&inp.value||'').trim(),pass=String(pwd&&pwd.value||'');if(!input||!pass){if(typeof W.authShowView==='function')W.authShowView('login');if(typeof W.authShowErr==='function')W.authShowErr('Remplis tous les champs.');return}if(!sb()){W.authShowErr&&W.authShowErr('Connexion indisponible.');return}if(typeof W.setAuthLoading==='function')W.setAuthLoading(true);var email=input,usedUsername=false;if(!input.includes('@')||input.startsWith('@')){usedUsername=true;var found=await findProfileForLogin(input);if(!found.profile||!found.profile.email){if(typeof W.setAuthLoading==='function')W.setAuthLoading(false);W.authShowErr&&W.authShowErr('Utilisateur introuvable. Vérifie que le profil public G-SQUAD possède bien ce @username.');return}email=found.profile.email}var res=await sb().auth.signInWithPassword({email:email,password:pass});if(typeof W.setAuthLoading==='function')W.setAuthLoading(false);if(res.error){var msg=usedUsername?'Ce @username existe, mais la connexion par mot de passe a échoué. Si ce compte a été créé avec Google, utilise “Continuer avec Google”. Sinon vérifie le mot de passe.':'Email ou mot de passe incorrect.';W.authShowErr&&W.authShowErr(msg);return}await W.afterAuth(res.data.user)};
  W.doLoginGoogle=async function(){if(!sb()){W.authShowErr&&W.authShowErr('Connexion indisponible.');return}try{localStorage.setItem('gs_oauth_provider_pending','google')}catch(e){}var r=await sb().auth.signInWithOAuth({provider:'google',options:{redirectTo:W.location.origin,queryParams:{prompt:'select_account'}}});if(r.error){W.authShowErr&&W.authShowErr(r.error.message)}};
- W.doLoginApple=async function(){if(!sb()){W.authShowErr&&W.authShowErr('Connexion indisponible.');return}try{localStorage.setItem('gs_oauth_provider_pending','apple')}catch(e){}var r=await sb().auth.signInWithOAuth({provider:'apple',options:{redirectTo:W.location.origin}});if(r.error){W.authShowErr&&W.authShowErr(r.error.message)}};
+ W.doLoginApple=async function(){ if(W.authShowErr) W.authShowErr('Connexion Apple indisponible pour le moment. Utilise Google ou email.'); };
  W.afterAuth=async function(user){if(!user)return;W._supaUser=user;try{_supaUser=user}catch(e){}isolateIfUserChanged(user);var auth=$('auth-screen');if(auth)auth.style.display='none';await W.loadFromSupabase(user.id);var ensured=await ensureProfileRow(user);if(!profileComplete(ensured.profile)){W.gsShowOAuthOnboarding(user,ensured.profile);return}var p=ensured.profile||{},data=p.data||{},pr=data.profil||{};S().profil=S().profil||{};if(p.username||pr.username)S().profil.username=p.username||pr.username;if(p.display_name||pr.name)S().profil.name=p.display_name||pr.name;if(p.email||pr.email)S().profil.email=p.email||pr.email;S().onboarded=true;S().onboardingComplete=true;S().authSetupStatus='completed';S().guestMode=false;try{localStorage.setItem('ath7',JSON.stringify(S()))}catch(e){}if(typeof W.bootApp==='function')W.bootApp()};
  // Neutralise l'ancienne afterAuth globale (ancien listener initAuth ligne 6375)
  try{if(typeof afterAuth==='function'&&!afterAuth.__gsPatched){afterAuth=async function(user){if(typeof W.afterAuth==='function')return W.afterAuth(user)};afterAuth.__gsPatched=true}}catch(e){}
@@ -27876,5 +27862,200 @@ D.addEventListener('click',function(ev){
 },true);
 
 console.log('GS265 conformity patch loaded');
+})();
+</script>
+
+
+<script id="gs-social-service-266-js">
+(function(){
+'use strict';
+var W=window,D=document;
+function $(id){return D.getElementById(id)}
+function sb(){return W._supa||null}
+function uid(){try{return W._supaUser&&W._supaUser.id?String(W._supaUser.id):null}catch(e){return null}}
+function state(){try{return typeof W.safeState==='function'?W.safeState():typeof W.getState==='function'?W.getState():(W.state||W._gsState||{})}catch(e){return W.state||W._gsState||{}}}
+function profil(){var s=state();s.profil=s.profil||{};return s.profil}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}
+function toast(m){try{if(typeof W.toast==='function')W.toast(m);else if(typeof W.notify==='function')W.notify(m);else console.log('[G-SQUAD]',m)}catch(e){}}
+function online(){return !!(sb()&&uid()&&(typeof navigator==='undefined'||navigator.onLine!==false))}
+function uuidish(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v||''))}
+function nameOfMe(){var p=profil();return p.name||p.display_name||p.firstName||p.prenom||p.username||'Un membre'}
+function usernameOfMe(){var p=profil();return p.username||''}
+function avatarOfMe(){var p=profil();return p.avatar||p.avatar_url||''}
+function connectionRequiredHTML(){return '<div class="gs-social-required" style="padding:22px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);border-radius:24px;margin:16px"><div style="font-size:22px;font-weight:1000;letter-spacing:-.04em;color:var(--txt);margin-bottom:6px">Connexion requise</div><div style="font-size:13px;color:var(--mut);font-weight:750;line-height:1.45">Les profils, Squads, demandes et notifications fonctionnent uniquement avec un compte connecté.</div></div>'}
+function requireOnlineUser(show){
+  if(online())return {id:uid(),client:sb()};
+  if(show!==false)toast('Connecte-toi pour utiliser le social.');
+  return null;
+}
+async function getProfile(userId){
+  if(!requireOnlineUser(false)||!userId)return null;
+  try{var r=await sb().from('profiles').select('id,email,username,display_name,avatar_url,data').eq('id',userId).maybeSingle();return r&&r.data?r.data:null}catch(e){return null}
+}
+function profileName(row){var d=row&&row.data||{},p=d.profil||{};return row&&row.display_name||p.name||p.firstName||p.prenom||row&&row.username||'Utilisateur'}
+function profileAvatar(row){var d=row&&row.data||{},p=d.profil||{};return row&&row.avatar_url||p.avatar||p.avatar_url||d.avatar_url||''}
+async function createNotification(args){
+  if(!requireOnlineUser(false)||!args||!args.recipient_id||String(args.recipient_id)===uid())return null;
+  var payload=Object.assign({},args.payload||{});
+  if(!payload.actor_name)payload.actor_name=nameOfMe();
+  if(!payload.actor_username)payload.actor_username=usernameOfMe();
+  if(!payload.actor_avatar)payload.actor_avatar=avatarOfMe();
+  var row={recipient_id:args.recipient_id,actor_id:args.actor_id||uid(),type:args.type||'activity',entity_type:args.entity_type||null,entity_id:args.entity_id==null?null:String(args.entity_id),status:'unread',payload:payload};
+  try{var r=await sb().from('notifications').insert(row).select('id').maybeSingle();return r&&r.data?r.data:null}catch(e){console.warn('[GS266] createNotification',e);return null}
+}
+async function followUser(targetId){
+  var u=requireOnlineUser();if(!u)return false;targetId=String(targetId||'');if(!targetId||targetId===uid()){toast('Profil indisponible.');return false}
+  try{
+    var r=await sb().from('follows').upsert({follower_id:uid(),following_id:targetId},{onConflict:'follower_id,following_id'});
+    if(r&&r.error)throw r.error;
+    await createNotification({recipient_id:targetId,type:'follow',entity_type:'profiles',entity_id:uid(),payload:{body:nameOfMe()+' te suit.',actor_name:nameOfMe()}});
+    toast('Abonné.');
+    return true;
+  }catch(e){console.warn('[GS266] followUser',e);toast('Impossible de suivre ce profil.');return false}
+}
+async function unfollowUser(targetId){
+  var u=requireOnlineUser();if(!u)return false;targetId=String(targetId||'');
+  try{var r=await sb().from('follows').delete().eq('follower_id',uid()).eq('following_id',targetId);if(r&&r.error)throw r.error;toast('Désabonné.');return true}catch(e){console.warn('[GS266] unfollowUser',e);toast('Impossible de se désabonner.');return false}
+}
+async function getFollowStatus(targetId){
+  if(!requireOnlineUser(false)||!targetId)return 'not_following';
+  try{var r=await sb().from('follows').select('following_id').eq('follower_id',uid()).eq('following_id',String(targetId)).maybeSingle();return r&&r.data?'following':'not_following'}catch(e){return 'not_following'}
+}
+async function fetchFollowMap(ids){
+  var out={};ids=(ids||[]).map(String).filter(Boolean);if(!ids.length||!requireOnlineUser(false))return out;
+  try{var r=await sb().from('follows').select('following_id').eq('follower_id',uid()).in('following_id',ids);(r.data||[]).forEach(function(x){out[String(x.following_id)]='following'});return out}catch(e){return out}
+}
+async function searchUsers(q){
+  if(!requireOnlineUser())return {login:true,users:[]};q=String(q||'').trim();if(q.length<2)return {users:[]};
+  try{var r=await sb().from('profiles').select('id,email,username,display_name,avatar_url,data').or('username.ilike.%'+q+'%,display_name.ilike.%'+q+'%').neq('id',uid()).limit(30);if(r.error)throw r.error;return {users:r.data||[]}}catch(e){console.warn('[GS266] searchUsers',e);return {error:e,users:[]}}
+}
+async function findSquad(squadId){
+  if(!requireOnlineUser(false)||!squadId)return null;
+  try{var r=await sb().from('private_squads').select('id,name,owner_id,host_id,created_by,squad_emoji,members_count,payload').eq('id',String(squadId)).maybeSingle();return r&&r.data?r.data:null}catch(e){return null}
+}
+async function requestJoinSquad(squadId,squadName,ownerId,btn){
+  var u=requireOnlineUser();if(!u)return false;squadId=String(squadId||'');if(!squadId){toast('Squad indisponible.');return false}
+  try{
+    if(btn){btn.disabled=true;btn.textContent='Envoi…'}
+    var sq=await findSquad(squadId);var host=ownerId||sq&&String(sq.host_id||sq.owner_id||sq.created_by||'');
+    var existing=await sb().from('private_squad_requests').select('id,status').eq('squad_id',squadId).eq('requester_id',uid()).in('status',['pending','accepted']).limit(1);
+    if(existing.data&&existing.data.length){var label=existing.data[0].status==='accepted'?'Membre':'Demande envoyée';if(btn)btn.textContent=label;toast(label);return true}
+    var row={squad_id:squadId,requester_id:uid(),status:'pending'};if(uuidish(host))row.host_id=host;
+    var ins=await sb().from('private_squad_requests').insert(row).select('id').maybeSingle();if(ins.error)throw ins.error;
+    if(uuidish(host))await createNotification({recipient_id:host,type:'squad_join_request',entity_type:'private_squad_requests',entity_id:ins.data&&ins.data.id,payload:{body:nameOfMe()+' veut rejoindre '+(squadName||sq&&sq.name||'ta Squad')+'.',squad_id:squadId,squad_name:squadName||sq&&sq.name||'Squad',requester_id:uid(),actor_name:nameOfMe()}});
+    if(btn){btn.textContent='Demande envoyée';btn.disabled=true}
+    toast('Demande envoyée.');return true;
+  }catch(e){console.warn('[GS266] requestJoinSquad',e);if(btn){btn.disabled=false;btn.textContent='Demander à rejoindre'}toast('Impossible d’envoyer la demande.');return false}
+}
+async function acceptSquadJoinRequest(requestId){
+  var u=requireOnlineUser();if(!u)return false;requestId=String(requestId||'');
+  try{
+    var got=await sb().from('private_squad_requests').select('*').eq('id',requestId).maybeSingle();if(got.error)throw got.error;var req=got.data;if(!req){toast('Demande introuvable.');return false}
+    var up=await sb().from('private_squad_requests').update({status:'accepted',handled_at:new Date().toISOString()}).eq('id',requestId);if(up.error)throw up.error;
+    var mem=await sb().from('private_squad_members').insert({squad_id:String(req.squad_id),user_id:req.requester_id,role:'member',status:'active',joined_at:new Date().toISOString()});if(mem.error){await sb().from('private_squad_members').update({role:'member',status:'active',joined_at:new Date().toISOString()}).eq('squad_id',String(req.squad_id)).eq('user_id',req.requester_id);}
+    await createNotification({recipient_id:req.requester_id,type:'squad_request_accepted',entity_type:'private_squad_requests',entity_id:requestId,payload:{body:'Ta demande de Squad a été acceptée.',squad_id:req.squad_id,actor_name:nameOfMe()}});
+    toast('Demande acceptée.');return true;
+  }catch(e){console.warn('[GS266] acceptSquadJoinRequest',e);toast('Impossible d’accepter.');return false}
+}
+async function rejectSquadJoinRequest(requestId){
+  var u=requireOnlineUser();if(!u)return false;requestId=String(requestId||'');
+  try{var got=await sb().from('private_squad_requests').select('*').eq('id',requestId).maybeSingle();var req=got&&got.data;var up=await sb().from('private_squad_requests').update({status:'refused',handled_at:new Date().toISOString()}).eq('id',requestId);if(up.error)throw up.error;if(req&&req.requester_id)await createNotification({recipient_id:req.requester_id,type:'squad_request_refused',entity_type:'private_squad_requests',entity_id:requestId,payload:{body:'Ta demande de Squad a été refusée.',squad_id:req.squad_id,actor_name:nameOfMe()}});toast('Demande refusée.');return true}catch(e){console.warn('[GS266] rejectSquadJoinRequest',e);toast('Impossible de refuser.');return false}
+}
+async function inviteUserToSquad(squadId,userId){
+  var u=requireOnlineUser();if(!u)return false;squadId=String(squadId||'');userId=String(userId||'');if(!squadId||!userId){toast('Invitation indisponible.');return false}
+  try{var sq=await findSquad(squadId);var ins=await sb().from('squad_invites').insert({squad_id:squadId,inviter_id:uid(),invited_user_id:userId,status:'pending'}).select('id').maybeSingle();if(ins.error)throw ins.error;await createNotification({recipient_id:userId,type:'squad_invite',entity_type:'squad_invites',entity_id:ins.data&&ins.data.id,payload:{body:nameOfMe()+' t’invite dans '+(sq&&sq.name||'sa Squad')+'.',squad_id:squadId,squad_name:sq&&sq.name||'Squad',actor_name:nameOfMe()}});toast('Invitation envoyée.');return true}catch(e){console.warn('[GS266] inviteUserToSquad',e);toast('Invitation impossible.');return false}
+}
+async function acceptSquadInvite(inviteId){
+  var u=requireOnlineUser();if(!u)return false;inviteId=String(inviteId||'');
+  try{var got=await sb().from('squad_invites').select('*').eq('id',inviteId).maybeSingle();if(got.error)throw got.error;var inv=got.data;if(!inv){toast('Invitation introuvable.');return false}var up=await sb().from('squad_invites').update({status:'accepted',handled_at:new Date().toISOString()}).eq('id',inviteId);if(up.error)throw up.error;var mem=await sb().from('private_squad_members').insert({squad_id:String(inv.squad_id),user_id:uid(),role:'member',status:'active',joined_at:new Date().toISOString()});if(mem.error){await sb().from('private_squad_members').update({role:'member',status:'active',joined_at:new Date().toISOString()}).eq('squad_id',String(inv.squad_id)).eq('user_id',uid());}await createNotification({recipient_id:inv.inviter_id,type:'squad_invite_accepted',entity_type:'squad_invites',entity_id:inviteId,payload:{body:nameOfMe()+' a accepté ton invitation Squad.',squad_id:inv.squad_id,actor_name:nameOfMe()}});toast('Invitation acceptée.');return true}catch(e){console.warn('[GS266] acceptSquadInvite',e);toast('Impossible d’accepter l’invitation.');return false}
+}
+async function rejectSquadInvite(inviteId){
+  var u=requireOnlineUser();if(!u)return false;inviteId=String(inviteId||'');
+  try{var got=await sb().from('squad_invites').select('*').eq('id',inviteId).maybeSingle();var inv=got&&got.data;var up=await sb().from('squad_invites').update({status:'refused',handled_at:new Date().toISOString()}).eq('id',inviteId);if(up.error)throw up.error;if(inv&&inv.inviter_id)await createNotification({recipient_id:inv.inviter_id,type:'squad_invite_refused',entity_type:'squad_invites',entity_id:inviteId,payload:{body:nameOfMe()+' a refusé ton invitation Squad.',squad_id:inv.squad_id,actor_name:nameOfMe()}});toast('Invitation refusée.');return true}catch(e){console.warn('[GS266] rejectSquadInvite',e);toast('Impossible de refuser l’invitation.');return false}
+}
+async function leaveSquad(squadId){var u=requireOnlineUser();if(!u)return false;try{await sb().from('private_squad_members').delete().eq('squad_id',String(squadId)).eq('user_id',uid());toast('Tu as quitté la Squad.');return true}catch(e){toast('Impossible de quitter.');return false}}
+async function removeMember(squadId,userId){var u=requireOnlineUser();if(!u)return false;try{await sb().from('private_squad_members').delete().eq('squad_id',String(squadId)).eq('user_id',String(userId));toast('Membre retiré.');return true}catch(e){toast('Impossible de retirer ce membre.');return false}}
+async function loadInbox(filter){
+  if(!requireOnlineUser(false))return [];
+  try{var q=sb().from('notifications').select('*').eq('recipient_id',uid()).neq('status','deleted').order('created_at',{ascending:false}).limit(60);var r=await q;if(r.error)throw r.error;var list=r.data||[];if(filter==='requests')list=list.filter(function(n){return /request|invite/.test(String(n.type||''))});if(filter==='squad')list=list.filter(function(n){return /^squad_/.test(String(n.type||''))});if(filter==='activity')list=list.filter(function(n){return !/request|invite/.test(String(n.type||''))&&n.type!=='follow'});return list}catch(e){console.warn('[GS266] loadInbox',e);return []}
+}
+async function markNotificationRead(id){if(!requireOnlineUser(false)||!id)return;try{await sb().from('notifications').update({status:'read'}).eq('id',id).eq('recipient_id',uid())}catch(e){}}
+async function markAllRead(){if(!requireOnlineUser(false))return;try{await sb().from('notifications').update({status:'read'}).eq('recipient_id',uid()).eq('status','unread')}catch(e){}}
+async function deleteNotification(id){if(!requireOnlineUser(false)||!id)return;try{await sb().from('notifications').update({status:'deleted'}).eq('id',id).eq('recipient_id',uid())}catch(e){}}
+function setFollowBtn(btn,status){if(!btn)return;btn.disabled=false;btn.classList.remove('pending','sent','following','primary');if(status==='following'){btn.textContent='Abonné';btn.classList.add('following');btn.setAttribute('data-social-action','unfollow')}else{btn.textContent='Suivre';btn.classList.add('primary');btn.setAttribute('data-social-action','follow')}}
+function setSquadBtn(btn,status){if(!btn)return;btn.disabled=false;btn.classList.remove('pending','following','primary');if(status==='pending'){btn.textContent='Demande envoyée';btn.classList.add('pending');btn.disabled=true}else if(status==='member'||status==='accepted'){btn.textContent='Membre';btn.classList.add('following')}else{btn.textContent='Demander à rejoindre';btn.classList.add('primary')}}
+function parseArgs(onclick){var m=String(onclick||'').match(/\((.*)\)/);if(!m)return [];try{return Function('return ['+m[1]+']')()}catch(e){return []}}
+async function syncVisibleFollowButtons(){
+  if(!requireOnlineUser(false))return;
+  var buttons=[].slice.call(D.querySelectorAll('button[onclick*="sendFriendRequest"],button[onclick*="gsGlobalAddFriend"],button[data-social-action="follow"],button[data-social-action="unfollow"]'));
+  var ids=[];buttons.forEach(function(b){var id=b.getAttribute('data-target')||b.getAttribute('data-user-id');if(!id){var args=parseArgs(b.getAttribute('onclick')||'');id=args[0]}if(id){b.setAttribute('data-target',String(id));ids.push(String(id));}});
+  var map=await fetchFollowMap(ids);buttons.forEach(function(b){var id=b.getAttribute('data-target');if(!id)return;setFollowBtn(b,map[id]||'not_following')});
+}
+function interceptClick(ev){
+  var btn=ev.target&&ev.target.closest&&ev.target.closest('button,[data-social-action]');if(!btn)return;
+  var action=btn.getAttribute('data-social-action'),onclick=btn.getAttribute('onclick')||'';
+  if(!action&&onclick.indexOf('sendFriendRequest')>-1)action='follow';
+  if(!action&&onclick.indexOf('gsGlobalAddFriend')>-1)action='follow';
+  if(!action&&onclick.indexOf('gsRequestPrivateSquad')>-1)action='request-squad';
+  if(!action&&onclick.indexOf('gsGlobalRequestSquad')>-1)action='request-squad';
+  if(!action&&onclick.indexOf('acceptFriend')>-1)action='accept-request';
+  if(!action&&onclick.indexOf('rejectFriend')>-1)action='reject-request';
+  if(!action)return;
+  ev.preventDefault();ev.stopPropagation();ev.stopImmediatePropagation();
+  var args=parseArgs(onclick),target=btn.getAttribute('data-target')||btn.getAttribute('data-user-id')||args[0],name=btn.getAttribute('data-name')||args[1],owner=btn.getAttribute('data-owner')||args[2];
+  Promise.resolve().then(async function(){
+    if(action==='follow'){if(await followUser(target)){setFollowBtn(btn,'following')}}
+    else if(action==='unfollow'){if(await unfollowUser(target)){setFollowBtn(btn,'not_following')}}
+    else if(action==='request-squad'){await requestJoinSquad(target,name,owner,btn)}
+    else if(action==='accept-request'){await acceptSquadJoinRequest(target);try{btn.closest('.gs-notif-card,.gs-ms-request-row,[data-gs-squad-notif]')&&btn.closest('.gs-notif-card,.gs-ms-request-row,[data-gs-squad-notif]').remove()}catch(e){}}
+    else if(action==='reject-request'){await rejectSquadJoinRequest(target);try{btn.closest('.gs-notif-card,.gs-ms-request-row,[data-gs-squad-notif]')&&btn.closest('.gs-notif-card,.gs-ms-request-row,[data-gs-squad-notif]').remove()}catch(e){}}
+    else if(action==='accept-invite'){await acceptSquadInvite(target)}
+    else if(action==='reject-invite'){await rejectSquadInvite(target)}
+  });
+}
+async function renderInbox(filter){
+  filter=filter||W.__GS266_INBOX_FILTER||'all';W.__GS266_INBOX_FILTER=filter;
+  if(!requireOnlineUser()){return}
+  var old=$('gs-notif-v4')||$('gs-notif-ov');if(old)old.remove();
+  var html='<div id="gs-notif-v4" onclick="if(event.target===this)this.remove()" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9800;display:flex;align-items:flex-end"><div style="width:100%;max-height:82vh;overflow:auto;background:#0F1824;border:1px solid rgba(255,255,255,.08);border-radius:28px 28px 0 0;padding:18px;padding-bottom:calc(env(safe-area-inset-bottom,18px) + 18px)"><div style="width:44px;height:5px;background:rgba(255,255,255,.12);border-radius:99px;margin:0 auto 16px"></div><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><div><div style="font-size:12px;color:var(--acc);font-weight:1000;text-transform:uppercase;letter-spacing:.12em">Notifications</div><div style="font-size:26px;font-weight:1000;letter-spacing:-.05em;color:var(--txt)">Social</div></div><button onclick="document.getElementById(\'gs-notif-v4\').remove()" style="width:38px;height:38px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--txt);font-size:20px">×</button></div><div style="display:flex;gap:8px;overflow:auto;margin-bottom:14px">';
+  [['all','Tout'],['requests','Demandes'],['squad','Squad'],['activity','Activité']].forEach(function(x){html+='<button data-social-filter="'+x[0]+'" style="border:1px solid rgba(255,255,255,.08);background:'+(filter===x[0]?'var(--txt)':'rgba(255,255,255,.045)')+';color:'+(filter===x[0]?'#071018':'var(--txt)')+';border-radius:999px;padding:9px 13px;font-size:12px;font-weight:1000;white-space:nowrap">'+x[1]+'</button>'});
+  html+='</div><div id="gs266-inbox-body"><div style="color:var(--mut);font-size:13px;font-weight:800;padding:12px">Chargement…</div></div></div></div>';D.body.insertAdjacentHTML('beforeend',html);
+  D.querySelectorAll('#gs-notif-v4 [data-social-filter]').forEach(function(b){b.onclick=function(e){e.stopPropagation();renderInbox(b.getAttribute('data-social-filter'))}});
+  var body=$('gs266-inbox-body'),items=await loadInbox(filter);
+  if(!body)return;if(!items.length){body.innerHTML='<div style="border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);border-radius:20px;padding:16px;color:var(--mut);font-size:13px;font-weight:850">Rien pour le moment.</div>';return}
+  body.innerHTML=items.map(function(n){var p=n.payload||{},type=String(n.type||''),title=p.title||type.replace(/_/g,' '),bodyTxt=p.body||p.message||'Nouvelle notification.',unread=n.status==='unread';var actions='';if(type==='squad_join_request')actions='<button data-social-action="accept-request" data-target="'+esc(n.entity_id)+'">Accepter</button><button data-social-action="reject-request" data-target="'+esc(n.entity_id)+'">Refuser</button>';if(type==='squad_invite')actions='<button data-social-action="accept-invite" data-target="'+esc(n.entity_id)+'">Accepter</button><button data-social-action="reject-invite" data-target="'+esc(n.entity_id)+'">Refuser</button>';return '<div class="gs-notif-card" data-notif-id="'+esc(n.id)+'" style="display:flex;gap:12px;align-items:flex-start;border:1px solid '+(unread?'rgba(143,185,255,.32)':'rgba(255,255,255,.08)')+';background:rgba(255,255,255,.045);border-radius:20px;padding:13px;margin-bottom:8px"><div style="width:40px;height:40px;border-radius:14px;background:rgba(143,185,255,.16);display:grid;place-items:center;color:var(--acc);font-weight:1000;flex-shrink:0">'+(type.indexOf('squad')===0?'S':'•')+'</div><div style="flex:1;min-width:0"><b style="display:block;color:var(--txt);font-size:14px">'+esc(title)+'</b><span style="display:block;color:var(--mut);font-size:12px;font-weight:750;line-height:1.4;margin-top:3px">'+esc(bodyTxt)+'</span><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'+actions+'<button data-social-mark-read="'+esc(n.id)+'">Lu</button><button data-social-delete-notif="'+esc(n.id)+'">Supprimer</button></div></div></div>'}).join('');
+}
+function normalizeSocialUI(){
+  [].slice.call(D.querySelectorAll('button[onclick*="sendFriendRequest"],button[onclick*="gsGlobalAddFriend"]')).forEach(function(b){var args=parseArgs(b.getAttribute('onclick')||'');if(args[0])b.setAttribute('data-target',String(args[0]));b.setAttribute('data-social-action','follow');if(/demande envoyée|ajouter|ami/i.test(b.textContent||''))b.textContent='Suivre'});
+  [].slice.call(D.querySelectorAll('button[onclick*="gsRequestPrivateSquad"],button[onclick*="gsGlobalRequestSquad"]')).forEach(function(b){var args=parseArgs(b.getAttribute('onclick')||'');if(args[0])b.setAttribute('data-target',String(args[0]));if(args[1])b.setAttribute('data-name',String(args[1]));if(args[2])b.setAttribute('data-owner',String(args[2]));b.setAttribute('data-social-action','request-squad');if(/^demander$|^demandé$/i.test((b.textContent||'').trim()))b.textContent='Demander à rejoindre'});
+  [].slice.call(D.querySelectorAll('button[onclick*="acceptFriend"]')).forEach(function(b){var args=parseArgs(b.getAttribute('onclick')||'');if(args[0])b.setAttribute('data-target',String(args[0]));b.setAttribute('data-social-action','accept-request')});
+  [].slice.call(D.querySelectorAll('button[onclick*="rejectFriend"]')).forEach(function(b){var args=parseArgs(b.getAttribute('onclick')||'');if(args[0])b.setAttribute('data-target',String(args[0]));b.setAttribute('data-social-action','reject-request')});
+}
+W.SocialService={requireOnlineUser:requireOnlineUser,followUser:followUser,unfollowUser:unfollowUser,getFollowStatus:getFollowStatus,fetchFollowMap:fetchFollowMap,searchUsers:searchUsers,createNotification:createNotification,loadInbox:loadInbox,markNotificationRead:markNotificationRead,markAllRead:markAllRead,deleteNotification:deleteNotification,requestJoinSquad:requestJoinSquad,acceptSquadJoinRequest:acceptSquadJoinRequest,rejectSquadJoinRequest:rejectSquadJoinRequest,inviteUserToSquad:inviteUserToSquad,acceptSquadInvite:acceptSquadInvite,rejectSquadInvite:rejectSquadInvite,leaveSquad:leaveSquad,removeMember:removeMember,setFollowBtn:setFollowBtn,setSquadBtn:setSquadBtn,connectionRequiredHTML:connectionRequiredHTML};
+W.gsRequireSocialReady=requireOnlineUser;
+W.sendFriendRequest=function(targetId,targetName,btn){return followUser(targetId).then(function(ok){if(ok)setFollowBtn(btn,'following');return ok})};
+W.gsGlobalAddFriend=function(id,name,btn){return W.sendFriendRequest(id,name,btn)};
+W.gsFollow=function(id,btn){return followUser(id).then(function(ok){if(ok)setFollowBtn(btn,'following')})};
+W.gsUnfollow=function(id,btn){return unfollowUser(id).then(function(ok){if(ok)setFollowBtn(btn,'not_following')})};
+W.gsToggleFollow=async function(id,btn){var st=await getFollowStatus(id);return st==='following'?W.gsUnfollow(id,btn):W.gsFollow(id,btn)};
+W.gsSetFollowBtn=setFollowBtn;
+W.fetchFollowMap=fetchFollowMap;W.getFollowStatus=getFollowStatus;
+W.loadFriendRequests=async function(){return loadInbox('requests')};
+W.acceptFriend=function(requestId){return acceptSquadJoinRequest(requestId)};
+W.rejectFriend=function(requestId){return rejectSquadJoinRequest(requestId)};
+W.gsRequestPrivateSquad=function(id,name,owner,btn){return requestJoinSquad(id,name,owner,btn)};
+W.gs190RequestSquad=W.gsRequestPrivateSquad;
+W.gsGlobalRequestSquad=function(id,name,owner,btn){return requestJoinSquad(id,name,owner,btn)};
+W.gsAcceptSquadInvite=function(notifOrInviteId,squadId,squadName){return acceptSquadInvite(notifOrInviteId)};
+W.gsRefuseSquadInvite=function(notifOrInviteId){return rejectSquadInvite(notifOrInviteId)};
+W.openNotifications=function(){return renderInbox('all')};
+W.gsNotificationsRefresh=function(){return loadInbox('all')};
+W.gsMarkNotificationRead=markNotificationRead;W.gsDeleteNotification=deleteNotification;
+W.doLoginApple=function(){if(W.authShowErr)W.authShowErr('Connexion Apple indisponible pour le moment. Utilise Google ou email.');else toast('Connexion Apple indisponible pour le moment.')};
+D.addEventListener('click',interceptClick,true);
+D.addEventListener('click',function(ev){var b=ev.target&&ev.target.closest&&ev.target.closest('[data-social-mark-read],[data-social-delete-notif]');if(!b)return;ev.preventDefault();ev.stopPropagation();if(b.hasAttribute('data-social-mark-read'))markNotificationRead(b.getAttribute('data-social-mark-read')).then(function(){b.closest('.gs-notif-card')&&b.closest('.gs-notif-card').classList.remove('unread')});if(b.hasAttribute('data-social-delete-notif'))deleteNotification(b.getAttribute('data-social-delete-notif')).then(function(){b.closest('.gs-notif-card')&&b.closest('.gs-notif-card').remove()})},true);
+try{new MutationObserver(function(){normalizeSocialUI();clearTimeout(W.__gs266FollowSyncTimer);W.__gs266FollowSyncTimer=setTimeout(syncVisibleFollowButtons,250)}).observe(D.documentElement,{childList:true,subtree:true})}catch(e){}
+if(D.readyState==='loading')D.addEventListener('DOMContentLoaded',function(){normalizeSocialUI();syncVisibleFollowButtons()});else{normalizeSocialUI();setTimeout(syncVisibleFollowButtons,300)}
+console.log('GS266 SocialService loaded — social serveur obligatoire, pas de fallback local.');
 })();
 </script>
