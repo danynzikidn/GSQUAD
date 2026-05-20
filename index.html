@@ -5840,22 +5840,6 @@ function openFriendProfile(u) {
  });
  }
 
- // Bouton suivre/désabonner
- if (_supa && u.id && _supaUser && u.id !== _supaUser.id) {
-  var followBtn = document.createElement('button');
-  followBtn.style.cssText = 'padding:10px 18px;border-radius:20px;border:1px solid var(--acc);background:var(--acc-dim);color:var(--acc);font-size:13px;font-weight:700;width:100%;margin-top:12px';
-  followBtn.textContent = "S'abonner";
-  followBtn.dataset.action = 'follow';
-  followBtn.onclick = function(){ gsToggleFollow(u.id, u.username||u.name, followBtn); };
-  body.appendChild(followBtn);
-  gsIsFollowing(u.id).then(function(isF) {
-   if (isF) {
-    followBtn.textContent = 'Abonné ✓';
-    followBtn.dataset.action = 'unfollow';
-    followBtn.style.cssText = 'padding:10px 18px;border-radius:20px;border:1px solid var(--brd);background:none;color:var(--mut);font-size:13px;font-weight:700;width:100%;margin-top:12px';
-   }
-  });
- }
 
  ov.classList.add('open');
 }
@@ -14794,8 +14778,8 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
  function cleanArr(a){return Array.isArray(a)?a.filter(Boolean):[]}
  function eventColor(t){return {session_start:'#6EA8FF',session_end:'#4ADE80',badge:'#F8C14A',level_up:'#A78BFA',encouragement:'#FB7185',reaction:'#FB7185',friend_request:'#57FFE1',pr:'#FF8A4C',walk_start:'#38BDF8',walk_end:'#22C55E'}[t]||'#8FB9FF'}
  function eventIcon(t){return {session_start:'•',session_end:'✓',badge:'◆',level_up:'↑',encouragement:'+',reaction:'+',friend_request:'?',pr:'!',walk_start:'↗',walk_end:'✓'}[t]||'•'}
- function labelType(t){return {session_start:'Séance lancée',session_end:'Séance terminée',badge:'Nouveau badge',level_up:'Niveau supérieur',encouragement:'Encouragement',reaction:'Réaction',friend_request:'Demande Squad',pr:'Record',walk_start:'Marche lancée',walk_end:'Marche terminée'}[t]||'Notification'}
- function bodyFor(t,p,a){p=p||{};var n=(a&&a.name)||'Un membre';if(t==='session_start')return n+' vient de lancer une séance. Envoie-lui de la force.';if(t==='session_end')return n+' a terminé sa séance'+(p.dur?' · '+p.dur:'')+(p.xp?' · +'+p.xp+' XP':'')+'.';if(t==='badge')return n+' a obtenu '+(p.badge||'un nouveau badge')+'.';if(t==='level_up')return n+' est passé niveau '+(p.level||p.niveau||'supérieur')+'.';if(t==='encouragement'||t==='reaction')return n+' t’a encouragé : '+(p.text||p.reaction||'Force à toi')+'.';if(t==='friend_request')return n+' veut te rejoindre.';if(t==='pr')return n+' a battu un record'+(p.ex?' sur '+p.ex:'')+'.';return n+' a publié une activité.'}
+ function labelType(t){return {session_start:'Séance lancée',session_end:'Séance terminée',badge:'Nouveau badge',level_up:'Niveau supérieur',encouragement:'Encouragement',reaction:'Réaction',friend_request:'Demande Squad',pr:'Record',walk_start:'Marche lancée',walk_end:'Marche terminée',follow:'Nouvel abonné',follow_new:'Nouvel abonné',squad_invite:'Invitation Squad'}[t]||'Notification'}
+ function bodyFor(t,p,a){p=p||{};var n=(a&&a.name)||'Un membre';if(t==='session_start')return n+' vient de lancer une séance. Envoie-lui de la force.';if(t==='session_end')return n+' a terminé sa séance'+(p.dur?' · '+p.dur:'')+(p.xp?' · +'+p.xp+' XP':'')+'.';if(t==='badge')return n+' a obtenu '+(p.badge||'un nouveau badge')+'.';if(t==='level_up')return n+' est passé niveau '+(p.level||p.niveau||'supérieur')+'.';if(t==='encouragement'||t==='reaction')return n+' t’a encouragé : '+(p.text||p.reaction||'Force à toi')+'.';if(t==='friend_request')return n+' veut te rejoindre.';if(t==='pr')return n+' a battu un record'+(p.ex?' sur '+p.ex:'')+'.';if(t==='follow'||t==='follow_new')return n+' s’est abonné à ton profil.';return n+' a publié une activité.'}
  function keyFor(type,p){p=p||{};return [type,uid()||'local',p.sessionId||p.badge||p.level||p.activityId||p.targetUserId||'',Math.floor(Date.now()/45000)].join(':')}
  function remember(key){var s=S();s._squadEventKeys=s._squadEventKeys||{};if(s._squadEventKeys[key])return false;s._squadEventKeys[key]=Date.now();var ks=Object.keys(s._squadEventKeys);if(ks.length>80){ks.sort(function(a,b){return s._squadEventKeys[a]-s._squadEventKeys[b]}).slice(0,ks.length-80).forEach(function(k){delete s._squadEventKeys[k]})}save();return true}
  async function friendIds(){var ids=cleanArr(S().friends).map(function(f){return f&&f.id}).filter(Boolean);if(ids.length||!window._supa||!uid())return ids;try{var a=await window._supa.from('friend_requests').select('from_id,to_id,status').or('from_id.eq.'+uid()+',to_id.eq.'+uid()).eq('status','accepted');(a.data||[]).forEach(function(r){var id=r.from_id===uid()?r.to_id:r.from_id;if(id&&ids.indexOf(id)<0)ids.push(id)})}catch(e){}return ids}
@@ -18762,7 +18746,7 @@ window.openChargesSelector=function(){
  var TYPES={friend_request:['Demande d’ami','?', '#57FFE1','Demandes'],friend_accept:['Squad ajoutée','✓','#57FFE1','Demandes'],squad_invite:['Invitation squad','+','#57FFE1','Squad'],private_squad_request:['Demande squad privée','?','#57FFE1','Squad'],session_start:['Séance lancée','•','#6EA8FF','Activité'],session_end:['Séance terminée','✓','#4ADE80','Activité'],badge:['Nouveau badge','◆','#F8C14A','Activité'],badge_unlock:['Nouveau badge','◆','#F8C14A','Activité'],level_up:['Niveau supérieur','↑','#A78BFA','Activité'],encouragement:['Encouragement','+','#FB7185','Activité'],reaction:['Réaction','+','#FB7185','Activité'],comment:['Commentaire','”','#8FB9FF','Activité'],pr:['Record','!','#FF8A4C','Activité'],squad_mission:['Mission squad','✓','#57FFE1','Squad'],boss_hit:['Boss touché','!','#FF6B7A','Squad'],boss_event:['Boss squad','!','#FF6B7A','Squad'],challenge:['Défi','◇','#F8C14A','Squad'],walk_start:['Marche lancée','↗','#38BDF8','Activité'],walk_end:['Marche terminée','✓','#22C55E','Activité'],system:['Info G-SQUAD','•','#8FB9FF','Système']};
  function typeInfo(t){return TYPES[String(t||'').toLowerCase()]||['Notification','•','#8FB9FF','Activité']}
  function label(t){return typeInfo(t)[0]}function icon(t){return typeInfo(t)[1]}function color(t){return typeInfo(t)[2]}function groupType(t){return typeInfo(t)[3]}
- function bodyFor(t,p,a){p=p||{};a=a||{};var n=a.name||p.actor_name||p.actorName||'Un membre';t=String(t||'').toLowerCase();if(t==='session_start')return n+' vient de lancer une séance. Tu peux l’encourager.';if(t==='session_end')return n+' a terminé sa séance'+(p.dur?' · '+p.dur:'')+(p.xp?' · +'+p.xp+' XP':'')+'.';if(t==='badge'||t==='badge_unlock')return n+' a obtenu '+(p.badge||'un nouveau badge')+'.';if(t==='level_up')return n+' est passé niveau '+(p.level||p.niveau||'supérieur')+'.';if(t==='encouragement'||t==='reaction')return n+' t’a envoyé : '+(p.text||p.reaction||'Force')+'.';if(t==='friend_request')return n+' veut te rejoindre.';if(t==='squad_invite')return 'Tu as reçu une invitation pour '+(p.squad_name||p.squadName||'une squad')+'.';if(t==='squad_mission')return 'Ta squad avance sur une mission collective.';if(t==='boss_hit'||t==='boss_event')return p.text||'Événement Battle Squad.';if(t==='pr')return n+' a battu un record'+(p.ex?' sur '+p.ex:'')+'.';return p.body||p.message||'Nouvelle activité G-SQUAD.'}
+ function bodyFor(t,p,a){p=p||{};a=a||{};var n=a.name||p.actor_name||p.actorName||'Un membre';t=String(t||'').toLowerCase();if(t==='session_start')return n+' vient de lancer une séance. Tu peux l’encourager.';if(t==='session_end')return n+' a terminé sa séance'+(p.dur?' · '+p.dur:'')+(p.xp?' · +'+p.xp+' XP':'')+'.';if(t==='badge'||t==='badge_unlock')return n+' a obtenu '+(p.badge||'un nouveau badge')+'.';if(t==='level_up')return n+' est passé niveau '+(p.level||p.niveau||'supérieur')+'.';if(t==='encouragement'||t==='reaction')return n+' t’a envoyé : '+(p.text||p.reaction||'Force')+'.';if(t==='friend_request')return n+' veut te rejoindre.';if(t==='follow'||t==='follow_new')return n+' s’est abonné à ton profil.';if(t==='squad_invite')return 'Tu as reçu une invitation pour '+(p.squad_name||p.squadName||'une squad')+'.';if(t==='squad_mission')return 'Ta squad avance sur une mission collective.';if(t==='boss_hit'||t==='boss_event')return p.text||'Événement Battle Squad.';if(t==='pr')return n+' a battu un record'+(p.ex?' sur '+p.ex:'')+'.';return p.body||p.message||'Nouvelle activité G-SQUAD.'}
  function status(n){return String(n&&n.status||'unread').toLowerCase()}function unread(n){return n&&status(n)!=='read'&&status(n)!=='deleted'}
  function isRequest(n){var t=String(n&&n.type||'').toLowerCase();return ['friend_request','friend_accept','squad_invite','private_squad_request'].indexOf(t)>-1}
  function isSquad(n){var t=String(n&&n.type||'').toLowerCase();return /^squad_|^boss_|challenge|mission|private_squad/.test(t)}
@@ -19041,7 +19025,7 @@ function routeMeta(r){var bits=[],d=r.distanceKm||r.km||r.distance;if(d)bits.pus
 function routesHtml(data){var items=publicRoutes(data);if(!items.length)return '<div class="gs119-public-route-empty">Aucun tracé public pour l’instant.<br>Les parcours running ou randonnée apparaîtront ici.</div>';return items.map(function(r){return '<div class="gs119-card"><b>'+E(r.title||r.name||r.type||'Activité')+'</b><div style="margin-top:5px;color:var(--txt2);font-size:13px;font-weight:850">'+E(routeMeta(r))+'</div></div>'}).join('')}
 function xpBlock(xp,lv){return '<div class="gs119-xp-block"><button type="button" class="gs119-xp-ring" data-public-act="xp" style="--p:'+E(lv.pct)+'" aria-label="Voir la progression des niveaux"><b>Niv. '+E(lv.lvl)+'</b><span>'+E(xp)+' XP</span></button><div class="gs119-xp-copy"><strong>Progression du niveau</strong><small>'+E(lv.toNext)+' XP avant le niveau '+E(lv.lvl+1)+'. Clique pour voir les prochains paliers.</small></div></div>'}
 function statsBar(data,sp){return '<div class="gs119-stats gs119-main-stats"><div class="gs119-stat"><b>'+E(postsCount(data))+'</b><span>Photos</span></div><div class="gs119-stat"><b id="gs119-public-followers">'+E(followersCount(data))+'</b><span>Abonnés</span></div><div class="gs119-stat"><b>'+E(sp.sessions)+'</b><span>Séances</span></div></div>'}
-function actionsHtml(u,isFriend){var followed=isFollowingPublic(u)||isFriend;return '<div class="gs119-public-actions"><button type="button" class="primary '+(followed?'followed':'')+'" data-public-act="follow" '+(followed?'disabled':'')+'>'+(followed?'Abonné':'S’abonner')+'</button><button type="button" data-public-act="addSquad">Ajouter Squad</button><button type="button" data-public-act="challenge">Défier</button></div>'}
+function actionsHtml(u,isFriend){var followed=isFollowingPublic(u)||isFriend;var lbl=followed?'Abonné':'S’abonner';var cls=followed?'primary followed':'primary';return '<div class="gs119-public-actions">'+'<button type="button" class="'+cls+'" data-public-act="follow">'+lbl+'</button>'+'<button type="button" data-public-act="addSquad">Ajouter Squad</button>'+'<button type="button" data-public-act="challenge">Défier</button>'+'</div>';}
 function profileHtml(u,data){var p=profOf(data),sp=scorePack(data),xp=sp.xp,lv=level(xp),name=nameOf(u,data),username=usernameOf(u,data),avatar=avatarOf(u,data),av=avatar?'<img src="'+E(avatar)+'" alt="Photo de profil">':E(name.charAt(0).toUpperCase()),gym=gymLabel(data),goal=goalLabel(data),rank=Math.max(1,parseInt(data.rank||p.rank||u.rank||1,10)||1),squad=activeSquadName(data);var ids=A(S().friends).map(function(f){return String(f&&((f.id)||(f.user_id)||(f.uid))||'')});var isFriend=ids.indexOf(String(u.id||''))>-1;return '<div class="gs119-prof gs119-public-prof"><div class="gs119-head"><button type="button" class="gs119-public-back" data-public-act="backSearch" aria-label="Retour">‹ <span>Retour aux résultats</span></button><div class="gs119-title">Profil</div><span></span></div><div class="gs119-shell"><aside class="gs119-side"><section class="gs119-top"><button type="button" class="gs119-avatar" data-public-act="avatar" data-avatar-src="'+E(avatar)+'" data-avatar-name="'+E(name)+'" aria-label="Agrandir la photo de profil">'+av+'</button><div class="gs119-top-main"><div class="gs119-name-row"><div class="gs119-name">'+E(name)+'</div>'+badgeStackHtml(data,sp)+'</div><div class="gs119-user">'+(username?'@'+E(username):'@username')+'</div><div class="gs119-meta"><span class="blue">'+E(gym)+'</span><span>'+E(goal)+'</span></div><button type="button" class="gs119-rank" data-public-act="rank"><span>Classement</span><b>#'+E(rank)+'</b></button></div></section>'+actionsHtml(u,isFriend)+'<section class="gs119-info"><div class="gs119-info-head"><div><div class="gs119-kicker">Mes informations</div><div class="gs119-info-title">Profil sportif</div></div><span class="gs119-info-edit public">Public</span></div><div class="gs119-info-list"><div class="gs119-info-row"><span>Salle</span><b>'+E(gym)+'</b></div><div class="gs119-info-row"><span>Objectif</span><b>'+E(goal)+'</b></div><div class="gs119-info-row"><span>Classement</span><b>#'+E(rank)+'</b></div>'+(squad&&squad!=='Aucune'?'<div class="gs119-info-row"><span>Squad</span><b>'+E(squad)+'</b></div>':'')+'</div>'+xpBlock(xp,lv)+'<div class="gs119-public-note">Profil en lecture seule. Les infos privées restent masquées.</div></section></aside><main class="gs119-main">'+statsBar(data,sp)+'<div class="gs119-tabs" id="gs119-public-tabs"><button type="button" class="active" data-public-slide="0">Photos</button><button type="button" data-public-slide="1">Stats</button><button type="button" data-public-slide="2">Tracés</button></div><div class="gs119-dots" id="gs119-public-dots"><span class="active"></span><span></span><span></span></div><div class="gs119-swipe" id="gs119-public-swipe"><section class="gs119-slide"><div class="gs119-section-head"><div><div class="gs119-section-title">Photos</div><div class="gs119-section-sub">Grille de progression publique.</div></div></div><div class="gs119-grid '+(!postsCount(data)?'empty':'')+'" id="gs119-public-grid">'+galleryHtml(data)+'</div></section><section class="gs119-slide"><div class="gs119-section-head"><div><div class="gs119-section-title">Stats</div><div class="gs119-section-sub">Résumé rapide du profil.</div></div></div>'+statsHtml(data,sp)+'</section><section class="gs119-slide"><div class="gs119-section-head"><div><div class="gs119-section-title">Tracés</div><div class="gs119-section-sub">Running et randonnée.</div></div></div>'+routesHtml(data)+'</section></div></main></div></div>'}
 function wireSwipe(body){var swipe=body.querySelector('#gs119-public-swipe'),tabs=body.querySelector('#gs119-public-tabs'),dots=body.querySelector('#gs119-public-dots');if(!swipe||!tabs)return;var btns=[].slice.call(tabs.querySelectorAll('button[data-public-slide]')),dotItems=dots?[].slice.call(dots.querySelectorAll('span')):[];function setActive(i){btns.forEach(function(b,n){b.classList.toggle('active',n===i)});dotItems.forEach(function(d,n){d.classList.toggle('active',n===i)})}function go(i){var target=swipe.querySelectorAll('.gs119-slide')[i];if(!target)return;try{target.scrollIntoView({behavior:'smooth',inline:'start',block:'nearest'})}catch(e){swipe.scrollLeft=i*swipe.clientWidth}setActive(i)}btns.forEach(function(b){b.onclick=function(ev){ev.preventDefault();go(parseInt(b.getAttribute('data-public-slide'),10)||0)}});dotItems.forEach(function(d,i){d.onclick=function(ev){ev.preventDefault();go(i)}});var raf=0;swipe.addEventListener('scroll',function(){if(raf)cancelAnimationFrame(raf);raf=requestAnimationFrame(function(){var i=Math.round(swipe.scrollLeft/Math.max(1,swipe.clientWidth));setActive(Math.max(0,Math.min(btns.length-1,i)))})},{passive:true});setTimeout(function(){setActive(0)},50)}
 function openAvatar(src,name){var old=$('gs119-public-avatar-ov');if(old)old.remove();var initial=String(name||'A').charAt(0).toUpperCase();D.body.insertAdjacentHTML('beforeend','<div id="gs119-public-avatar-ov" class="gs119-public-avatar-ov" data-close="1"><div class="gs119-public-avatar-card"><button type="button" class="gs119-public-avatar-close" data-close="1">×</button><div class="gs119-public-avatar-img">'+(src?'<img src="'+E(src)+'" alt="Photo de profil">':E(initial))+'</div><div class="gs119-public-avatar-name">'+E(name||'Profil')+'</div></div></div>');var ov=$('gs119-public-avatar-ov');if(ov)ov.addEventListener('click',function(e){if(e.target&&e.target.getAttribute('data-close')==='1')ov.remove()})}
@@ -27622,6 +27606,93 @@ el.innerHTML=chunks.join('');D.querySelectorAll('[data-gs-follow-id]').forEach(a
 })();
 </script>
 
+
+<style id="gs-squad-invite-patch-css">
+#gs-ms-app .gs-ms-tabs{display:flex!important;gap:0!important;margin:0!important;border-bottom:1px solid rgba(255,255,255,.08)!important;background:none!important;padding:0 4px!important}
+#gs-ms-app .gs-ms-tabs button{flex:1!important;height:44px!important;border:0!important;border-radius:0!important;background:transparent!important;color:#8FA1B7!important;font-weight:1000!important;font-size:13px!important;position:relative!important;cursor:pointer!important;transition:color .15s!important}
+#gs-ms-app .gs-ms-tabs button.on{color:#F4F6FB!important;background:transparent!important}
+#gs-ms-app .gs-ms-tabs button.on::after{content:'';position:absolute;left:10px;right:10px;bottom:0;height:2px;border-radius:999px;background:linear-gradient(90deg,#C8B4FF,#52D3FF)}
+#gs-ms-app .gs-ms-dots{display:none!important}
+</style>
+
+<script id="gs-squad-invite-patch-js">
+(function(){
+  var W=window,D=document;
+  function uid(){return W._supaUser&&W._supaUser.id}
+  function supa(){return W._supa}
+  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function toast(t){try{if(W.notify)W.notify(t)}catch(e){}}
+
+  W.gsAcceptSquadInvite=async function(notifId,squadId,squadName){
+    var row=D.querySelector('[data-gs-squad-notif="'+notifId+'"]');
+    if(row){var btns=row.querySelectorAll('button');btns.forEach(function(b){b.disabled=true});row.style.opacity='.5'}
+    try{
+      if(supa()&&uid()){
+        await supa().from('private_squad_members').upsert(
+          {squad_id:String(squadId),user_id:uid(),role:'member',joined_at:new Date().toISOString()},
+          {onConflict:'squad_id,user_id'}
+        );
+        await supa().from('notifications').update({status:'accepted'}).eq('id',notifId);
+        if(typeof W.loadMembershipSquads==='function')await W.loadMembershipSquads();
+      }
+      if(row)row.remove();
+      toast('Tu as rejoint '+(squadName||'la squad')+' \uD83D\uDCAA');
+    }catch(e){
+      toast('Erreur: '+(e.message||e));
+      if(row){row.style.opacity='1';row.querySelectorAll('button').forEach(function(b){b.disabled=false})}
+    }
+  };
+
+  W.gsRefuseSquadInvite=async function(notifId){
+    var row=D.querySelector('[data-gs-squad-notif="'+notifId+'"]');
+    if(row)row.style.opacity='.5';
+    try{
+      if(supa()&&uid())await supa().from('notifications').update({status:'deleted'}).eq('id',notifId);
+      if(row)row.remove();
+      toast('Invitation refus\u00e9e.');
+    }catch(e){if(row)row.style.opacity='1'}
+  };
+
+  async function injectSquadInvites(){
+    var panel=D.getElementById('gs-notif-v4');if(!panel)return;
+    if(panel.querySelector('.gs-squad-invite-section'))return;
+    if(!supa()||!uid())return;
+    try{
+      var r=await supa().from('notifications')
+        .select('id,payload,actor_id,created_at')
+        .eq('user_id',uid()).eq('type','squad_invite')
+        .neq('status','deleted').neq('status','accepted')
+        .order('created_at',{ascending:false}).limit(10);
+      var items=r.data||[];if(!items.length)return;
+      var sheet=panel.querySelector('.gs-notif-v4-sheet');if(!sheet)return;
+      var html='<div class="gs-squad-invite-section" style="padding:0 16px 16px">'
+        +'<div class="gs-notif-v4-group">Invitations Squad</div>'
+        +items.map(function(n){
+          var p=n.payload||{};
+          var sq=p.squad_name||p.squadName||'une squad';
+          var who=p.actor_name||p.actorName||'Quelqu\u2019un';
+          var sid=String(p.squad_id||p.squadId||'');
+          var sqSafe=sq.replace(/'/g,'').replace(/&#39;/g,'');
+          return '<div data-gs-squad-notif="'+E(n.id)+'" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.04);border:1px solid rgba(157,124,255,.22);border-radius:18px;padding:12px;margin-bottom:8px">'
+            +'<div style="width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,#9D7CFF,#52D3FF);color:#071018;display:grid;place-items:center;font-size:18px;font-weight:1000;flex-shrink:0">+</div>'
+            +'<div style="flex:1;min-width:0"><b style="display:block;color:#F4F6FB;font-size:14px">'+E(who)+'</b><span style="display:block;color:#8EA0B8;font-size:12px;font-weight:850;margin-top:2px">invite dans '+E(sq)+'</span></div>'
+            +'<div style="display:flex;gap:8px;flex-shrink:0">'
+            +'<button style="height:34px;border-radius:999px;background:linear-gradient(90deg,#9D7CFF,#52D3FF);color:#071018;border:0;font-weight:1000;padding:0 14px;font-size:12px;cursor:pointer" onclick="window.gsAcceptSquadInvite(\''+E(n.id)+'\',\''+E(sid)+'\',\''+sqSafe+'\')">Accepter</button>'
+            +'<button style="height:34px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#8EA0B8;font-weight:1000;padding:0 12px;font-size:12px;cursor:pointer" onclick="window.gsRefuseSquadInvite(\''+E(n.id)+'\')">Refuser</button>'
+            +'</div></div>';
+        }).join('')+'</div>';
+      sheet.insertAdjacentHTML('beforeend',html);
+    }catch(e){console.warn('squad invite inject',e)}
+  }
+
+  var _prev=W.openNotifications;
+  W.openNotifications=function(){
+    var r=typeof _prev==='function'?_prev.apply(this,arguments):undefined;
+    Promise.resolve(r).then(function(){setTimeout(injectSquadInvites,400)});
+    return r;
+  };
+})();
+</script>
 </body>
 </html>
 
