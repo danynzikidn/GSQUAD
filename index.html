@@ -696,6 +696,7 @@ body.theme-female{--acc:#8FB9FF!important;--acc-dim:rgba(143,185,255,.13)!import
  <div class="auth-sub">Entraîne-toi. Progresse. Domine.</div>
  <div style="display:flex;flex-direction:column;gap:12px">
  <button type="button" class="auth-btn" onclick="authShowView('signup-s1')">Créer un compte</button>
+ <button type="button" style="width:100%;padding:16px;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:#fff;color:#071018;font-size:15px;font-weight:1000;cursor:pointer" onclick="window.doLoginGoogle&&window.doLoginGoogle()">Continuer avec Google</button>
  <button type="button" style="width:100%;padding:16px;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:var(--txt);font-size:15px;font-weight:900;cursor:pointer" onclick="authShowView('login')">Me connecter</button>
  <div style="display:flex;align-items:center;gap:10px;margin:2px 0">
  <div style="flex:1;height:1px;background:rgba(255,255,255,.07)"></div>
@@ -3384,7 +3385,19 @@ async function initAuth() {
   }
   return false;
  }
- /* GS social refactor: legacy auth listener removed; gs264 initAuth owns Supabase auth. */
+ _supa.auth.onAuthStateChange(async function(event, session) {
+  if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session && session.user) {
+   await handleSession(session);
+   return;
+  }
+  if (event === 'SIGNED_OUT') {
+   handled=false;
+   state = {}; _supaUser = null;
+   if(authEl)authEl.style.display = 'flex';
+   if (typeof authShowView === 'function') authShowView('landing');
+   if(onboardEl)onboardEl.style.display = 'none';
+  }
+ });
  var sess = await _supa.auth.getSession();
  if (await handleSession(sess.data && sess.data.session)) return;
  setTimeout(async function(){
@@ -6484,6 +6497,362 @@ document.addEventListener('DOMContentLoaded',function(){
 });
 </script>
 
+<!-- G-SQUAD SOCIALSERVICE (1/2) - DÉFINITION : fondation sociale serveur, chargée juste après l'init du client Supabase, AVANT le flux Auth qui s'appuie dessus -->
+<script id="gs-social-service-def-js">
+(function(){
+'use strict';
+/* =====================================================================
+   SocialService : SEULE couche autorisée à toucher au social serveur.
+   Serveur obligatoire. Aucune écriture sociale locale.
+   Définie ICI (après le client, avant l'Auth) pour respecter l'ordre
+   logique de chargement : client -> SocialService -> Auth -> features.
+   Modèle : follows (suivre) + private_squad_requests (demande) +
+   squad_invites (invitation). Notifications status unread/read/deleted.
+   ===================================================================== */
+var W=window, D=document;
+
+/* Colonne destinataire de la table notifications.
+   Par défaut 'user_id' (= mon SQL gsquad_supabase.sql ET le code existant).
+   Si ta base LIVE utilise un autre nom (ex : 'recipient_id'), définis
+   AVANT le chargement : window.GS_NOTIF_RECIPIENT_COL = 'recipient_id';
+   Une seule source de vérité, utilisée partout pour les notifications. */
+var RCOL = (W.GS_NOTIF_RECIPIENT_COL || 'user_id');
+
+function client(){ return W._supa || null; }
+function meId(){ try{ return (W._supaUser && W._supaUser.id) ? String(W._supaUser.id) : null; }catch(e){ return null; } }
+function isOnline(){ return !!(client() && meId()); }
+function toast(m){ try{ if(typeof W.toast==='function') W.toast(m); else if(typeof W.notify==='function') W.notify(m); }catch(e){} }
+function meProfile(){ try{ var p=(typeof W.P==='function'?W.P():null)||{}; return p; }catch(e){ return {}; } }
+function meName(){ var p=meProfile(); return p.name||p.display_name||p.username||(W._supaUser&&W._supaUser.email?String(W._supaUser.email).split('@')[0]:'Membre'); }
+function meUsername(){ var p=meProfile(); return String(p.username||'').replace(/^@/,''); }
+function meAvatar(){ var p=meProfile(); return p.avatar||p.avatar_url||''; }
+function notLogged(){ toast('Connexion requise. Le social fonctionne uniquement connecté.'); return null; }
+
+var SocialService = {
+
+  requireOnlineUser: function(){
+    if(!isOnline()){ var e=new Error('Connexion requise'); e.code='offline'; throw e; }
+    return { client: client(), uid: meId() };
+  },
+
+  /* ---------------- FOLLOW ---------------- */
+  getFollowStatus: async function(targetId){
+    if(!isOnline()||!targetId||String(targetId)===meId()) return 'self';
+    try{
+      var r=await client().from('follows').select('id,status').eq('follower_id',meId()).eq('following_id',targetId).maybeSingle();
+      return (r.data&&(r.data.status||'accepted'))||'';
+    }catch(e){ return ''; }
+  },
+
+  fetchFollowMap: async function(ids){
+    var map={}; ids=(ids||[]).filter(Boolean);
+    if(!isOnline()||!ids.length) return map;
+    try{
+      var r=await client().from('follows').select('following_id,status').eq('follower_id',meId()).in('following_id',ids);
+      (r.data||[]).forEach(function(x){ map[String(x.following_id)]=x.status||'accepted'; });
+    }catch(e){}
+    return map;
+  },
+
+  followUser: async function(targetId, targetName){
+    if(!isOnline()) return notLogged();
+    targetId=String(targetId||''); if(!targetId||targetId===meId()) return;
+    var sb=client();
+    await sb.from('follows').upsert(
+      { follower_id: meId(), following_id: targetId, status:'accepted', created_at:new Date().toISOString() },
+      { onConflict:'follower_id,following_id' }
+    );
+    await SocialService.createNotification({
+      user_id: targetId, type:'follow', entity_type:'follows', entity_id: meId(),
+      title:'Nouvel abonné',
+      body:(meUsername()?'@'+meUsername():meName())+' a commencé à te suivre.'
+    });
+    return 'accepted';
+  },
+
+  unfollowUser: async function(targetId){
+    if(!isOnline()) return notLogged();
+    targetId=String(targetId||''); if(!targetId) return;
+    await client().from('follows').delete().eq('follower_id',meId()).eq('following_id',targetId);
+    return '';
+  },
+
+  toggleFollow: async function(targetId, targetName, btn){
+    if(!isOnline()) return notLogged();
+    targetId=String(targetId||''); if(!targetId||targetId===meId()) return 'self';
+    var st=await SocialService.getFollowStatus(targetId);
+    var after = (st==='accepted'||st==='following') ? await SocialService.unfollowUser(targetId)
+                                                     : await SocialService.followUser(targetId, targetName);
+    SocialService._paintFollowBtns(targetId, after);
+    return after;
+  },
+
+  _paintFollowBtns: function(id, status){
+    try{
+      D.querySelectorAll('[data-gs-follow-id="'+String(id).replace(/"/g,'')+'"]').forEach(function(b){
+        b.classList.remove('following','pending','loading','primary'); b.disabled=false;
+        if(status==='accepted'||status==='following'){ b.textContent='Abonné'; b.classList.add('following'); }
+        else { b.textContent='Suivre'; b.classList.add('primary'); }
+      });
+    }catch(e){}
+  },
+
+  /* ---------------- SQUAD : DEMANDE À REJOINDRE ---------------- */
+  requestJoinSquad: async function(squadId, squadName, ownerId){
+    if(!isOnline()) return notLogged();
+    squadId=String(squadId||''); if(!squadId) return;
+    var sb=client();
+    if(!ownerId){
+      try{ var sq=await sb.from('private_squads').select('owner_id,host_id,created_by,name').eq('id',squadId).maybeSingle();
+           if(sq.data){ ownerId=sq.data.owner_id||sq.data.host_id||sq.data.created_by||null; squadName=squadName||sq.data.name; } }catch(e){}
+    }
+    try{
+      var ex=await sb.from('private_squad_requests').select('id,status').eq('squad_id',squadId).eq('requester_id',meId()).in('status',['pending','accepted']).limit(1);
+      if(ex.data&&ex.data.length){ toast(ex.data[0].status==='accepted'?'Tu es déjà membre.':'Demande déjà envoyée.'); return ex.data[0]; }
+    }catch(e){}
+    var ins=await sb.from('private_squad_requests').insert({
+      squad_id:squadId, requester_id:meId(), owner_id:ownerId||null, host_id:ownerId||null,
+      squad_name:squadName||null, requester_name:meName(), requester_username:meUsername(),
+      type:'join_request', status:'pending'
+    }).select('id').maybeSingle();
+    var reqId=(ins.data&&ins.data.id)||null;
+    if(ownerId){
+      await SocialService.createNotification({
+        user_id: ownerId, type:'squad_join_request',
+        entity_type:'private_squad_requests', entity_id: reqId,
+        squad_id: squadId, squad_name: squadName||'',
+        title:'Demande de Squad',
+        body:(meUsername()?'@'+meUsername():meName())+' veut rejoindre '+(squadName||'ta Squad')+'.',
+        payload:{ route:'ma_squad', squadId:squadId }
+      });
+    }
+    toast('Demande envoyée à '+(squadName||'la Squad')+'.');
+    return ins.data;
+  },
+
+  cancelJoinRequest: async function(requestId){
+    if(!isOnline()) return notLogged();
+    await client().from('private_squad_requests').update({status:'cancelled'}).eq('id',requestId).eq('requester_id',meId());
+    toast('Demande annulée.');
+  },
+
+  acceptSquadJoinRequest: async function(requestId){
+    if(!isOnline()) return notLogged();
+    var sb=client();
+    var r=await sb.from('private_squad_requests').select('id,squad_id,requester_id,requester_name,squad_name,status').eq('id',requestId).maybeSingle();
+    if(!r.data){ toast('Demande introuvable.'); return; }
+    var req=r.data;
+    await sb.from('private_squad_requests').update({status:'accepted'}).eq('id',requestId);
+    await sb.from('private_squad_members').upsert(
+      { squad_id:req.squad_id, user_id:req.requester_id, role:'member', status:'active', joined_at:new Date().toISOString() },
+      { onConflict:'squad_id,user_id' }
+    );
+    await SocialService.createNotification({
+      user_id: req.requester_id, type:'squad_request_accepted',
+      entity_type:'private_squads', entity_id:req.squad_id,
+      squad_id:req.squad_id, squad_name:req.squad_name||'',
+      title:'Demande acceptée',
+      body:'Ta demande pour '+(req.squad_name||'la Squad')+' a été acceptée.'
+    });
+    toast('Demande acceptée.');
+    return req;
+  },
+
+  rejectSquadJoinRequest: async function(requestId){
+    if(!isOnline()) return notLogged();
+    var sb=client();
+    var r=await sb.from('private_squad_requests').select('id,squad_id,requester_id,squad_name').eq('id',requestId).maybeSingle();
+    await sb.from('private_squad_requests').update({status:'refused'}).eq('id',requestId);
+    if(r.data){
+      await SocialService.createNotification({
+        user_id:r.data.requester_id, type:'squad_request_refused',
+        entity_type:'private_squads', entity_id:r.data.squad_id,
+        squad_id:r.data.squad_id, squad_name:r.data.squad_name||'',
+        title:'Demande refusée',
+        body:'Ta demande pour '+(r.data.squad_name||'la Squad')+' a été refusée.'
+      });
+    }
+    toast('Demande refusée.');
+  },
+
+  /* ---------------- SQUAD : INVITATION (hôte -> utilisateur) ---------------- */
+  inviteUserToSquad: async function(squadId, userId, squadName){
+    if(!isOnline()) return notLogged();
+    squadId=String(squadId||''); userId=String(userId||'');
+    if(!squadId||!userId) return;
+    var sb=client();
+    if(!squadName){ try{ var sq=await sb.from('private_squads').select('name').eq('id',squadId).maybeSingle(); if(sq.data) squadName=sq.data.name; }catch(e){} }
+    var ins=await sb.from('squad_invites').upsert(
+      { squad_id:squadId, inviter_id:meId(), invited_user_id:userId, status:'pending' },
+      { onConflict:'squad_id,invited_user_id' }
+    ).select('id').maybeSingle();
+    var invId=(ins.data&&ins.data.id)||null;
+    await SocialService.createNotification({
+      user_id:userId, type:'squad_invite',
+      entity_type:'squad_invites', entity_id:invId,
+      squad_id:squadId, squad_name:squadName||'',
+      title:'Invitation Squad',
+      body:(meUsername()?'@'+meUsername():meName())+' t’invite dans '+(squadName||'sa Squad')+'.',
+      payload:{ squad_id:squadId, squad_name:squadName||'' }
+    });
+    toast('Invitation envoyée.');
+    return ins.data;
+  },
+
+  acceptSquadInvite: async function(inviteId){
+    if(!isOnline()) return notLogged();
+    var sb=client();
+    var r=await sb.from('squad_invites').select('id,squad_id,inviter_id,status').eq('id',inviteId).maybeSingle();
+    if(!r.data){ toast('Invitation introuvable.'); return; }
+    var inv=r.data;
+    await sb.from('squad_invites').update({status:'accepted'}).eq('id',inviteId).eq('invited_user_id',meId());
+    await sb.from('private_squad_members').upsert(
+      { squad_id:inv.squad_id, user_id:meId(), role:'member', status:'active', joined_at:new Date().toISOString() },
+      { onConflict:'squad_id,user_id' }
+    );
+    await SocialService.createNotification({
+      user_id:inv.inviter_id, type:'squad_invite_accepted',
+      entity_type:'private_squads', entity_id:inv.squad_id, squad_id:inv.squad_id,
+      title:'Invitation acceptée',
+      body:(meUsername()?'@'+meUsername():meName())+' a rejoint ta Squad.'
+    });
+    toast('Tu as rejoint la Squad.');
+    return inv;
+  },
+
+  acceptSquadInviteBySquad: async function(squadId){
+    if(!isOnline()) return notLogged();
+    var r=await client().from('squad_invites').select('id').eq('squad_id',squadId).eq('invited_user_id',meId()).eq('status','pending').order('created_at',{ascending:false}).limit(1);
+    if(r.data&&r.data.length) return SocialService.acceptSquadInvite(r.data[0].id);
+    toast('Invitation introuvable.');
+  },
+
+  rejectSquadInvite: async function(inviteId){
+    if(!isOnline()) return notLogged();
+    var sb=client();
+    var r=await sb.from('squad_invites').select('id,squad_id,inviter_id').eq('id',inviteId).maybeSingle();
+    await sb.from('squad_invites').update({status:'refused'}).eq('id',inviteId).eq('invited_user_id',meId());
+    if(r.data){
+      await SocialService.createNotification({
+        user_id:r.data.inviter_id, type:'squad_invite_refused',
+        entity_type:'private_squads', entity_id:r.data.squad_id, squad_id:r.data.squad_id,
+        title:'Invitation refusée',
+        body:(meUsername()?'@'+meUsername():meName())+' a refusé ton invitation.'
+      });
+    }
+    toast('Invitation refusée.');
+  },
+
+  rejectSquadInviteBySquad: async function(squadId){
+    if(!isOnline()) return notLogged();
+    var r=await client().from('squad_invites').select('id').eq('squad_id',squadId).eq('invited_user_id',meId()).eq('status','pending').order('created_at',{ascending:false}).limit(1);
+    if(r.data&&r.data.length) return SocialService.rejectSquadInvite(r.data[0].id);
+  },
+
+  leaveSquad: async function(squadId){
+    if(!isOnline()) return notLogged();
+    await client().from('private_squad_members').delete().eq('squad_id',squadId).eq('user_id',meId());
+    toast('Tu as quitté la Squad.');
+  },
+
+  removeMember: async function(squadId, userId){
+    if(!isOnline()) return notLogged();
+    await client().from('private_squad_members').delete().eq('squad_id',squadId).eq('user_id',userId);
+    toast('Membre retiré.');
+  },
+
+  /* ---------------- RECHERCHE ---------------- */
+  searchUsers: async function(q){
+    if(!isOnline()) return { login:true, items:[] };
+    var c=String(q||'').replace(/^@/,'').trim(); if(c.length<2) return { items:[] };
+    try{
+      var or='username.ilike.%'+c+'%,display_name.ilike.%'+c+'%';
+      if(c.indexOf('@')>-1) or+=',email.ilike.%'+c+'%';
+      var r=await client().from('profiles').select('id,email,username,display_name,avatar_url,data,xp').or(or).neq('id',meId()).limit(20);
+      if(r.error) return { error:r.error, items:[] };
+      return { items:r.data||[] };
+    }catch(e){ return { error:e, items:[] }; }
+  },
+
+  searchSquads: async function(q){
+    if(!isOnline()) return { login:true, items:[] };
+    var c=String(q||'').trim(); if(c.length<2) return { items:[] };
+    try{
+      var r=await client().from('private_squads').select('id,name,owner_id,host_id,created_by,owner_name,members_count,squad_emoji,avatar_url,payload,created_at').ilike('name','%'+c+'%').limit(16);
+      if(r.error) return { error:r.error, items:[] };
+      return { items:r.data||[] };
+    }catch(e){ return { error:e, items:[] }; }
+  },
+
+  /* ---------------- NOTIFICATIONS UNIFIÉES ---------------- */
+  createNotification: async function(n){
+    if(!isOnline()||!n||!n.user_id) return;
+    if(String(n.user_id)===meId()) return;
+    var sb=client();
+    try{
+      var ex=await sb.from('notifications').select('id').eq(RCOL,n.user_id).eq('actor_id',meId()).eq('type',n.type).eq('entity_id',String(n.entity_id||'')).neq('status','deleted').limit(1);
+      if(ex.data&&ex.data.length) return ex.data[0];
+    }catch(e){}
+    var row={ actor_id:meId(), from_id:meId(),
+      type:n.type, entity_type:n.entity_type||null, entity_id:n.entity_id!=null?String(n.entity_id):null,
+      related_id:n.entity_id!=null?String(n.entity_id):null,
+      squad_id:n.squad_id||null, squad_name:n.squad_name||null,
+      actor_name:meName(), actor_username:meUsername(), actor_avatar:meAvatar(),
+      title:n.title||'G-SQUAD', body:n.body||'', status:'unread', read:false,
+      payload:n.payload||{}
+    };
+    row[RCOL]=n.user_id;
+    try{ var r=await sb.from('notifications').insert(row).select('id').maybeSingle(); return r.data; }
+    catch(e){ try{ console.warn('createNotification',e); }catch(_){} }
+  },
+
+  loadInbox: async function(filter){
+    if(!isOnline()) return { login:true, items:[] };
+    try{
+      var r=await client().from('notifications').select('*').eq(RCOL,meId()).neq('status','deleted').order('created_at',{ascending:false}).limit(80);
+      var items=r.data||[];
+      filter=filter||'all';
+      if(filter!=='all'){
+        items=items.filter(function(n){
+          var t=n.type||'';
+          if(filter==='requests') return t==='squad_join_request'||t==='squad_invite';
+          if(filter==='squad')    return t.indexOf('squad')===0;
+          if(filter==='activity') return t==='activity'||t==='follow';
+          return true;
+        });
+      }
+      return { items:items };
+    }catch(e){ return { error:e, items:[] }; }
+  },
+
+  unreadCount: async function(){
+    if(!isOnline()) return 0;
+    try{ var r=await client().from('notifications').select('id',{count:'exact',head:true}).eq(RCOL,meId()).eq('status','unread'); return r.count||0; }
+    catch(e){ return 0; }
+  },
+
+  markNotificationRead: async function(id){
+    if(!isOnline()) return;
+    await client().from('notifications').update({status:'read'}).eq('id',id).eq(RCOL,meId());
+  },
+
+  markAllRead: async function(){
+    if(!isOnline()) return;
+    await client().from('notifications').update({status:'read'}).eq(RCOL,meId()).eq('status','unread');
+  },
+
+  deleteNotification: async function(id){
+    if(!isOnline()) return;
+    await client().from('notifications').update({status:'deleted'}).eq('id',id).eq(RCOL,meId());
+  }
+};
+
+W.SocialService = SocialService;
+try{ console.log('[GS] SocialService défini (fondation, avant Auth).'); }catch(e){}
+})();
+</script>
+
+
 
 <script>
 
@@ -6875,7 +7244,9 @@ document.addEventListener('DOMContentLoaded',function(){
  try{
  var sess=await _supa.auth.getSession();
  if(sess && sess.data && sess.data.session && sess.data.session.user){ await afterAuth(sess.data.session.user); }
- /* GS social refactor: legacy signed-out listener removed; gs264 initAuth owns Supabase auth. */
+ _supa.auth.onAuthStateChange(async function(event, session){
+ if(event==='SIGNED_OUT'){ state={}; _supaUser=null; ensureState(); if(auth)auth.style.display='flex'; if(onboard)onboard.style.display='none'; }
+ });
  }catch(e){ console.warn('Supabase auth unavailable:', e); }
  };
 
@@ -7699,7 +8070,7 @@ document.addEventListener('DOMContentLoaded',function(){
  }
  window.renderOnboardingWizard=renderOnboardingWizard;
  // replace old onboarding overlay on app start
- setTimeout(function(){var ob=$('onboard');if(ob){ob.style.display='none';ob.innerHTML=''} if(st().onboarded===false){openOnboardingWizard(0)}},250);
+ setTimeout(function(){var ob=$('onboard');if(ob){ob.style.display='none';ob.innerHTML=''} /* legacy onboarding auto-start disabled: auth landing/canonical wizard only */},250);
 
  // clean session renderer
  function days(){try{if(typeof getDays==='function')return getDays()}catch(e){} return window.DAYS||[]}
@@ -10058,7 +10429,7 @@ document.addEventListener('DOMContentLoaded',function(){
     window.bootSafe=function(){var r=oldBootSafe.apply(this,arguments);setTimeout(function(){fixGuestState();openSeanceFirst();},100);return r;};
   }
   document.addEventListener('DOMContentLoaded',function(){setTimeout(fixGuestState,180);setTimeout(openSeanceFirst,900);setTimeout(fixGuestState,1800)});
-  /* GS social refactor: legacy guest/auth listener removed. */
+  if(window._supa&&window._supa.auth){try{window._supa.auth.onAuthStateChange(function(ev,session){if(session&&session.user){window._supaUser=session.user;S().guestMode=false;sessionStorage.removeItem('gs_guest_session');save();setTimeout(fixGuestState,50);}})}catch(e){}}
 
   function dataLogo(k){
     try{ if(window.GYM_DATA&&window.GYM_DATA[k]&&/^data:image/.test(window.GYM_DATA[k].logo||''))return window.GYM_DATA[k].logo; }catch(e){}
@@ -10787,7 +11158,7 @@ function adaptDay(base,p){
     if(s==='sports'){title='Sports pratiqués';sub='Étape 9/11. Séparé de l’objectif. Sélectionne tous les sports que tu pratiques.';var sports=allSports();body=bodyWrap('<div class="gs-ob-sports2">'+sports.map(function(sp){return '<button type="button" class="gs-ob-sport2 '+sel(sp,'sports')+'" onclick="ob11SportToggle(\''+J(sp)+'\')">'+E(sportLabel(sp))+'<span>'+(sel(sp,'sports')?'Sélectionné':'Ajouter')+'</span></button>'}).join('')+'</div>')}
     if(s==='program'){title='Programme trouvé';sub='Étape 10/11. Choisis le format. Le badge Recommandé dépend de ton objectif, niveau et profil.';var rec=recommendedFormat(p);body=bodyWrap('<div class="gs-ob11-grid gs-ob11-grid-auto">'+Object.keys(FORMAT_LABELS).map(function(f){var pp=Object.assign({},p,{programFormat:f}),pl=buildSimplePlan(pp);return '<button type="button" class="gs-ob11-choice '+((p.programFormat||rec)===f?'sel':'')+'" onclick="ob11PickProgram(\''+f+'\')">'+(rec===f?'<i class="gs-ob11-reco">Recommandé</i>':'')+E(FORMAT_LABELS[f])+'<span>'+pl.frequency+' séances · '+E(pl.priority)+'</span></button>'}).join('')+'</div><div class="gs-ob11-program-friendly"><div class="gs-ob11-program-hero"><span>Programme 7 jours</span><b>'+E(plan.name)+'</b><p>'+E('Adapté à ton objectif '+(plan.objective||'maintien')+', niveau '+(plan.level||'débutant')+' et profil '+(plan.metabolicProfile||'neutre')+'.')+'</p></div><div class="gs-ob11-program-days">'+plan.week.map(function(d,i){return '<div class="gs-ob11-program-day"><b>'+['LUN','MAR','MER','JEU','VEN','SAM','DIM'][i]+'</b><span>'+E(d.type)+'</span><small>'+E(d.groups||'Récupération')+'</small><small>'+E((d.exercises||[]).slice(0,4).map(function(x){return x.n}).join(' · '))+'</small></div>'}).join('')+'</div><div class="gs-ob11-hint">Le Journal affichera ce planning prévu, sans créer de séance réalisée.</div></div>')}
     if(s==='start'){title='START';sub='Étape 11/11. Création du compte en ligne et synchronisation du programme.';body=bodyWrap('<div class="gs-sp-card"><div class="gs-sp-kicker">Résumé</div><div class="gs-sp-title">'+E(plan.name)+'</div><div class="gs-sp-sub">'+E((p.email||'Email manquant')+' · @'+(p.username||'username')+' · '+(p.objectif||'maintien'))+'</div><div class="gs-sp-grid"><div class="gs-sp-metric"><b>'+m.kcal+'</b><span>kcal</span></div><div class="gs-sp-metric"><b>'+m.bmr+'</b><span>BMR</span></div><div class="gs-sp-metric"><b>'+plan.frequency+'</b><span>séances</span></div></div></div>')}
-    var html='<div class="gs-onboard-v11 gs-auth-102 gs-ob11-noemoji" id="gs-onboard-v11"><div class="gs-ob11-shell"><aside class="gs-ob11-aside"><div><div class="gs-ob11-logo">G-SQUAD</div><h2 class="gs-ob11-aside-title">Ton setup complet.</h2><p class="gs-ob11-aside-sub">Compte en ligne, profil physique, salles, sports et programme 7 jours. Une seule base propre, synchronisée.</p></div><div class="gs-ob11-stepcount">Étape '+(idx+1)+' / 11</div></aside><main class="gs-ob11-main"><div class="gs-ob11-box"><div class="gs-ob11-progress">'+bars()+'</div><h1 class="gs-ob11-title">'+title+'</h1><div class="gs-ob11-sub">'+sub+'</div>'+body+'<div class="gs-ob11-actions"><button type="button" onclick="ob11Prev()" '+(idx===0?'disabled':'')+'>Retour</button><button type="button" class="primary" onclick="ob11Next()">'+(s==='start'?'Créer mon compte':'Continuer')+'</button></div><button type="button" class="gs-ob11-skip" onclick="ob11SkipStep()">Passer cette étape - retrouvable dans Profil</button></div></main></div></div>';document.body.insertAdjacentHTML('beforeend',html);if(s==='password'){try{var ov=$('gs-onboard-v11');if(ov){ov.classList.remove('gs-ob11-show-password');Array.prototype.slice.call(ov.querySelectorAll('.gs-ob11-passwrap button')).forEach(function(btn){if(btn.id!=='ob11-password-toggle')btn.remove()})}}catch(e){}}var inp=$('ob11-main-input')||$('ob11-password-input')||$('ob11-age');if(inp)setTimeout(function(){try{inp.focus()}catch(e){}},50)};
+    var html='<div class="gs-onboard-v11 gs-auth-102 gs-ob11-noemoji" id="gs-onboard-v11"><div class="gs-ob11-shell"><aside class="gs-ob11-aside"><div><div class="gs-ob11-logo">G-SQUAD</div><h2 class="gs-ob11-aside-title">Créer ton compte.</h2><p class="gs-ob11-aside-sub">Compte en ligne, profil physique, salles, sports et programme 7 jours. Une seule base propre, synchronisée.</p></div><div class="gs-ob11-stepcount">Étape '+(idx+1)+' / 11</div></aside><main class="gs-ob11-main"><div class="gs-ob11-box"><div class="gs-ob11-progress">'+bars()+'</div><h1 class="gs-ob11-title">'+title+'</h1><div class="gs-ob11-sub">'+sub+'</div>'+body+'<div class="gs-ob11-actions"><button type="button" onclick="ob11Prev()" '+(idx===0?'disabled':'')+'>Retour</button><button type="button" class="primary" onclick="ob11Next()">'+(s==='start'?'Créer mon compte':'Continuer')+'</button></div><button type="button" class="gs-ob11-skip" onclick="ob11SkipStep()">Passer cette étape - retrouvable dans Profil</button></div></main></div></div>';document.body.insertAdjacentHTML('beforeend',html);if(s==='password'){try{var ov=$('gs-onboard-v11');if(ov){ov.classList.remove('gs-ob11-show-password');Array.prototype.slice.call(ov.querySelectorAll('.gs-ob11-passwrap button')).forEach(function(btn){if(btn.id!=='ob11-password-toggle')btn.remove()})}}catch(e){}}var inp=$('ob11-main-input')||$('ob11-password-input')||$('ob11-age');if(inp)setTimeout(function(){try{inp.focus()}catch(e){}},50)};
   window.openOnboardingWizard=function(step){window.OB11=window.OB11||{step:0,total:11,password:'',passwordConfirm:''};window.OB11.total=11;window.OB11.step=typeof step==='number'?Math.max(0,Math.min(10,step)):0;window.renderOb11()};
 
   function patchOutdoorTexts(){var fl=$('fl-marche');if(!fl)return;fl.querySelectorAll('button').forEach(function(b){var t=(b.textContent||'').trim();if(t==='Course')b.innerHTML='Running';if(t==='Marche')b.innerHTML='🥾 Randonnée';if(t==='Vélo')b.innerHTML='🚴 Vélo<small>route / ville</small>'});var body=fl.querySelector('.flbody');if(body&&!body.querySelector('.gs-walk-help2')){var ref=body.querySelector('.bigbtn');if(ref){var d=document.createElement('div');d.className='gs-walk-help2';d.innerHTML='<div><b>GPS automatique</b><br>L’app calcule la distance si tu autorises la localisation et que le site est en HTTPS.</div><div><b>Plan B manuel</b><br>Si le GPS bloque, entre simplement les kilomètres et la durée.</div>';ref.insertAdjacentElement('afterend',d)}}}
@@ -15800,9 +16171,9 @@ body.gs-theme-light #profile-settings-v2 .gs-set-green{background:#F2FBF6;border
 
  // SECTION B — OAuth Google / Apple, injecté sans casser email/mdp.
  window.doLoginGoogle=async function(){if(!window._supa){if(typeof authShowErr==='function')authShowErr('Connexion indisponible.');else notify('Connexion indisponible.');return}var r=await window._supa.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin}});if(r.error){if(typeof authShowErr==='function')authShowErr(r.error.message);else notify(r.error.message)}};
- window.doLoginApple=async function(){if(typeof authShowErr==='function')authShowErr('Connexion Apple indisponible pour le moment. Utilise Google ou email.');else notify('Connexion Apple indisponible pour le moment.');};
+ window.doLoginApple=async function(){if(!window._supa){if(typeof authShowErr==='function')authShowErr('Connexion indisponible.');else notify('Connexion indisponible.');return}var r=await window._supa.auth.signInWithOAuth({provider:'apple',options:{redirectTo:window.location.origin}});if(r.error){if(typeof authShowErr==='function')authShowErr(r.error.message);else notify(r.error.message)}};
  function oauthSvg(t){return t==='google'?'<svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9c-.3 1.4-1 2.5-2.1 3.3v2.7h3.4c2-1.8 3.4-4.6 3.4-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.4-2.7c-.9.6-2.2 1-3.8 1-2.9 0-5.3-1.9-6.2-4.6H2.3v2.8C4.1 20.5 7.8 23 12 23z"/><path fill="#FBBC05" d="M5.8 14c-.2-.6-.4-1.3-.4-2s.1-1.4.4-2V7.2H2.3C1.5 8.6 1 10.2 1 12s.5 3.4 1.3 4.8L5.8 14z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.1-3.1C17.5 2.1 15 1 12 1 7.8 1 4.1 3.5 2.3 7.2L5.8 10c.9-2.7 3.3-4.6 6.2-4.6z"/></svg>':'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.4 1.9c0 1-.4 1.9-1.1 2.6-.8.8-1.7 1.2-2.6 1.1-.1-1 .4-1.9 1.1-2.6.7-.7 1.8-1.2 2.6-1.1zM20.4 17.5c-.5 1.1-.8 1.6-1.5 2.6-1 1.5-2.4 3.3-4.1 3.3-1.5 0-1.9-1-3.9-1s-2.5 1-3.9 1c-1.7 0-3-1.6-4-3.1C.3 16.2.1 11.5 1.7 9.1c1.1-1.7 2.9-2.7 4.6-2.7 1.8 0 2.9 1 4.4 1 1.4 0 2.3-1 4.4-1 1.5 0 3.1.8 4.2 2.2-3.7 2-3.1 7.3 1.1 8.9z"/></svg>'}
- function injectOAuth(){document.querySelectorAll('.auth-box,[id^="auth-view-"]').forEach(function(box){if(!box||box.querySelector('.gs-oauth-sep'))return;var btn=box.querySelector('.auth-btn');if(!btn)return;btn.insertAdjacentHTML('afterend','<div class="gs-oauth-sep">ou</div><button type="button" class="gs-oauth-btn google" onclick="doLoginGoogle()">'+oauthSvg('google')+' Continuer avec Google</button>')})}
+ function injectOAuth(){document.querySelectorAll('.auth-box,[id^="auth-view-"]').forEach(function(box){if(!box||box.querySelector('.gs-oauth-sep'))return;var btn=box.querySelector('.auth-btn');if(!btn)return;btn.insertAdjacentHTML('afterend','<div class="gs-oauth-sep">ou</div><button type="button" class="gs-oauth-btn google" onclick="doLoginGoogle()">'+oauthSvg('google')+' Continuer avec Google</button><button type="button" class="gs-oauth-btn apple" onclick="doLoginApple()">'+oauthSvg('apple')+' Continuer avec Apple</button>')})}
  setTimeout(injectOAuth,300);document.addEventListener('click',function(){setTimeout(injectOAuth,80)},true);
 
  // SECTION C — Charges : dernier log, PR, +/- 2.5, suggestion semaine.
@@ -16391,7 +16762,7 @@ var oldPush=window.pushSquadEvent;window.pushSquadEvent=function(type,payload,op
  async function loadProfileStateStrict(id){var r=await selectProfile(id);if(r.data){var st=Object.assign(baseState(),r.data.data||{});st.profil=st.profil||{};if(r.data.username)st.profil.username=r.data.username;if(r.data.display_name)st.profil.name=r.data.display_name;if(r.data.email)st.profil.email=r.data.email;assignState(st);return r.data}assignState(baseState());return null}
  W.loadFromSupabase=async function(id){return !!(await loadProfileStateStrict(id))};
  W.afterAuth=async function(u){if(!u)return;W._supaUser=u;try{_supaUser=u}catch(e){}purgeOnlineCacheForSwitch(u.id);var auth=$('auth-screen');if(auth)auth.style.display='none';var row=await loadProfileStateStrict(u.id);var ensured=await ensureProfileRowStrict(u);var p=ensured.profile||row;if(!profileComplete(p)){if(typeof W.gsShowOAuthOnboarding==='function'){W.gsShowOAuthOnboarding(u,p)}else{var a=$('auth-screen');if(a)a.style.display='flex'}return}S().profil=S().profil||{};if(p.username)S().profil.username=p.username;if(p.display_name)S().profil.name=p.display_name;if(p.email)S().profil.email=p.email;S().guestMode=false;save();try{if(typeof W.hideGates==='function')W.hideGates()}catch(e){}if(S().onboarded){try{if(typeof W.bootApp==='function')W.bootApp();else if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){console.warn(e)}}else{var ob=$('onboard');if(ob)ob.style.display='flex'}};
- W.initAuth=async function(){try{if(typeof W.ensureState==='function')W.ensureState();if(typeof W.gsInstallOnboarding==='function')W.gsInstallOnboarding()}catch(e){}var auth=$('auth-screen'),onboard=$('onboard');if(auth)auth.style.display='flex';if(onboard)onboard.style.display='none';if(!sb()||!sb().auth){if(S().onboarded&&S().profil&&S().profil.name){try{if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}}return}try{var sess=await sb().auth.getSession();if(sess&&sess.data&&sess.data.session&&sess.data.session.user){await W.afterAuth(sess.data.session.user);return}try{/* GS266: legacy auth listener removed; gs264 initAuth owns Supabase auth. */}catch(e){}if(S().onboarded&&S().profil&&S().profil.name){try{if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}}else if(typeof W.authShowView==='function')W.authShowView('landing')}catch(e){console.warn('initAuth 193 failed',e)}};
+ W.initAuth=async function(){try{if(typeof W.ensureState==='function')W.ensureState();if(typeof W.gsInstallOnboarding==='function')W.gsInstallOnboarding()}catch(e){}var auth=$('auth-screen'),onboard=$('onboard');if(auth)auth.style.display='flex';if(onboard)onboard.style.display='none';if(!sb()||!sb().auth){if(S().onboarded&&S().profil&&S().profil.name){try{if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}}return}try{var sess=await sb().auth.getSession();if(sess&&sess.data&&sess.data.session&&sess.data.session.user){await W.afterAuth(sess.data.session.user);return}try{sb().auth.onAuthStateChange(async function(ev,session){if((ev==='SIGNED_IN'||ev==='INITIAL_SESSION'||ev==='TOKEN_REFRESHED')&&session&&session.user){await W.afterAuth(session.user)}if(ev==='SIGNED_OUT'){assignState(baseState());W._supaUser=null;try{_supaUser=null}catch(e){}try{localStorage.removeItem('gs_auth_uid')}catch(e){}if(auth)auth.style.display='flex';if(onboard)onboard.style.display='none';if(typeof W.authShowView==='function')W.authShowView('landing')}})}catch(e){}if(S().onboarded&&S().profil&&S().profil.name){try{if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}}else if(typeof W.authShowView==='function')W.authShowView('landing')}catch(e){console.warn('initAuth 193 failed',e)}};
  async function resolveLoginIdentifier(input){var raw=String(input||'').trim();if(!sb())return {email:null,profile:null,error:'supabase_missing'};if(raw.indexOf('@')>-1&&!raw.startsWith('@'))return {email:raw.toLowerCase(),profile:null,error:null};var u=normUsername(raw);if(!u)return {email:null,profile:null,error:'empty'};try{var rpc=await sb().rpc('resolve_login_username',{p_login:u});if(rpc&&!rpc.error){var row=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;if(row&&row.email)return {email:String(row.email).toLowerCase(),profile:row,error:null,via:'rpc'}}}catch(e){}
   try{var q=await sb().from('profiles').select('id,email,username,display_name,data').eq('username',u).maybeSingle();if(q.data&&q.data.email)return {email:q.data.email,profile:q.data,error:null,via:'select'}}catch(e){}
   return {email:null,profile:null,error:'not_found'} }
@@ -16414,7 +16785,7 @@ var oldPush=window.pushSquadEvent;window.pushSquadEvent=function(type,payload,op
  function empty(t,s){return '<div class="gs193-empty"><b>'+E(t)+'</b>'+E(s||'')+'</div>'}
  async function getFollowStatus(id){if(!sb()||!uid()||!id||String(id)===String(uid()))return 'self';try{var r=await sb().from('follows').select('id,status').eq('follower_id',uid()).eq('following_id',id).maybeSingle();return r.data&&(r.data.status||'accepted')||''}catch(e){return ''}}
  async function fetchFollowMap(ids){var map={};ids=(ids||[]).filter(Boolean);if(!ids.length||!sb()||!uid())return map;try{var r=await sb().from('follows').select('following_id,status').eq('follower_id',uid()).in('following_id',ids);(r.data||[]).forEach(function(x){map[String(x.following_id)]=x.status||'accepted'})}catch(e){}return map}
- function setFollowBtn(btn,status){if(!btn)return;btn.disabled=false;btn.classList.remove('primary','following','pending','loading');btn.removeAttribute('aria-busy');if(status==='accepted'){btn.textContent='Abonné';btn.classList.add('following')}else if(status==='pending'){btn.textContent='Abonné';btn.classList.add('following')}else if(status==='self'){btn.textContent='Toi';btn.disabled=true}else{btn.textContent='Suivre';btn.classList.add('primary')}}
+ function setFollowBtn(btn,status){if(!btn)return;btn.disabled=false;btn.classList.remove('primary','following','pending','loading');btn.removeAttribute('aria-busy');if(status==='accepted'||status==='following'){btn.textContent='Abonné';btn.classList.add('following')}else if(status==='self'){btn.textContent='Toi';btn.disabled=true}else{btn.textContent='Suivre';btn.classList.add('primary')}}
  function profileRow(p,fmap,i){var obj=publicObj(p),key='gs193_prof_'+Date.now()+'_'+i;W[key]=obj;var gyms=profileGyms(p);var status=fmap[String(p.id)]||'';return '<div class="gs193-row" onclick="gs193OpenProfile(\''+JS(key)+'\')"><div class="gs193-av">'+avatarHtml(obj.name,obj.avatar)+'</div><div class="gs193-main"><b>'+E(obj.name)+'</b><span>'+(obj.username?'@'+E(obj.username):'@username non défini')+'</span><em>'+E((gyms.length?gyms.join(' · '):'Salle non renseignée')+' · '+((p.data&&p.data.xp)||0)+' XP')+'</em></div><div class="gs193-actions"><button type="button" onclick="event.stopPropagation();gs193OpenProfile(\''+JS(key)+'\')">Voir</button><button type="button" data-gs-follow-id="'+E(p.id)+'" onclick="event.stopPropagation();gsSocialToggleFollow(\''+JS(p.id)+'\',\''+JS(obj.name)+'\',this)"></button></div></div>'}
  function squadRow(s){var logo=s.avatar_url||s.squad_logo||'',ico=logo?'<img src="'+E(logo)+'" alt="">':E((s.squad_emoji||s.emblem||'S').charAt(0));return '<div class="gs193-row" onclick="if(window.gsRequestJoinSquad)gsRequestJoinSquad(\''+JS(s.id)+'\');else if(window.openMaSquad)openMaSquad()"><div class="gs193-av">'+ico+'</div><div class="gs193-main"><b>'+E(s.name||'Squad')+'</b><span>'+E((s.members_count||0)+' membre(s)')+'</span><em>'+E(s.owner_name?'Hôte : '+s.owner_name:'Squad privée')+'</em></div><div class="gs193-actions"><button type="button">Demander</button></div></div>'}
  function exoRow(e){return '<div class="gs193-row" onclick="closeSearchModal(); if(window.openExerciseDetail)openExerciseDetail(\''+JS(e.n)+'\'); else if(window.openBibliotheque)openBibliotheque()"><div class="gs193-av">⚡</div><div class="gs193-main"><b>'+E(e.n||'Exercice')+'</b><span>'+E((e.g||'')+' · '+(e.t||''))+'</span><em>'+E(e.m||'')+'</em><div><span class="gs193-exo-tag">'+E(e.g||'Groupe')+'</span><span class="gs193-exo-tag">'+E(e.t||'Type')+'</span></div></div></div>'}
@@ -17264,11 +17635,6 @@ setTimeout(refreshAll,450);
  if(D.readyState==='loading')D.addEventListener('DOMContentLoaded',function(){setTimeout(boot,500);setTimeout(boot,1500)});else{setTimeout(boot,500);setTimeout(boot,1500)}
 })();
 
-</script>
-y></html>`;
-  try{w.document.open();w.document.write(html);w.document.close();setTimeout(function(){try{w.focus();w.print()}catch(e){}},350)}catch(e){try{w.document.write(html)}catch(e2){}}
- };
-})();
 </script>
 
 <script id="gs-notifications-clean-v5-20260512-js">
@@ -19093,7 +19459,7 @@ W.openFriendProfile=async function(u){u=u||{};if(!u.id&&u.me){if(typeof W.openPr
   W.gsMsRefuseRequest=function(i){if(!requireHost())return;var sq=squad();sq.requests=arr(sq.requests);sq.requests.splice(i,1);setSquad(sq);toast('Demande refusée.');render();gsMsGo(2)}
   function patchBurger(){var old=W.openHamburger;if(old&&old.__gsMaSquadFinal)return;W.openHamburger=function(){var r=old?old.apply(this,arguments):undefined;setTimeout(function(){var sh=$('more-sh');if(!sh||sh.querySelector('.gs-ms-menu-entry'))return;var head=sh.querySelector('.gs-r-menu-head')||sh.firstElementChild;if(!head)return;var btn=D.createElement('button');btn.type='button';btn.className='gs-ms-menu-entry';btn.innerHTML='<span class="ico">S</span><span><b>Ma Squad</b><span>Gérer ton équipe</span></span>';btn.onclick=function(){try{if(typeof W.closeHamburger==='function')W.closeHamburger()}catch(e){}W.gsOpenMaSquad()};head.insertAdjacentElement('afterend',btn)},60);return r};W.openHamburger.__gsMaSquadFinal=true}
   W.gsOpenPrivateSquads=function(){W.gsOpenMaSquad()};W.gsCreatePrivateSquad=function(){W.gsOpenMaSquad();if(!squad())setTimeout(function(){var inp=$('gs-ms-create-name');if(inp)inp.focus()},80)};W.gsOpenPrivateSquadSearch=W.gsOpenPrivateSquadSearch||function(){W.gsOpenMaSquad()};
-  W.gsRequestPrivateSquad=async function(id,name,owner){var sq=squad();if(sq&&(!id||String(id)===String(sq.id)||String(name||'').toLowerCase()===String(sq.name||'').toLowerCase())){sq.requests=arr(sq.requests);sq.requests.push({type:'join_request',id:me().id,username:me().username,name:me().name,createdAt:Date.now()});setSquad(sq);toast('Demande envoyée à la Squad.');return}try{if(W._supa&&uid())await W._supa.from('private_squad_requests').insert({squad_id:id,requester_id:uid(),type:'join_request',status:'pending'});toast('Demande envoyée.')}catch(e){toast('Impossible d’envoyer la demande.')}};
+  W.gsRequestPrivateSquad=async function(id,name,owner){if(W.SocialService&&typeof W.SocialService.requestJoinSquad==='function'){return W.SocialService.requestJoinSquad(id,name,owner)}if(!(W._supa&&uid())){toast('Connecte-toi pour rejoindre une Squad.');return}try{await W._supa.from('private_squad_requests').insert({squad_id:id,squad_name:name,owner_id:owner||null,requester_id:uid(),type:'join_request',status:'pending'});toast('Demande envoyée.')}catch(e){toast('Impossible d’envoyer la demande.')}};
   var oldGlobal=W.gsGlobalRequestSquad;W.gsGlobalRequestSquad=function(id,name,owner,btn){try{W.gsRequestPrivateSquad(id,name,owner);if(btn){btn.textContent='Demandé';btn.disabled=true}}catch(e){if(oldGlobal)return oldGlobal(id,name,owner,btn);toast('Impossible d’envoyer la demande')}};
   function boot(){cleanupLegacy();patchBurger();setTimeout(cleanupLegacy,300);setTimeout(cleanupLegacy,1000)}
   try{new MutationObserver(function(){cleanupLegacy()}).observe(D.body,{childList:true,subtree:true})}catch(e){}
@@ -22885,7 +23251,7 @@ if(document.readyState==='loading'){
   save();try{localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');localStorage.removeItem('gs_oauth_provider_pending');sessionStorage.removeItem('gs_guest_session')}catch(e){}
   var ov=$('gs-onboard-v11');if(ov)ov.remove();var a=$('auth-screen');if(a){a.style.display='none';a.classList.remove('open')}try{if(typeof W.hideGates==='function')W.hideGates()}catch(e){}try{if(typeof W.bootApp==='function')W.bootApp();else if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}try{if(typeof W.goTab==='function')W.goTab('accueil',$('nb-accueil'))}catch(e){}toast('Bienvenue dans G-SQUAD')
  }
- function renderOb258(){var idx=clamp((W.OB11&&W.OB11.step)||0,0,AUTH_STEPS.length-1),step=AUTH_STEPS[idx],info=authBody(step);var old=$('gs-onboard-v11');if(old)old.remove();var flowSteps=isOAuthMode()?AUTH_STEPS.filter(function(x){return x!=='password'}):AUTH_STEPS;var displayIndex=isOAuthMode()?Math.max(1,flowSteps.indexOf(step)+1):(idx+1);var bars=flowSteps.map(function(x){var real=AUTH_STEPS.indexOf(x);return '<i class="'+(real<=idx?'on':'')+'"></i>'}).join('');var next=step==='create'?'Créer mon compte':'Continuer';var backDisabled=(!isOAuthMode()&&idx===0)?'disabled':'';var html='<div class="gs-onboard-v11 gs-auth-102 gs-ob11-noemoji" id="gs-onboard-v11"><div class="gs-ob11-shell"><aside class="gs-ob11-aside"><div><div class="gs-ob11-logo">G-SQUAD</div><h2 class="gs-ob11-aside-title">Ton setup complet.</h2><p class="gs-ob11-aside-sub">Auth, Profil, IMC/BMR et Programme avancent dans le même tunnel.</p></div><div class="gs-ob11-stepcount">Étape '+displayIndex+' / '+flowSteps.length+'</div></aside><main class="gs-ob11-main"><div class="gs-ob11-box"><div class="gs-ob11-progress">'+bars+'</div><h1 class="gs-ob11-title">'+E(info.title)+'</h1><div class="gs-ob11-sub">'+E(info.sub)+'</div>'+info.body+'<div class="gs-ob11-actions"><button type="button" onclick="ob11Prev()" '+backDisabled+'>Retour</button><button type="button" class="primary" onclick="ob11Next()">'+next+'</button></div>'+(isOAuthMode()?'<button type="button" class="gs-ob11-skip" onclick="gsCancelOAuthOnboarding()">Annuler la création du compte</button>':'')+'</div></main></div></div>';D.body.insertAdjacentHTML('beforeend',html);bindAuth(step);var inp=$('ob11-main-input')||$('ob11-password-input')||$('auth-age');if(inp)setTimeout(function(){try{inp.focus()}catch(e){}},40)}
+ function renderOb258(){var idx=clamp((W.OB11&&W.OB11.step)||0,0,AUTH_STEPS.length-1),step=AUTH_STEPS[idx],info=authBody(step);var old=$('gs-onboard-v11');if(old)old.remove();var flowSteps=isOAuthMode()?AUTH_STEPS.filter(function(x){return x!=='password'}):AUTH_STEPS;var displayIndex=isOAuthMode()?Math.max(1,flowSteps.indexOf(step)+1):(idx+1);var bars=flowSteps.map(function(x){var real=AUTH_STEPS.indexOf(x);return '<i class="'+(real<=idx?'on':'')+'"></i>'}).join('');var next=step==='create'?'Créer mon compte':'Continuer';var backDisabled=(!isOAuthMode()&&idx===0)?'disabled':'';var html='<div class="gs-onboard-v11 gs-auth-102 gs-ob11-noemoji" id="gs-onboard-v11"><div class="gs-ob11-shell"><aside class="gs-ob11-aside"><div><div class="gs-ob11-logo">G-SQUAD</div><h2 class="gs-ob11-aside-title">Créer ton compte.</h2><p class="gs-ob11-aside-sub">Ton profil, ton entraînement, puis ton programme.</p></div><div class="gs-ob11-stepcount">Étape '+displayIndex+' / '+flowSteps.length+'</div></aside><main class="gs-ob11-main"><div class="gs-ob11-box"><div class="gs-ob11-progress">'+bars+'</div><h1 class="gs-ob11-title">'+E(info.title)+'</h1><div class="gs-ob11-sub">'+E(info.sub)+'</div>'+info.body+'<div class="gs-ob11-actions"><button type="button" onclick="ob11Prev()" '+backDisabled+'>Retour</button><button type="button" class="primary" onclick="ob11Next()">'+next+'</button></div>'+(isOAuthMode()?'<button type="button" class="gs-ob11-skip" onclick="gsCancelOAuthOnboarding()">Annuler la création du compte</button>':'')+'</div></main></div></div>';D.body.insertAdjacentHTML('beforeend',html);bindAuth(step);var inp=$('ob11-main-input')||$('ob11-password-input')||$('auth-age');if(inp)setTimeout(function(){try{inp.focus()}catch(e){}},40)}
  W.renderOb11=renderOb258;
  W.renderAuth258=renderOb258;
  W.openOnboardingWizard=function(step,opts){opts=opts||{};var mode=opts.mode||((W.OB11&&W.OB11.mode)||'signup');W.OB11=W.OB11||{step:0,total:AUTH_STEPS.length,password:'',passwordConfirm:'',mode:mode};W.OB11.total=AUTH_STEPS.length;W.OB11.mode=mode;if(mode==='oauth'&&(step==null||step<authStepIndex('username')))step=authStepIndex('username');W.OB11.step=typeof step==='number'?clamp(step,0,AUTH_STEPS.length-1):0;if(mode==='oauth'&&W.OB11.step<authStepIndex('username'))W.OB11.step=authStepIndex('username');renderOb258()};
@@ -27142,7 +27508,7 @@ if(D.readyState==='loading'){
  function avatarHtml(name,av){return av?'<img src="'+E(av)+'" alt="">':E(String(name||'U').charAt(0).toUpperCase())}
  function iconSearch(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>'}
  function publicUserObj(u){var name=displayName(u),un=username(u),av=avatar(u);return {id:u.id,name:name,display_name:name,username:un,avatar:av,xp:Number((u.data&&u.data.xp)||0),data:u.data||{}}}
- function setBtn(btn,status){if(!btn)return;btn.classList.remove('following','pending','loading','primary');btn.disabled=false;btn.removeAttribute('aria-busy');if(status==='accepted'){btn.textContent='Abonné';btn.classList.add('following')}else if(status==='pending'){btn.textContent='Abonné';btn.classList.add('following')}else{btn.textContent='Suivre';btn.classList.add('primary')}}
+ function setBtn(btn,status){if(!btn)return;btn.classList.remove('following','pending','loading','primary');btn.disabled=false;btn.removeAttribute('aria-busy');if(status==='accepted'||status==='following'){btn.textContent='Abonné';btn.classList.add('following')}else{btn.textContent='Suivre';btn.classList.add('primary')}}
  function refreshSameFollowButtons(id,status){D.querySelectorAll('[data-gs-follow-id="'+String(id).replace(/"/g,'')+'"]').forEach(function(b){setBtn(b,status)})}
  async function getFollowStatus(id){if(!online()||!id||String(id)===uid())return 'self';try{var r=await supa().from('follows').select('status').eq('follower_id',uid()).eq('following_id',id).maybeSingle();if(r&&r.data&&r.data.status)return r.data.status}catch(e){}return ''}
  async function createNotif(userId,type,title,body,related,payload){try{if(!online()||!userId||String(userId)===uid())return;var sb=supa();var existing=await sb.from('notifications').select('id').eq('user_id',userId).eq('actor_id',uid()).eq('type',type).eq('related_id',String(related||'')).neq('status','deleted').limit(1);if(existing.data&&existing.data.length)return;await sb.from('notifications').insert({user_id:userId,actor_id:uid(),from_id:uid(),type:type,status:'unread',title:title||'G-SQUAD',body:body||'',related_id:String(related||''),payload:payload||{}})}catch(e){}}
@@ -27222,7 +27588,7 @@ el.innerHTML=chunks.join('');D.querySelectorAll('[data-gs-follow-id]').forEach(a
  function empty(t,b){return '<div class="gs-sc-empty"><b>'+E(t)+'</b>'+E(b||'')+'</div>'}
  function section(t,n){return '<div class="gs-sc-section"><b>'+E(t)+'</b><span>'+E(n||'')+'</span></div>'}
  function publicUserObj(u){var name=displayName(u),un=usernameOf(u),av=avatarOf(u);return {id:u.id,name:name,display_name:name,username:un,avatar:av,xp:Number((u.data&&u.data.xp)||0),data:u.data||{},email:u.email||''}}
- function setBtn(btn,status){if(!btn)return;btn.classList.remove('following','pending','loading','primary');btn.disabled=false;btn.removeAttribute('aria-busy');if(status==='accepted'){btn.textContent='Abonné';btn.classList.add('following')}else if(status==='pending'){btn.textContent='Abonné';btn.classList.add('following')}else{btn.textContent='Suivre';btn.classList.add('primary')}}
+ function setBtn(btn,status){if(!btn)return;btn.classList.remove('following','pending','loading','primary');btn.disabled=false;btn.removeAttribute('aria-busy');if(status==='accepted'||status==='following'){btn.textContent='Abonné';btn.classList.add('following')}else{btn.textContent='Suivre';btn.classList.add('primary')}}
  function refreshSameFollowButtons(id,status){D.querySelectorAll('[data-gs-follow-id="'+String(id).replace(/"/g,'')+'"]').forEach(function(b){setBtn(b,status)})}
  function profileMatches(u,raw){var q=norm(raw),compact=normCompact(raw),tk=tokens(raw);if(!q)return false;var vals=[u.email,u.username,u.display_name,displayName(u),usernameOf(u),profileInner(u).username,profileInner(u).name,profileInner(u).display_name,profileInner(u).full_name].map(norm);var compVals=vals.map(function(x){return normCompact(x)});if(vals.some(function(v){return v===q||v.indexOf(q)>-1}))return true;if(compact&&compVals.some(function(v){return v===compact||v.indexOf(compact)>-1}))return true;return tk.length&&tk.every(function(t){return vals.concat(compVals).some(function(v){return v.indexOf(t)>-1})})}
  function scoreProfile(u,raw){var q=norm(raw),c=normCompact(raw),un=norm(usernameOf(u)),unc=normCompact(usernameOf(u)),dn=norm(displayName(u)),email=norm(u.email);if(un===q||unc===c)return 1;if(un.indexOf(q)===0||unc.indexOf(c)===0)return 2;if(dn===q)return 3;if(dn.indexOf(q)===0)return 4;if(email===q)return 5;if(un.indexOf(q)>-1||unc.indexOf(c)>-1)return 6;if(dn.indexOf(q)>-1)return 7;if(email.indexOf(q)>-1)return 8;return 20}
@@ -27325,7 +27691,7 @@ el.innerHTML=chunks.join('');D.querySelectorAll('[data-gs-follow-id]').forEach(a
  if(!name)return {profile:null,error:null};try{var rpc=await sb().rpc('resolve_login_username',{p_login:name});if(rpc&&!rpc.error){var row=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;if(row&&row.email)return {profile:row,error:null}}}catch(e){}var q1=await sb().from('profiles').select('id,email,username,display_name,data').eq('username',name).maybeSingle();if(q1.data)return {profile:q1.data,error:null};var q2=await sb().from('profiles').select('id,email,username,display_name,data').ilike('username',name).limit(5);if(q2.data&&q2.data.length)return {profile:q2.data[0],error:null};try{var q3=await sb().from('profiles').select('id,email,username,display_name,data').filter('data->profil->>username','eq',name).limit(5);if(q3.data&&q3.data.length)return {profile:q3.data[0],error:null}}catch(e){}var q4=await sb().from('profiles').select('id,email,username,display_name,data').ilike('display_name','%'+input.replace(/^@/,'')+'%').limit(5);if(q4.data&&q4.data.length){var exact=q4.data.find(function(p){return normUsername((p.data&&p.data.profil&&p.data.profil.username)||p.username||p.display_name)===name});if(exact)return {profile:exact,error:null}}return {profile:null,error:null}}
  W.doLogin=async function(){var inp=$('auth-email'),pwd=$('auth-password'),input=String(inp&&inp.value||'').trim(),pass=String(pwd&&pwd.value||'');if(!input||!pass){if(typeof W.authShowView==='function')W.authShowView('login');if(typeof W.authShowErr==='function')W.authShowErr('Remplis tous les champs.');return}if(!sb()){W.authShowErr&&W.authShowErr('Connexion indisponible.');return}if(typeof W.setAuthLoading==='function')W.setAuthLoading(true);var email=input,usedUsername=false;if(!input.includes('@')||input.startsWith('@')){usedUsername=true;var found=await findProfileForLogin(input);if(!found.profile||!found.profile.email){if(typeof W.setAuthLoading==='function')W.setAuthLoading(false);W.authShowErr&&W.authShowErr('Utilisateur introuvable. Vérifie que le profil public G-SQUAD possède bien ce @username.');return}email=found.profile.email}var res=await sb().auth.signInWithPassword({email:email,password:pass});if(typeof W.setAuthLoading==='function')W.setAuthLoading(false);if(res.error){var msg=usedUsername?'Ce @username existe, mais la connexion par mot de passe a échoué. Si ce compte a été créé avec Google, utilise “Continuer avec Google”. Sinon vérifie le mot de passe.':'Email ou mot de passe incorrect.';W.authShowErr&&W.authShowErr(msg);return}await W.afterAuth(res.data.user)};
  W.doLoginGoogle=async function(){if(!sb()){W.authShowErr&&W.authShowErr('Connexion indisponible.');return}try{localStorage.setItem('gs_oauth_provider_pending','google')}catch(e){}var r=await sb().auth.signInWithOAuth({provider:'google',options:{redirectTo:W.location.origin,queryParams:{prompt:'select_account'}}});if(r.error){W.authShowErr&&W.authShowErr(r.error.message)}};
- W.doLoginApple=async function(){ if(W.authShowErr) W.authShowErr('Connexion Apple indisponible pour le moment. Utilise Google ou email.'); };
+ W.doLoginApple=async function(){if(!sb()){W.authShowErr&&W.authShowErr('Connexion indisponible.');return}try{localStorage.setItem('gs_oauth_provider_pending','apple')}catch(e){}var r=await sb().auth.signInWithOAuth({provider:'apple',options:{redirectTo:W.location.origin}});if(r.error){W.authShowErr&&W.authShowErr(r.error.message)}};
  W.afterAuth=async function(user){if(!user)return;W._supaUser=user;try{_supaUser=user}catch(e){}isolateIfUserChanged(user);var auth=$('auth-screen');if(auth)auth.style.display='none';await W.loadFromSupabase(user.id);var ensured=await ensureProfileRow(user);if(!profileComplete(ensured.profile)){W.gsShowOAuthOnboarding(user,ensured.profile);return}var p=ensured.profile||{},data=p.data||{},pr=data.profil||{};S().profil=S().profil||{};if(p.username||pr.username)S().profil.username=p.username||pr.username;if(p.display_name||pr.name)S().profil.name=p.display_name||pr.name;if(p.email||pr.email)S().profil.email=p.email||pr.email;S().onboarded=true;S().onboardingComplete=true;S().authSetupStatus='completed';S().guestMode=false;try{localStorage.setItem('ath7',JSON.stringify(S()))}catch(e){}if(typeof W.bootApp==='function')W.bootApp()};
  // Neutralise l'ancienne afterAuth globale (ancien listener initAuth ligne 6375)
  try{if(typeof afterAuth==='function'&&!afterAuth.__gsPatched){afterAuth=async function(user){if(typeof W.afterAuth==='function')return W.afterAuth(user)};afterAuth.__gsPatched=true}}catch(e){}
@@ -27476,10 +27842,19 @@ el.innerHTML=chunks.join('');D.querySelectorAll('[data-gs-follow-id]').forEach(a
   if(D.readyState==='loading')D.addEventListener('DOMContentLoaded',wireHeader);else wireHeader();
 })();
 </script>
+
+<style id="gs-auth-compact-flow-css">
+.gs-onboard-v11 .gs-auth-form-grid{display:grid;grid-template-columns:1fr;gap:10px}.gs-onboard-v11 .gs-auth-section{margin:0 0 16px}.gs-onboard-v11 .gs-auth-section-title{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:1000;margin:0 0 9px}.gs-onboard-v11 .gs-ob11-grid-auto{grid-template-columns:repeat(auto-fit,minmax(128px,1fr))}.gs-onboard-v11 .gs-pa-select-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px}.gs-onboard-v11 .gs-pa-select,.gs-onboard-v11 .gs-pa-add{border-radius:16px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.055);color:var(--txt);font-weight:850;padding:12px;min-width:0}.gs-onboard-v11 .gs-pa-add{background:var(--txt);color:#071018;font-weight:1000}.gs-onboard-v11 .gs-pa-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:10px 0}.gs-onboard-v11 .gs-pa-days button{border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);color:var(--txt2);font-weight:950;padding:9px 0}.gs-onboard-v11 .gs-pa-days button.sel{background:rgba(143,185,255,.18);border-color:rgba(143,185,255,.45);color:var(--txt)}.gs-onboard-v11 .gs-pa-summary{font-size:12px;color:var(--txt2);font-weight:800;line-height:1.4}.gs-onboard-v11 .gs-pa-sport-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);border-radius:14px;padding:10px;margin-top:8px}.gs-onboard-v11 .gs-pa-sport-row button{border:0;background:transparent;color:#FF8A98;font-weight:900}.gs-onboard-v11 .gs-pass-rules264{min-height:0!important}.gs-onboard-v11 .gs-pass-rules264:empty{display:none!important}
+@media(max-width:520px){.gs-onboard-v11 .gs-pa-select-row{grid-template-columns:1fr}.gs-onboard-v11 .gs-pa-days{grid-template-columns:repeat(4,1fr)}}
+</style>
 <!-- G-SQUAD index-264 — Auth/setup stable + OAuth direct + Ma Squad ↔ Battle sync -->
 <style id="gs-index-264-css">
 .gs-auth-pwd-toggle264{width:100%;margin-top:10px;height:46px;border-radius:18px!important;border:1px solid rgba(255,255,255,.09)!important;background:rgba(143,185,255,.10)!important;color:var(--txt)!important;font-weight:1000!important}
-.gs-pass-rules264{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;font-size:11px;font-weight:900}.gs-pass-rules264 span{display:inline-flex;align-items:center;border-radius:999px;padding:6px 9px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);color:var(--txt2)}.gs-pass-rules264 span.ok{border-color:rgba(115,214,162,.34);background:rgba(115,214,162,.12);color:#73D6A2}.gs-pass-rules264 span.bad{border-color:rgba(255,107,122,.30);background:rgba(255,107,122,.08);color:#FF6B7A}
+.gs-pass-rules264{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;font-size:11px;font-weight:900}.gs-pass-rules264 span{display:inline-flex;align-items:center;border-radius:999px;padding:6px 9px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);color:var(--txt2)}.gs-pass-rules264 span.ok{border-color:rgba(115,214,162,.34);background:rgba(115,214,162,.12);color:#73D6A2}.gs-pass-rules264 span.bad{border-color:rgba(255,255,255,.10);background:rgba(255,255,255,.045);color:var(--txt2)}
+</style>
+
+<style id="gs-auth-program-ready-final-css">
+.gs-sp-plan{display:grid;gap:7px;margin-top:8px}.gs-sp-plan-row{display:grid;grid-template-columns:92px minmax(0,1fr);gap:10px;align-items:center;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.065);border-radius:16px;padding:10px 12px}.gs-sp-plan-row b{font-size:12px;color:var(--txt);font-weight:1000}.gs-sp-plan-row span{font-size:12px;color:var(--txt2);font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gs-ob11-choice b{display:block;font-size:14px;line-height:1.1}
 </style>
 <script id="gs-index-264-auth-final-js">
 (function(){
@@ -27497,87 +27872,112 @@ el.innerHTML=chunks.join('');D.querySelectorAll('[data-gs-follow-id]').forEach(a
  function base(){try{return typeof W.baseState==='function'?W.baseState():{profil:{},onboarded:false,onboardingComplete:false}}catch(e){return {profil:{},onboarded:false,onboardingComplete:false}}}
  function clamp(v,min,max){v=parseInt(v,10);if(!isFinite(v))v=min;return Math.max(min,Math.min(max,v))}
  function key(v,d){return String(v||d||'').toLowerCase()}
- function modeKey(v){v=key(v,'gym');if(/street|calis|barre|traction|dips/.test(v))return 'street';if(/poids|body|home|maison/.test(v))return 'bodyweight';return 'gym'}
+ function modeKey(v){v=key(v,'gym');if(/mix|hybride|hybrid/.test(v))return 'mixte';if(/street|calis|barre|traction|dips/.test(v))return 'street';if(/poids|body|home|maison/.test(v))return 'bodyweight';return 'gym'}
  function objKey(v){v=key(v,'maintien');if(/perte|cut|seche|sèche/.test(v))return 'perte';if(/prise|gain|masse|bulk/.test(v))return 'prise';return 'maintien'}
  function levelKey(v){v=key(v,'debutant');if(/avan|expert|pro/.test(v))return 'avance';if(/inter/.test(v))return 'intermediaire';return 'debutant'}
+ function athleteKey(v){v=key(v,'massif');if(/fess|or|glute|booty/.test(v))return 'fesses';if(/6|six|pack|abdo/.test(v))return 'sixpack';if(/massif|masse|muscle|volume/.test(v))return 'massif';if(/sec|sèche|seche|athl/.test(v))return 'sec';if(/puissance|sportif|complet|performance|explos/.test(v))return 'puissance';if(/taille|dessin/.test(v))return 'taille';if(v==='classic'||v==='muscle')return 'massif';if(v==='performance'||v==='endurance')return 'puissance';return 'massif'}
  function splitKey(v){v=key(v,'upperlower');if(/pplul|ppl\s*\+|ppl\s*\/\s*ul|ppl.*upper.*lower/.test(v))return 'pplul';if(/split/.test(v))return 'split';if(/upper|lower|haut|bas|^ul$|u\/l/.test(v))return 'upperlower';if(/ppl/.test(v))return 'ppl';if(/libre/.test(v))return 'libre';return 'fullbody'}
  function normUsername(v){return String(v||'').trim().replace(/^@/,'').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()}
- var STEPS=['email','password','username','name','gender','body','mode','objective','level','athlete','freq','priority','split','sports','gym','create'];
+ function normEmail(v){return String(v||'').trim().toLowerCase()}
+ function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normEmail(v))}
+ function passOk(p){p=String(p||'');return p.length>=6&&/[A-Z]/.test(p)&&/[^A-Za-z0-9]/.test(p)}
+ function isOauth(){return !!(W.OB11&&(W.OB11.mode==='oauth'||W.OB11.oauthPending))}
+ function isLoginMode(){return !!(W.OB11&&W.OB11.mode==='login')}
+ function withTimeout(promise,ms,label){var t;return Promise.race([promise,new Promise(function(_,reject){t=setTimeout(function(){reject(new Error(label||'timeout'))},ms||12000)})]).finally(function(){clearTimeout(t)})}
+ function showErr(m){if(typeof W.authShowErr==='function')W.authShowErr(m);else toast(m)}
+ function primaryBtn(){return D.querySelector('#gs-onboard-v11 .gs-ob11-actions .primary')}
+ function setPrimaryLoading(txt){var b=primaryBtn();if(!b)return function(){};var old=b.textContent;b.disabled=true;b.textContent=txt||'Chargement…';return function(){if(D.body.contains(b)){b.disabled=false;b.textContent=old}}}
+ function focusFirst(){var first=$('auth-email-compact')||$('ob11-main-input')||$('ob11-password-input')||$('auth-age');if(first)setTimeout(function(){try{first.focus()}catch(e){}},40)}
+ function resetSignupDraft(){if(W._supaUser)return;try{localStorage.removeItem('ath7');localStorage.removeItem('gs_auth_uid');localStorage.removeItem('gs_oauth_provider_pending');sessionStorage.removeItem('gs_guest_session')}catch(e){}assign(base());S().profil=S().profil||{}}
+ var STEPS=['account','profile','training','athlete','rhythm','create'];
+ var OAUTH_STEPS=['profile','training','athlete','rhythm','create'];
+ var LOGIN_STEPS=['loginId','loginPassword'];
  W.GS_AUTH_STEPS=STEPS;W.GS_AUTH_STEP_INDEX=function(name){return STEPS.indexOf(name)};
- var MODE_INFO={gym:['Salle','Salle complète + poids du corps utile.'],bodyweight:['Poids du corps','Maison, sans matériel obligatoire.'],street:['Street workout','Maison + barre/parc/assisté.']};
- var OBJ_INFO={perte:['Perte de gras','Déficit maîtrisé et volume contrôlé.'],maintien:['Maintien / recomposition','Progresser sans surcharge inutile.'],prise:['Prise de muscle','Volume, progression, récupération.']};
- var LEVEL_INFO={debutant:['Débutant','Guidé, simple, technique propre.'],intermediaire:['Intermédiaire','Volume modéré, progression régulière.'],avance:['Avancé','Plus structuré, plus exigeant.']};
- var ATHLETE_INFO={classic:['Classique fitness','Profil équilibré, progression générale.'],muscle:['Physique esthétique','Accent muscle, silhouette et priorités physiques.'],performance:['Performance','Force, explosivité et progression mesurable.'],endurance:['Endurance / hybride','Sport, cardio et récupération mieux intégrés.']};
- var SPLIT_INFO={fullbody:['Full Body','Tout le corps à chaque séance.'],ppl:['PPL','Push / Pull / Legs.'],upperlower:['Upper / Lower','Haut du corps / bas du corps.'],pplul:['PPL + U/L','PPL avec rappels haut/bas.'],split:['Split','Structure ciblée par zones musculaires.'],libre:['Libre','Structure flexible.']};
+ var MODE_INFO={street:['Street workout','Barres, parc, tractions, dips.'],bodyweight:['Poids du corps','Maison, sans matériel obligatoire.'],gym:['Salle','Machines, charges libres, poulies.'],mixte:['Mixte','Salle, poids du corps et extérieur.']};
+ var OBJ_INFO={perte:['Perte de gras','Sec, simple, progressif.'],maintien:['Maintien / recomposition','Progresser sans te cramer.'],prise:['Prise de muscle','Volume, force, récupération.']};
+ var LEVEL_INFO={debutant:['Débutant','Guidé, technique propre.'],intermediaire:['Intermédiaire','Volume régulier.'],avance:['Avancé','Plus structuré, plus exigeant.']};
+ var ATHLETE_INFO={fesses:['Fesses en or','Fessiers, ischios, bas du corps.'],sixpack:['6 packs','Abdos, gainage, sèche propre.'],massif:['Massif propre','Pecs, dos, épaules, volume.'],sec:['Sec athlétique','Recomposition, rythme, mobilité.'],puissance:['Puissance / sportif complet','Force, explosivité, performance.'],taille:['Taille dessinée','Gainage, posture, ligne.']};
+ var SPLIT_INFO={fullbody:['Full Body','Tout le corps à chaque séance.'],ppl:['PPL','Push / Pull / Legs.'],upperlower:['Upper / Lower','Haut du corps / bas du corps.'],pplul:['PPL + U/L','PPL avec rappels haut/bas.'],split:['Split','Structure ciblée.'],libre:['Libre','Structure flexible.']};
  var PRIO_LABELS={pecs:'Pectoraux',dos:'Dos',epaules:'Épaules',bras:'Bras',abdos:'Abdos',fessiers:'Fessiers',jambes:'Jambes',mollets:'Mollets',global:'Global'};
  var PRIO_KEYS=['pecs','dos','epaules','bras','abdos','fessiers','jambes','mollets','global'];
  var SPORT_LABELS={basket:'Basket',football:'Football',foot:'Football',footus:'Football américain',rugby:'Rugby',tennis:'Tennis',padel:'Padel',badminton:'Badminton',handball:'Handball',volley:'Volley',natation:'Natation',velo:'Vélo',course:'Course / running',running:'Running',marche:'Marche',randonnee:'Randonnée',boxe:'Boxe',mma:'MMA',jjb:'JJB',judo:'Judo',lutte:'Lutte',escalade:'Escalade',danse:'Danse',athletisme:'Athlétisme',crossfit:'CrossFit'};
  var SPORT_KEYS=Object.keys(SPORT_LABELS);
- var GYMS={basicfit:['Basic-Fit','Profil équipement standard'],fitnesspark:['Fitness Park','Machines, charges libres, poulies'],onair:['On Air','Salle complète'],keepcool:['Keep Cool','Machines et guidé'],neoness:['Neoness','Salle généraliste'],autre:['Autre salle','Profil équipement standard']};
- function gymKeys(){var out=[],seen={};function add(k){if(!k||seen[k]||k==='maison'||k==='home')return;seen[k]=1;out.push(k)}Object.keys(GYMS).forEach(add);try{Object.keys(W.GS_GYMS||{}).forEach(add)}catch(e){}return out.length?out:['basicfit','autre']}
- function gymName(k){var g=(W.GS_GYMS&&W.GS_GYMS[k])||{};return g.name||g.label||(GYMS[k]&&GYMS[k][0])||k||'Salle'}
- function gymSub(k){var g=(W.GS_GYMS&&W.GS_GYMS[k])||{};return g.sub||g.txt||(GYMS[k]&&GYMS[k][1])||'Profil équipement standard'}
- function passOk(p){p=String(p||'');return p.length>=6&&/[A-Z]/.test(p)&&/[^A-Za-z0-9]/.test(p)}
- function isOauth(){return !!(W.OB11&&(W.OB11.mode==='oauth'||W.OB11.oauthPending))}
- function idx(name){var i=STEPS.indexOf(name);return i<0?0:i}
- function resetSignupDraft(){if(W._supaUser)return;try{localStorage.removeItem('ath7');localStorage.removeItem('gs_auth_uid');localStorage.removeItem('gs_oauth_provider_pending');sessionStorage.removeItem('gs_guest_session')}catch(e){}assign(base());S().profil=S().profil||{};}
- function cfg(){var p=P(),s=S();return {trainingMode:modeKey(p.programTrainingMode||p.trainingMode||s.programTrainingMode||'gym'),objectif:objKey(p.objectif||'maintien'),level:levelKey(p.level||p.niveau||'debutant'),athleteType:key(p.athleteType||s.programAthleteType||'classic','classic'),freq:clamp(p.frequency||p.frequence||s.programDaysCount||4,1,6),priorities:(p.programPriorities||s.programPriorities||[]).filter(Boolean).slice(0,3),split:splitKey(p.split||p.programme||'upperlower'),gym:p.programGym||p.gym||s.programGym||'basicfit'} }
- function setCfg(c){c=c||{};var p=P(),s=S();p.programTrainingMode=modeKey(c.trainingMode||p.programTrainingMode);p.trainingMode=p.programTrainingMode;s.programTrainingMode=p.programTrainingMode;p.objectif=objKey(c.objectif||p.objectif);p.level=levelKey(c.level||p.level);p.niveau=p.level;p.athleteType=c.athleteType||p.athleteType||'classic';s.programAthleteType=p.athleteType;p.frequency=clamp(c.freq||p.frequency||4,1,6);p.frequence=p.frequency;s.programDaysCount=p.frequency;p.programPriorities=(c.priorities||p.programPriorities||s.programPriorities||[]).slice(0,3);s.programPriorities=p.programPriorities;p.split=splitKey(c.split||p.split);p.programme=p.split;s.programRecommendedSplit=p.split;p.programGym=c.gym||p.programGym||p.gym||s.programGym||'basicfit';p.gym=p.programGym;p.salle=p.programGym;p.gymName=gymName(p.programGym);s.programGym=p.programGym;s.gym=p.programGym;save();return cfg()}
- function recommendPriorities(type){type=String(type||'classic');if(type==='muscle')return ['pecs','dos','epaules'];if(type==='performance')return ['jambes','dos','global'];if(type==='endurance')return ['jambes','abdos','global'];return []}
+ function cfg(){var p=P(),s=S();return {trainingMode:modeKey(p.programTrainingMode||p.trainingMode||s.programTrainingMode||'gym'),objectif:objKey(p.objectif||'maintien'),level:levelKey(p.level||p.niveau||'debutant'),athleteType:athleteKey(p.athleteType||s.programAthleteType||'massif'),freq:clamp(p.frequency||p.frequence||s.programDaysCount||4,1,6),priorities:(p.programPriorities||s.programPriorities||[]).filter(Boolean).slice(0,3),split:splitKey(p.split||p.programme||s.programRecommendedSplit||'upperlower')}}
+ function setCfg(c){c=c||{};var p=P(),s=S(),cur=cfg();p.programTrainingMode=modeKey(c.trainingMode||cur.trainingMode);p.trainingMode=p.programTrainingMode;s.programTrainingMode=p.programTrainingMode;p.objectif=objKey(c.objectif||cur.objectif);p.level=levelKey(c.level||cur.level);p.niveau=p.level;p.athleteType=athleteKey(c.athleteType||cur.athleteType||'massif');s.programAthleteType=p.athleteType;p.frequency=clamp(c.freq||cur.freq||4,1,6);p.frequence=p.frequency;s.programDaysCount=p.frequency;p.programPriorities=(c.priorities||cur.priorities||[]).slice(0,3);s.programPriorities=p.programPriorities;p.split=splitKey(c.split||cur.split);p.programme=p.split;s.programRecommendedSplit=p.split;save();return cfg()}
+ function recommendPriorities(type){type=athleteKey(type);if(type==='fesses')return ['fessiers','jambes','abdos'];if(type==='sixpack')return ['abdos','dos','epaules'];if(type==='massif')return ['pecs','dos','epaules'];if(type==='sec')return ['abdos','global','jambes'];if(type==='puissance')return ['jambes','dos','epaules'];if(type==='taille')return ['abdos','fessiers','jambes'];return ['pecs','dos','epaules']}
  function calcIMC(w,h){w=parseFloat(w||0);h=parseFloat(h||0);if(!w||!h)return null;var m=h/100;return w/(m*m)}
  function calcBMR(w,h,a,g){w=parseFloat(w||0);h=parseFloat(h||0);a=parseFloat(a||0);g=String(g||'autre').toLowerCase();if(!w||!h||!a)return null;var off=g==='homme'?5:(g==='femme'?-161:-78);return 10*w+6.25*h-5*a+off}
  function syncBody(){var p=P(),w=parseFloat(p.poids||p.weight||0),h=parseFloat(p.taille||p.height||0),a=parseFloat(p.age||0),g=String(p.gender||p.sexe||'autre').toLowerCase();p.gender=g;p.sexe=g;if(w)p.poids=w;if(h)p.taille=h;if(a)p.age=a;var imc=calcIMC(w,h),bmr=calcBMR(w,h,a,g);if(imc){p.imc=Number(imc.toFixed(1));p.bmi=p.imc}if(bmr){p.bmr=Math.round(bmr);p.metabolismeBase=p.bmr}return {imc:imc,bmr:bmr}}
- function bodySummary(){var v=syncBody();return '<div id="auth-body-summary" class="gs-sp-card" style="margin-top:12px"><div class="gs-sp-kicker">Calcul automatique</div><div class="gs-sp-grid"><div class="gs-sp-metric"><b>'+E(v.imc?v.imc.toFixed(1):'—')+'</b><span>IMC</span></div><div class="gs-sp-metric"><b>'+E(v.bmr?Math.round(v.bmr):'—')+'</b><span>BMR kcal</span></div><div class="gs-sp-metric"><b>'+E(v.imc?(v.imc<18.5?'Bas':v.imc<25?'Normal':v.imc<30?'Élevé':'Très élevé'):'—')+'</b><span>repère</span></div></div><div class="gs-sp-sub">Ces valeurs restent modifiables dans le profil.</div></div>'}
+ function bodySummary(){var v=syncBody();return '<div id="auth-body-summary" class="gs-sp-card" style="margin-top:12px"><div class="gs-sp-kicker">Repères</div><div class="gs-sp-grid"><div class="gs-sp-metric"><b>'+E(v.imc?v.imc.toFixed(1):'—')+'</b><span>IMC</span></div><div class="gs-sp-metric"><b>'+E(v.bmr?Math.round(v.bmr):'—')+'</b><span>BMR kcal</span></div><div class="gs-sp-metric"><b>'+E(v.imc?(v.imc<18.5?'Bas':v.imc<25?'Normal':v.imc<30?'Élevé':'Très élevé'):'—')+'</b><span>repère</span></div></div></div>'}
  function choices(map,current,attr){return Object.keys(map).map(function(k){return '<button type="button" class="gs-ob11-choice '+(current===k?'sel':'')+'" '+attr+'="'+E(k)+'"><b>'+E(map[k][0])+'</b><span>'+E(map[k][1])+'</span></button>'}).join('')}
+ function section(title,html){return '<div class="gs-auth-section"><div class="gs-auth-section-title">'+E(title)+'</div>'+html+'</div>'}
  function dayButtons(sel){sel=Array.isArray(sel)?sel:[];return ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map(function(d,i){return '<button type="button" class="'+(sel.indexOf(i)>-1?'sel':'')+'" data-auth-day="'+i+'">'+d+'</button>'}).join('')}
- function sportRows(){var arr=S().programSports||[];return arr.length?'<div class="gs-pa-summary">'+arr.map(function(x,i){return '<div class="gs-pa-sport-row"><span>'+E(SPORT_LABELS[x.sport]||x.sport)+' · '+E(x.intensity||'moyenne')+'</span><button type="button" onclick="gsAuthRemoveSport264('+i+')">Retirer</button></div>'}).join('')+'</div>':'<div class="gs-pa-summary">Optionnel. Tu peux passer si tu n’as pas d’activité sportive régulière.</div>'}
+ function sportRows(){var arr=S().programSports||[];return arr.length?'<div class="gs-pa-summary">'+arr.map(function(x,i){return '<div class="gs-pa-sport-row"><span>'+E(SPORT_LABELS[x.sport]||x.sport)+' · '+E(x.intensity||'moyenne')+'</span><button type="button" onclick="gsAuthRemoveSport264('+i+')">Retirer</button></div>'}).join('')+'</div>':'<div class="gs-pa-summary">Optionnel.</div>'}
+ function visibleSteps(){if(isLoginMode())return LOGIN_STEPS.slice();return isOauth()?OAUTH_STEPS.slice():STEPS.slice()}
+ function flowIndex(name){var f=visibleSteps(),i=f.indexOf(name);return i<0?0:i}
  function renderBody(step){var p=P(),c=cfg(),title='',sub='',body='';
-  if(step==='email'){title='Email';sub='Compte en ligne G-SQUAD.';body='<input id="ob11-main-input" class="gs-ob11-input" type="email" autocomplete="email" placeholder="ton@email.com" value="'+E(p.email||'')+'"><div id="ob11-email-error" class="gs-ob11-field-error"></div>'}
-  if(step==='password'){title='Mot de passe';sub='Minimum 6 caractères, une majuscule et un caractère spécial.';body='<div class="gs-ob11-passwrap"><input id="ob11-password-input" class="gs-ob11-input" type="password" autocomplete="new-password" placeholder="Mot de passe" value="'+E((W.OB11&&W.OB11.password)||'')+'"><input id="ob11-password-confirm" class="gs-ob11-input" type="password" autocomplete="new-password" placeholder="Confirmer le mot de passe" value="'+E((W.OB11&&W.OB11.passwordConfirm)||'')+'"></div><button type="button" id="ob11-password-toggle" class="gs-auth-pwd-toggle264" onclick="gsAuthTogglePasswords264(this)">Afficher les mots de passe</button><div id="ob11-pass-rules" class="gs-pass-rules264"></div>'}
-  if(step==='username'){title='Username';sub=isOauth()?'Compte Google reconnu. Choisis ton identité G-SQUAD.':'Visible dans ta Squad et dans la recherche.';body='<input id="ob11-main-input" class="gs-ob11-input" type="text" autocomplete="username" placeholder="@username" value="'+E(p.username||'')+'"><div id="ob11-username-error" class="gs-ob11-field-error"></div>'}
-  if(step==='name'){title='Prénom';sub='Affiché sur ton profil et dans ta Squad.';body='<input id="ob11-main-input" class="gs-ob11-input" type="text" autocomplete="given-name" maxlength="30" placeholder="Ton prénom" value="'+E(p.firstName||p.prenom||p.name||'')+'"><div id="ob11-name-error" class="gs-ob11-field-error"></div>'}
-  if(step==='gender'){title='Sexe';sub='Utilisé uniquement pour les estimations IMC / BMR.';body='<div class="gs-ob11-grid">'+choices({homme:['Homme','Calcul BMR formule homme.'],femme:['Femme','Calcul BMR formule femme.'],autre:['Autre','Estimation neutre.']},String(p.gender||p.sexe||''),'data-auth-gender')+'</div>'}
-  if(step==='body'){title='Mensurations';sub='Âge, taille, poids pour calculer IMC et BMR.';body='<div class="gs-pa-select-row" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:10px"><input id="auth-age" class="gs-ob11-input" type="number" min="10" max="100" inputmode="numeric" placeholder="Âge" value="'+E(p.age||'')+'"><input id="auth-height" class="gs-ob11-input" type="number" min="100" max="230" inputmode="decimal" placeholder="Taille cm" value="'+E(p.taille||p.height||'')+'"><input id="auth-weight" class="gs-ob11-input" type="number" min="30" max="250" inputmode="decimal" placeholder="Poids kg" value="'+E(p.poids||p.weight||'')+'"></div>'+bodySummary()}
-  if(step==='mode'){title='Mode d’entraînement';sub='Même ordre que le calculateur Programme.';body='<div class="gs-ob11-grid">'+choices(MODE_INFO,c.trainingMode,'data-auth-mode')+'</div>'}
-  if(step==='objective'){title='Objectif';sub='Objectif principal du programme.';body='<div class="gs-ob11-grid">'+choices(OBJ_INFO,c.objectif,'data-auth-obj')+'</div>'}
-  if(step==='level'){title='Niveau';sub='Niveau réel actuel.';body='<div class="gs-ob11-grid">'+choices(LEVEL_INFO,c.level,'data-auth-level')+'</div>'}
-  if(step==='athlete'){title='Type d’athlète recherché';sub='Optionnel, mais il aide à orienter les priorités physiques.';body='<div class="gs-ob11-grid">'+choices(ATHLETE_INFO,c.athleteType,'data-auth-athlete')+'</div>'}
-  if(step==='freq'){title='Séances par semaine';sub='Choisis ton volume réel avant les priorités.';body='<div class="gs-ob11-grid gs-ob11-grid-auto">'+[1,2,3,4,5,6].map(function(n){return '<button type="button" class="gs-ob11-choice '+(c.freq===n?'sel':'')+'" data-auth-freq="'+n+'"><b>'+n+'</b><span>Séance'+(n>1?'s':'')+' / semaine</span></button>'}).join('')+'</div>'}
-  if(step==='priority'){title='Priorité physique';sub='Jusqu’à 3 zones, synchronisées avec ton type d’athlète.';body='<div class="gs-ob11-grid gs-ob11-grid-auto">'+PRIO_KEYS.map(function(k){return '<button type="button" class="gs-ob11-choice '+(c.priorities.indexOf(k)>-1?'sel':'')+'" data-auth-prio="'+E(k)+'"><b>'+E(PRIO_LABELS[k])+'</b><span>'+(c.priorities.indexOf(k)>-1?'Sélectionné':'Ajouter')+'</span></button>'}).join('')+'</div>'}
-  if(step==='split'){title='Organisation';sub='Organisation après niveau, type d’athlète, volume et priorités.';body='<div class="gs-ob11-grid">'+choices(SPLIT_INFO,c.split,'data-auth-split')+'</div>'}
-  if(step==='sports'){title='Activité sportive';sub='Sport externe à intégrer au programme.';body='<div class="gs-pa-select-row"><select id="auth-sport" class="gs-pa-select">'+SPORT_KEYS.map(function(k){return '<option value="'+E(k)+'">'+E(SPORT_LABELS[k])+'</option>'}).join('')+'</select><select id="auth-intensity" class="gs-pa-select"><option value="leger">Intensité légère</option><option value="moyenne" selected>Intensité moyenne</option><option value="intense">Intensité forte</option></select><button type="button" class="gs-pa-add" onclick="gsAuthAddSport264()">Ajouter</button></div><div class="gs-pa-days" id="auth-days">'+dayButtons([])+'</div>'+sportRows()}
-  if(step==='gym'){title='Salle d’entraînement';sub='Dernière information avant le programme trouvé.';body='<div class="gs-ob11-grid gs-ob11-grid-auto">'+gymKeys().map(function(k){return '<button type="button" class="gs-ob11-choice '+(c.gym===k?'sel':'')+'" data-auth-gym="'+E(k)+'"><b>'+E(gymName(k))+'</b><span>'+E(gymSub(k))+'</span></button>'}).join('')+'</div>'}
-  if(step==='create'){syncBody();title='Programme trouvé';sub='Nous avons trouvé le bon programme pour toi. Valide pour créer le compte.';body='<div class="gs-sp-card"><div class="gs-sp-kicker">Résumé</div><div class="gs-sp-title">@'+E(p.username||'username')+' · '+E((p.firstName||p.prenom||p.name||'Profil'))+'</div><div class="gs-sp-sub">'+E(MODE_INFO[c.trainingMode][0])+' · '+c.freq+' séances · '+E(OBJ_INFO[c.objectif][0])+' · '+E(LEVEL_INFO[c.level][0])+' · '+E(ATHLETE_INFO[c.athleteType]&&ATHLETE_INFO[c.athleteType][0]||'Classique')+'</div><div class="gs-sp-grid"><div class="gs-sp-metric"><b>'+E(p.imc||'—')+'</b><span>IMC</span></div><div class="gs-sp-metric"><b>'+E(p.bmr||'—')+'</b><span>BMR kcal</span></div><div class="gs-sp-metric"><b>'+E(gymName(c.gym))+'</b><span>salle</span></div></div><div class="gs-sp-sub">Le compte devient actif uniquement après validation.</div></div>'}
+  if(step==='loginId'){title='Connexion';sub='Email ou @username.';body='<input id="ob11-main-input" class="gs-ob11-input" type="text" autocomplete="username" placeholder="Email ou @username" value="'+E(p.email||'')+'">'}
+  if(step==='loginPassword'){title='Mot de passe';sub='Entre ton mot de passe.';body='<div class="gs-ob11-passwrap"><input id="ob11-password-input" class="gs-ob11-input" type="password" autocomplete="current-password" placeholder="Mot de passe" value="'+E((W.OB11&&W.OB11.password)||'')+'"></div>'}
+  if(step==='account'){title='Ton compte';sub='Les infos importantes sont vérifiées maintenant.';body='<div class="gs-auth-form-grid"><input id="auth-email-compact" class="gs-ob11-input" type="email" autocomplete="email" inputmode="email" placeholder="Email" value="'+E(p.email||'')+'"><input id="ob11-password-input" class="gs-ob11-input" type="password" autocomplete="new-password" placeholder="Mot de passe" value="'+E((W.OB11&&W.OB11.password)||'')+'"><input id="ob11-password-confirm" class="gs-ob11-input" type="password" autocomplete="new-password" placeholder="Confirmer le mot de passe" value="'+E((W.OB11&&W.OB11.passwordConfirm)||'')+'"><input id="auth-username-compact" class="gs-ob11-input" type="text" autocomplete="username" placeholder="@username" value="'+E(p.username||'')+'"></div><button type="button" class="gs-pwd-toggle264" onclick="gsAuthTogglePasswords264(this)">Afficher les mots de passe</button><div id="ob11-pass-rules" class="gs-pass-rules264"></div>'}
+  if(step==='profile'){title='Ton profil';sub='On garde le nécessaire pour bien démarrer.';body='<div class="gs-auth-form-grid"><input id="auth-name" class="gs-ob11-input" type="text" autocomplete="given-name" maxlength="30" placeholder="Prénom" value="'+E(p.firstName||p.prenom||p.name||'')+'"><div class="gs-ob11-grid gs-ob11-grid-auto">'+choices({homme:['Homme',''],femme:['Femme',''],autre:['Autre','']},String(p.gender||p.sexe||''),'data-auth-gender')+'</div><input id="auth-age" class="gs-ob11-input" type="number" min="12" max="90" inputmode="numeric" placeholder="Âge" value="'+E(p.age||'')+'"><input id="auth-height" class="gs-ob11-input" type="number" min="120" max="230" inputmode="decimal" placeholder="Taille en cm" value="'+E(p.taille||p.height||'')+'"><input id="auth-weight" class="gs-ob11-input" type="number" min="35" max="250" inputmode="decimal" placeholder="Poids en kg" value="'+E(p.poids||p.weight||'')+'"></div>'+bodySummary()}
+  if(step==='training'){title='Ton entraînement';sub='Cadre, objectif, niveau.';body=section('Tu t’entraînes comment ?', '<div class="gs-ob11-grid">'+choices(MODE_INFO,c.trainingMode,'data-auth-mode')+'</div>')+section('Objectif', '<div class="gs-ob11-grid">'+choices(OBJ_INFO,c.objectif,'data-auth-obj')+'</div>')+section('Niveau', '<div class="gs-ob11-grid">'+choices(LEVEL_INFO,c.level,'data-auth-level')+'</div>')}
+  if(step==='athlete'){title='Ton profil d’athlète';sub='On affine sans compliquer.';body=section('Type d’athlète', '<div class="gs-ob11-grid">'+choices(ATHLETE_INFO,c.athleteType,'data-auth-athlete')+'</div>')+section('Priorités physiques', '<div class="gs-ob11-grid gs-ob11-grid-auto">'+PRIO_KEYS.map(function(k){return '<button type="button" class="gs-ob11-choice '+(c.priorities.indexOf(k)>-1?'sel':'')+'" data-auth-prio="'+E(k)+'"><b>'+E(PRIO_LABELS[k])+'</b><span>'+(c.priorities.indexOf(k)>-1?'Sélectionné':'Ajouter')+'</span></button>'}).join('')+'</div>')}
+  if(step==='rhythm'){title='Ton rythme';sub='Séances, organisation, activité sportive.';body=section('Séances par semaine','<div class="gs-ob11-grid gs-ob11-grid-auto">'+[1,2,3,4,5,6].map(function(n){return '<button type="button" class="gs-ob11-choice '+(c.freq===n?'sel':'')+'" data-auth-freq="'+n+'"><b>'+n+'</b><span>Séance'+(n>1?'s':'')+' / semaine</span></button>'}).join('')+'</div>')+section('Organisation','<div class="gs-ob11-grid">'+choices(SPLIT_INFO,c.split,'data-auth-split')+'</div>')+section('Activité sportive','<div class="gs-pa-select-row"><select id="auth-sport" class="gs-pa-select">'+SPORT_KEYS.map(function(k){return '<option value="'+E(k)+'">'+E(SPORT_LABELS[k])+'</option>'}).join('')+'</select><select id="auth-intensity" class="gs-pa-select"><option value="leger">Intensité légère</option><option value="moyenne" selected>Intensité moyenne</option><option value="intense">Intensité forte</option></select><button type="button" class="gs-pa-add" onclick="gsAuthAddSport264()">Ajouter</button></div><div class="gs-pa-days" id="auth-days">'+dayButtons([])+'</div>'+sportRows())}
+  if(step==='create'){syncBody();title='Programme prêt';sub='Tes premières séances t’attendent dans ton planning.';body=readyProgramHTML()}
   return {title:title,sub:sub,body:body};
  }
- function visibleSteps(){return isOauth()?STEPS.filter(function(x){return x!=='email'&&x!=='password'}):STEPS.slice()}
- function render(){var step=STEPS[clamp(W.OB11&&W.OB11.step||0,0,STEPS.length-1)],info=renderBody(step),old=$('gs-onboard-v11');if(old)old.remove();var flow=visibleSteps(),display=STEPS.indexOf(step)+1,total=STEPS.length,bars=STEPS.map(function(_,i){return '<i class="'+(i<=STEPS.indexOf(step)?'on':'')+'"></i>'}).join(''),next=step==='create'?'Créer mon compte':'Continuer';var backDisabled=(!isOauth()&&STEPS.indexOf(step)===0)?'disabled':'';D.body.insertAdjacentHTML('beforeend','<div class="gs-onboard-v11 gs-auth-102 gs-ob11-noemoji" id="gs-onboard-v11"><div class="gs-ob11-shell"><aside class="gs-ob11-aside"><div><div class="gs-ob11-logo">G-SQUAD</div><h2 class="gs-ob11-aside-title">Ton setup complet.</h2><p class="gs-ob11-aside-sub">Auth, Profil, IMC/BMR et Programme suivent le même ordre que le calculateur.</p></div><div class="gs-ob11-stepcount">Étape '+display+' / '+total+'</div></aside><main class="gs-ob11-main"><div class="gs-ob11-box"><div class="gs-ob11-progress">'+bars+'</div><h1 class="gs-ob11-title">'+E(info.title)+'</h1><div class="gs-ob11-sub">'+E(info.sub)+'</div>'+info.body+'<div class="gs-ob11-actions"><button type="button" onclick="ob11Prev()" '+backDisabled+'>Retour</button><button type="button" class="primary" onclick="ob11Next()">'+next+'</button></div>'+(isOauth()?'<button type="button" class="gs-ob11-skip" onclick="gsCancelOAuthOnboarding&&gsCancelOAuthOnboarding()">Annuler la création du compte</button>':'')+'</div></main></div></div>');bind(step);if(step==='password')updatePassRules();var first=$('ob11-main-input')||$('ob11-password-input')||$('auth-age');if(first)setTimeout(function(){try{first.focus()}catch(e){}},40)}
- function capture(){var step=STEPS[W.OB11&&W.OB11.step||0],p=P();if(step==='email'){var e=String(($('ob11-main-input')||{}).value||'').trim().toLowerCase();if(e)p.email=e}if(step==='password'){W.OB11.password=String(($('ob11-password-input')||{}).value||W.OB11.password||'');W.OB11.passwordConfirm=String(($('ob11-password-confirm')||{}).value||W.OB11.passwordConfirm||'')}if(step==='username'){var u=normUsername(($('ob11-main-input')||{}).value||p.username);if(u)p.username=u}if(step==='name'){var n=String(($('ob11-main-input')||{}).value||'').trim();if(n){p.name=n;p.firstName=n;p.prenom=n;p.display_name=n}}if(step==='body'){p.age=String(($('auth-age')||{}).value||p.age||'');p.taille=String(($('auth-height')||{}).value||p.taille||'');p.poids=String(($('auth-weight')||{}).value||p.poids||'');syncBody()}if(isOauth()&&W._supaUser&&W._supaUser.email)p.email=String(W._supaUser.email||'').toLowerCase();save()}
- function bind(step){D.querySelectorAll('[data-auth-gender]').forEach(function(b){b.onclick=function(){P().gender=b.getAttribute('data-auth-gender')||'autre';P().sexe=P().gender;syncBody();save();render()}});['auth-age','auth-height','auth-weight'].forEach(function(id){var el=$(id);if(el)el.oninput=function(){capture();var box=$('auth-body-summary');if(box)box.outerHTML=bodySummary()}});D.querySelectorAll('[data-auth-mode]').forEach(function(b){b.onclick=function(){setCfg({trainingMode:b.getAttribute('data-auth-mode')});render()}});D.querySelectorAll('[data-auth-obj]').forEach(function(b){b.onclick=function(){setCfg({objectif:b.getAttribute('data-auth-obj')});render()}});D.querySelectorAll('[data-auth-level]').forEach(function(b){b.onclick=function(){setCfg({level:b.getAttribute('data-auth-level')});render()}});D.querySelectorAll('[data-auth-athlete]').forEach(function(b){b.onclick=function(){var t=b.getAttribute('data-auth-athlete')||'classic',p=P(),s=S();p.athleteType=t;s.programAthleteType=t;if(!(p.programPriorities&&p.programPriorities.length)){var pr=recommendPriorities(t);p.programPriorities=pr;s.programPriorities=pr}save();render()}});D.querySelectorAll('[data-auth-freq]').forEach(function(b){b.onclick=function(){setCfg({freq:b.getAttribute('data-auth-freq')});render()}});D.querySelectorAll('[data-auth-prio]').forEach(function(b){b.onclick=function(){var p=P(),s=S(),arr=(p.programPriorities||s.programPriorities||[]).slice(0,3),k=b.getAttribute('data-auth-prio'),i=arr.indexOf(k);if(i>-1)arr.splice(i,1);else{if(arr.length>=3){toast('Maximum 3 groupes musculaires.');return}arr.push(k)}p.programPriorities=arr;s.programPriorities=arr;save();render()}});D.querySelectorAll('[data-auth-split]').forEach(function(b){b.onclick=function(){setCfg({split:b.getAttribute('data-auth-split')});render()}});D.querySelectorAll('[data-auth-gym]').forEach(function(b){b.onclick=function(){setCfg({gym:b.getAttribute('data-auth-gym')});syncGymAliases();render()}});D.querySelectorAll('[data-auth-day]').forEach(function(b){b.onclick=function(){b.classList.toggle('sel')}});var pi=$('ob11-password-input'),pc=$('ob11-password-confirm');if(pi)pi.oninput=function(){capture();updatePassRules()};if(pc)pc.oninput=function(){capture();updatePassRules()}}
- function updatePassRules(){var p=String(($('ob11-password-input')||{}).value||''),c=String(($('ob11-password-confirm')||{}).value||''),el=$('ob11-pass-rules');if(!el)return;el.innerHTML='<span class="'+(p.length>=6?'ok':'bad')+'">6 caractères min</span><span class="'+(/[A-Z]/.test(p)?'ok':'bad')+'">Majuscule</span><span class="'+(/[^A-Za-z0-9]/.test(p)?'ok':'bad')+'">Caractère spécial</span><span class="'+(p&&p===c?'ok':'bad')+'">Confirmation</span>'}
+ function targetNutrition(){var p=P(),c=cfg(),v=syncBody(),bmr=Math.round((v&&v.bmr)||p.bmr||0),freq=Number(c.freq||4),activity=1.25+(Math.min(6,Math.max(1,freq))*0.055),base=bmr?Math.round(bmr*activity):0,kcal=base;if(c.objectif==='perte')kcal=Math.max(1200,base-350);else if(c.objectif==='prise')kcal=base+250;var w=parseFloat(p.poids||p.weight||0),prot=w?Math.round(w*(c.objectif==='perte'?2.0:1.8)):0;return {bmr:bmr,kcal:kcal,prot:prot,objectif:c.objectif==='perte'?'Déficit progressif':(c.objectif==='prise'?'Surplus propre':'Maintien stable')}}
+ function dayNames(){return ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche']}
+ function sessionNames(){var c=cfg(),split=c.split,f=c.freq,n=[];if(split==='ppl'||split==='pplul'){n=['Push','Pull','Legs','Haut du corps','Bas du corps','Rappel global']}else if(split==='upperlower'){n=['Haut du corps','Bas du corps','Haut du corps','Bas du corps','Full body','Rappel technique']}else if(split==='split'){n=['Pecs / épaules','Dos / bras','Jambes','Haut du corps','Bas du corps','Rappel points faibles']}else{n=['Full body','Full body technique','Full body volume','Full body mobilité','Full body force','Rappel global']}return n.slice(0,Math.max(1,Math.min(6,f)))}
+ function planningPreview(){var d=dayNames(),s=sessionNames(),out=[],step=s.length>=5?1:Math.floor(7/s.length)||1,idx=0;for(var i=0;i<s.length;i++){out.push({day:d[Math.min(6,idx)],name:s[i]});idx+=step;if(idx>=7)idx=6}return out}
+ function readyProgramHTML(){var p=P(),c=cfg(),n=targetNutrition(),ath=ATHLETE_INFO[c.athleteType]||ATHLETE_INFO.massif,mode=MODE_INFO[c.trainingMode]||MODE_INFO.gym,obj=OBJ_INFO[c.objectif]||OBJ_INFO.maintien,lvl=LEVEL_INFO[c.level]||LEVEL_INFO.debutant,split=SPLIT_INFO[c.split]||SPLIT_INFO.upperlower,pr=(c.priorities&&c.priorities.length?c.priorities:recommendPriorities(c.athleteType)).map(function(k){return PRIO_LABELS[k]||k}).join(' · '),sports=(P().externalSports||S().externalSports||[]).slice(0,2).map(function(x){return SPORT_LABELS[x.sport]||x.sport}).filter(Boolean).join(' · '),plan=planningPreview().map(function(x){return '<div class="gs-sp-plan-row"><b>'+E(x.day)+'</b><span>'+E(x.name)+'</span></div>'}).join('');return '<div class="gs-sp-card"><div class="gs-sp-kicker">Programme prêt</div><div class="gs-sp-title">'+E(ath[0])+' · '+E(obj[0])+'</div><div class="gs-sp-sub">'+E(mode[0])+' · '+c.freq+' séances · '+E(lvl[0])+' · '+E(split[0])+'</div><div class="gs-sp-grid"><div class="gs-sp-metric"><b>'+E(n.kcal||'—')+'</b><span>kcal / jour</span></div><div class="gs-sp-metric"><b>'+E(n.prot? n.prot+'g':'—')+'</b><span>protéines</span></div><div class="gs-sp-metric"><b>'+E(p.imc||'—')+'</b><span>IMC</span></div></div><div class="gs-sp-sub"><b>Objectif :</b> '+E(n.objectif)+' · <b>BMR :</b> '+E(n.bmr||'—')+' kcal</div><div class="gs-sp-sub"><b>Priorités :</b> '+E(pr||'—')+(sports?' · <b>Activité :</b> '+E(sports):'')+'</div><div class="gs-sp-kicker" style="margin-top:14px">Aperçu du planning</div><div class="gs-sp-plan">'+plan+'</div><div class="gs-sp-sub" style="margin-top:12px">Tu pourras l’ajuster plus tard.</div></div>'}
+
+ function render(){var login=isLoginMode();var flow=visibleSteps();W.OB11=W.OB11||{step:0,mode:'signup'};W.OB11.step=clamp(W.OB11.step,0,flow.length-1);var step=flow[W.OB11.step],info=renderBody(step),old=$('gs-onboard-v11');if(old)old.remove();var idxInFlow=flow.indexOf(step),bars=flow.map(function(s,i){return '<i class="'+(i<=idxInFlow?'on':'')+'"></i>'}).join(''),next=login?(step==='loginPassword'?'Se connecter':'Continuer'):(step==='create'?'Créer mon compte':'Continuer'),asideTitle=login?'Te revoilà.':'Créer ton compte',asideSub=login?'Connexion à ton compte G-SQUAD.':'Ton profil, ton entraînement, puis ton programme.';D.body.insertAdjacentHTML('beforeend','<div class="gs-onboard-v11 gs-auth-102 gs-ob11-noemoji" id="gs-onboard-v11"><div class="gs-ob11-shell"><aside class="gs-ob11-aside"><div><div class="gs-ob11-logo">G-SQUAD</div><h2 class="gs-ob11-aside-title">'+E(asideTitle)+'</h2><p class="gs-ob11-aside-sub">'+E(asideSub)+'</p></div><div class="gs-ob11-stepcount">Étape '+(idxInFlow+1)+' / '+flow.length+'</div></aside><main class="gs-ob11-main"><div class="gs-ob11-box"><div class="gs-ob11-progress">'+bars+'</div><h1 class="gs-ob11-title">'+E(info.title)+'</h1><div class="gs-ob11-sub">'+E(info.sub)+'</div>'+info.body+'<div id="gs-ob11-err" class="gs-ob11-err264"></div><div class="gs-ob11-actions"><button type="button" onclick="ob11Prev()">Retour</button><button type="button" class="primary" onclick="ob11Next()">'+next+'</button></div>'+(login?'<button type="button" class="gs-ob11-skip" onclick="gsAuthGotoSignup264()">Pas de compte ? Créer le mien</button>':'')+(isOauth()?'<button type="button" class="gs-ob11-skip" onclick="gsCancelOAuthOnboarding&&gsCancelOAuthOnboarding()">Annuler la création du compte</button>':'')+'</div></main></div></div>');bind(step);updatePassRules();try{if(typeof W.gsScanEyes264==='function')setTimeout(W.gsScanEyes264,10)}catch(e){}focusFirst()}
+ function capture(){var step=visibleSteps()[W.OB11&&W.OB11.step||0],p=P();if(step==='loginId'){var li=String(($('ob11-main-input')||{}).value||'').trim();if(li)p.email=li}if(step==='loginPassword'){W.OB11.password=String(($('ob11-password-input')||{}).value||W.OB11.password||'')}if(step==='account'){p.email=normEmail(($('auth-email-compact')||{}).value||p.email||'');W.OB11.password=String(($('ob11-password-input')||{}).value||W.OB11.password||'');W.OB11.passwordConfirm=String(($('ob11-password-confirm')||{}).value||W.OB11.passwordConfirm||'');var un=normUsername(($('auth-username-compact')||{}).value||p.username||'');if(un)p.username=un}if(step==='profile'){var n=String(($('auth-name')||{}).value||'').trim();if(n){p.name=n;p.firstName=n;p.prenom=n;p.display_name=n}p.age=String(($('auth-age')||{}).value||p.age||'');p.taille=String(($('auth-height')||{}).value||p.taille||'');p.poids=String(($('auth-weight')||{}).value||p.poids||'');syncBody()}if(isOauth()&&W._supaUser&&W._supaUser.email)p.email=normEmail(W._supaUser.email||'');save()}
+ function bind(step){D.querySelectorAll('[data-auth-gender]').forEach(function(b){b.onclick=function(){P().gender=b.getAttribute('data-auth-gender')||'autre';P().sexe=P().gender;syncBody();save();render()}});['auth-email-compact','auth-username-compact','auth-name','auth-age','auth-height','auth-weight'].forEach(function(id){var el=$(id);if(el)el.oninput=function(){if(id==='auth-username-compact')el.value=normUsername(el.value);capture();if(typeof W.authShowErr==='function')W.authShowErr('');var box=$('auth-body-summary');if(box&&(id==='auth-age'||id==='auth-height'||id==='auth-weight'))box.outerHTML=bodySummary()}});D.querySelectorAll('[data-auth-mode]').forEach(function(b){b.onclick=function(){setCfg({trainingMode:b.getAttribute('data-auth-mode')});render()}});D.querySelectorAll('[data-auth-obj]').forEach(function(b){b.onclick=function(){setCfg({objectif:b.getAttribute('data-auth-obj')});render()}});D.querySelectorAll('[data-auth-level]').forEach(function(b){b.onclick=function(){setCfg({level:b.getAttribute('data-auth-level')});render()}});D.querySelectorAll('[data-auth-athlete]').forEach(function(b){b.onclick=function(){var t=athleteKey(b.getAttribute('data-auth-athlete')||'massif'),p=P(),s=S();p.athleteType=t;s.programAthleteType=t;var pr=recommendPriorities(t);p.programPriorities=pr;s.programPriorities=pr;save();render()}});D.querySelectorAll('[data-auth-freq]').forEach(function(b){b.onclick=function(){setCfg({freq:b.getAttribute('data-auth-freq')});render()}});D.querySelectorAll('[data-auth-prio]').forEach(function(b){b.onclick=function(){var p=P(),s=S(),arr=(p.programPriorities||s.programPriorities||[]).slice(0,3),k=b.getAttribute('data-auth-prio'),i=arr.indexOf(k);if(i>-1)arr.splice(i,1);else{if(arr.length>=3){toast('Maximum 3 priorités.');return}arr.push(k)}p.programPriorities=arr;s.programPriorities=arr;save();render()}});D.querySelectorAll('[data-auth-split]').forEach(function(b){b.onclick=function(){setCfg({split:b.getAttribute('data-auth-split')});render()}});D.querySelectorAll('[data-auth-day]').forEach(function(b){b.onclick=function(){b.classList.toggle('sel')}});var pi=$('ob11-password-input'),pc=$('ob11-password-confirm');if(pi)pi.oninput=function(){capture();updatePassRules();if(typeof W.authShowErr==='function')W.authShowErr('')};if(pc)pc.oninput=function(){capture();updatePassRules();if(typeof W.authShowErr==='function')W.authShowErr('')}}
+ function updatePassRules(){var p=String(($('ob11-password-input')||{}).value||''),c=String(($('ob11-password-confirm')||{}).value||''),el=$('ob11-pass-rules');if(!el)return;if(!p&&!c){el.innerHTML='';return}el.innerHTML='<span class="'+(p.length>=6?'ok':'bad')+'">6 caractères min</span><span class="'+(/[A-Z]/.test(p)?'ok':'bad')+'">Majuscule</span><span class="'+(/[^A-Za-z0-9]/.test(p)?'ok':'bad')+'">Caractère spécial</span><span class="'+(p&&p===c?'ok':'bad')+'">Confirmation</span>'}
  W.gsAuthTogglePasswords264=function(btn){var p=$('ob11-password-input'),c=$('ob11-password-confirm');var show=p&&p.type==='password';if(p)p.type=show?'text':'password';if(c)c.type=show?'text':'password';if(btn)btn.textContent=show?'Masquer les mots de passe':'Afficher les mots de passe'};
  W.gsAuthAddSport264=function(){var sport=($('auth-sport')||{}).value||'basket',intensity=($('auth-intensity')||{}).value||'moyenne',days=Array.prototype.slice.call(D.querySelectorAll('#auth-days [data-auth-day].sel')).map(function(b){return parseInt(b.getAttribute('data-auth-day'),10)});if(!days.length){toast('Choisis au moins un jour.');return}S().programSports=S().programSports||[];S().programSports.push({sport:sport,intensity:intensity,days:days});save();render()};
  W.gsAuthRemoveSport264=function(i){S().programSports=S().programSports||[];S().programSports.splice(i,1);save();render()};
- async function usernameTaken(name,userId){if(!sb()||!sb().from)return false;try{var q=sb().from('profiles').select('id').eq('username',name).limit(1);if(userId)q=q.neq('id',userId);var r=await q;return !!(r&&r.data&&r.data.length)}catch(e){return false}}
- async function finish(){capture();var p=P(),st=S(),user=W._supaUser||null,c=cfg();if(!isOauth()&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(p.email||''))){W.OB11.step=idx('email');render();toast('Ajoute un email valide.');return}if(!isOauth()&&!passOk(W.OB11.password)){W.OB11.step=idx('password');render();toast('Mot de passe : minimum 6 caractères, une majuscule et un caractère spécial.');return}if(!isOauth()&&W.OB11.password!==W.OB11.passwordConfirm){W.OB11.step=idx('password');render();toast('Les deux mots de passe ne correspondent pas.');return}if(!p.username||String(p.username).length<3){W.OB11.step=idx('username');render();toast('Choisis un username de 3 caractères minimum.');return}if(!p.name&&!p.firstName&&!p.prenom){W.OB11.step=idx('name');render();toast('Ajoute ton prénom.');return}if(!p.gender&&!p.sexe){W.OB11.step=idx('gender');render();toast('Choisis Homme, Femme ou Autre.');return}syncBody();if(!p.age||!p.taille||!p.poids||!p.imc||!p.bmr){W.OB11.step=idx('body');render();toast('Renseigne âge, taille et poids.');return}if(await usernameTaken(p.username,user&&user.id)){W.OB11.step=idx('username');render();toast('Identifiant déjà pris.');return}if(!user){try{var res=await sb().auth.signUp({email:p.email,password:W.OB11.password,options:{data:{username:p.username,display_name:p.name||p.username}}});if(res.error){toast(res.error.message||'Création du compte impossible.');return}user=res.data&&res.data.user;W._supaUser=user;try{_supaUser=user}catch(e){}}catch(e){toast('Création du compte impossible.');return}}
-  p.name=p.name||p.firstName||p.prenom||p.username;p.firstName=p.firstName||p.name;p.prenom=p.prenom||p.name;p.display_name=p.display_name||p.name;p.email=p.email||((user&&user.email)||'');syncGymAliases();setCfg(c);syncBody();try{if(typeof W.gsOfficialApplyProgram258==='function')W.gsOfficialApplyProgram258(c,{silent:true})}catch(e){}
+ async function usernameTaken(name,userId){if(!sb()||!sb().from)return false;try{var q=sb().from('profiles').select('id').eq('username',name).limit(1);if(userId)q=q.neq('id',userId);var r=await withTimeout(q,8000,'username_timeout');return !!(r&&r.data&&r.data.length)}catch(e){return false}}
+ async function emailExistsServer(email){if(!sb()||!sb().from)return false;email=normEmail(email);if(!email)return false;try{var r=await withTimeout(sb().from('profiles').select('id').eq('email',email).limit(1),8000,'email_timeout');return !!(r&&r.data&&r.data.length)}catch(e){return false}}
+ async function findProfileForLogin(input){if(!sb()||!sb().from)return {profile:null};var raw=String(input||'').trim(),u=normUsername(raw);try{var q=sb().from('profiles').select('id,email,username,display_name,data').eq('username',u).limit(1);var r=await withTimeout(q,8000,'login_lookup_timeout');return {profile:r&&r.data&&r.data[0]||null}}catch(e){return {profile:null,error:e}}}
+ function accountCacheKey(email,username,password,confirm,userId){return [normEmail(email),normUsername(username),String(password||''),String(confirm||''),String(userId||'')].join('|')}
+ function accountCacheOk(email,username,password,confirm,userId){var c=W.__gsAuthAccountCheckCache||null;if(!c)return false;return c.key===accountCacheKey(email,username,password,confirm,userId)&&Date.now()-c.at<90000&&c.ok===true}
+ function setAccountCache(email,username,password,confirm,userId,ok){W.__gsAuthAccountCheckCache={key:accountCacheKey(email,username,password,confirm,userId),at:Date.now(),ok:!!ok}}
+ async function validateAccount(opts){opts=opts||{};capture();var p=P(),email=normEmail(p.email),username=normUsername(p.username),password=String(W.OB11&&W.OB11.password||''),confirm=String(W.OB11&&W.OB11.passwordConfirm||''),userId=(W._supaUser&&W._supaUser.id)||'';p.email=email;p.username=username;save();if(!validEmail(email)){showErr('Ajoute un email valide.');return false}if(!passOk(password)){showErr('Mot de passe : minimum 6 caractères, une majuscule et un caractère spécial.');return false}if(password!==confirm){showErr('Les deux mots de passe ne correspondent pas.');return false}if(!username||username.length<3){showErr('Choisis un username de 3 caractères minimum.');return false}if(!sb()||!sb().auth){showErr('Connexion indisponible. Réessaie en ligne.');return false}if(accountCacheOk(email,username,password,confirm,userId))return true;var done=setPrimaryLoading('Vérification…');try{var checks=[usernameTaken(username,userId)];if(!isOauth())checks.push(emailExistsServer(email));var r=await Promise.all(checks);if(r[0]){showErr('Ce username est déjà pris.');return false}if(!isOauth()&&r[1]){showErr('Un compte existe déjà avec cet email. Connecte-toi.');return false}setAccountCache(email,username,password,confirm,userId,true);return true}catch(e){showErr('Vérification impossible. Réessaie.');return false}finally{done()}}
+ function validateProfile(){capture();var p=P();if(!(p.name||p.firstName||p.prenom)){showErr('Ajoute ton prénom.');return false}if(!(p.gender||p.sexe)){showErr('Choisis Homme, Femme ou Autre.');return false}syncBody();if(!p.age||!p.taille||!p.poids){showErr('Renseigne âge, taille et poids.');return false}return true}
+ async function finish(){if(W.__gsAuthCreating)return false;W.__gsAuthCreating=true;var unlock=setPrimaryLoading('Création…');try{capture();var p=P(),st=S(),user=W._supaUser||null,c=cfg();function stage(t){var b=primaryBtn();if(b)b.textContent=t}
+ if(!isOauth()){W.OB11.step=flowIndex('account');stage('Vérification…');if(!await validateAccount({silent:true})){render();setTimeout(function(){showErr('Corrige ton compte pour continuer.')},30);return false}}
+ if(!p.username||normUsername(p.username).length<3){W.OB11.step=flowIndex(isOauth()?'profile':'account');render();setTimeout(function(){showErr('Choisis un username de 3 caractères minimum.')},30);return false}
+ if(!validateProfile()){W.OB11.step=flowIndex('profile');render();setTimeout(function(){showErr('Complète ton profil.')},30);return false}
+ var userId=user&&user.id||'';
+ if(!isOauth()&&!accountCacheOk(p.email,p.username,W.OB11&&W.OB11.password,W.OB11&&W.OB11.passwordConfirm,userId)){stage('Vérification…');if(await usernameTaken(p.username,userId)){W.OB11.step=flowIndex('account');render();setTimeout(function(){showErr('Ce username est déjà pris.')},30);return false}}
+ if(isOauth()){stage('Vérification…');if(await usernameTaken(p.username,userId)){W.OB11.step=flowIndex('profile');render();setTimeout(function(){showErr('Ce username est déjà pris.')},30);return false}}
+ if(!user){if(!sb()||!sb().auth){showErr('Connexion indisponible. Réessaie en ligne.');return false}var res;stage('Création du compte…');try{res=await withTimeout(sb().auth.signUp({email:p.email,password:W.OB11.password,options:{data:{username:p.username,display_name:p.name||p.username}}}),14000,'signup_timeout')}catch(e){showErr('Création du compte impossible. Réessaie.');return false}if(res&&res.error){var em=String(res.error.message||'');W.OB11.step=flowIndex('account');render();setTimeout(function(){if(/email|invalid/i.test(em))showErr('Cet email n’est pas valide.');else if(/password/i.test(em))showErr('Mot de passe invalide.');else if(/already|registered|exist|déjà/i.test(em))showErr('Un compte existe déjà avec cet email. Connecte-toi.');else showErr(em||'Création du compte impossible.')},30);return false}user=res&&res.data&&res.data.user;if(!user){showErr('Création en attente. Vérifie ton email puis reconnecte-toi.');return false}var idents=(user&&user.identities)||null;if(idents&&idents.length===0){W.OB11.step=flowIndex('account');render();setTimeout(function(){showErr('Un compte existe déjà avec cet email. Connecte-toi.')},30);return false}W._supaUser=user;try{_supaUser=user}catch(e){}}
+  p.name=p.name||p.firstName||p.prenom||p.username;p.firstName=p.firstName||p.name;p.prenom=p.prenom||p.name;p.display_name=p.display_name||p.name;p.email=p.email||((user&&user.email)||'');setCfg(c);syncBody();stage('Préparation du programme…');try{if(typeof W.gsOfficialApplyProgram258==='function')W.gsOfficialApplyProgram258(c,{silent:true})}catch(e){}
   st.onboarded=true;st.onboardingComplete=true;st.authSetupStatus='completed';st.guestMode=false;p.onboardingComplete=true;p.authSetupStatus='completed';
-  if(user&&sb()){try{var data=(typeof W.gsSafeSupabaseState==='function'?W.gsSafeSupabaseState(st):JSON.parse(JSON.stringify(st)));data.onboarded=true;data.onboardingComplete=true;data.authSetupStatus='completed';data.profil=data.profil||{};data.profil.onboardingComplete=true;data.profil.authSetupStatus='completed';await sb().from('profiles').upsert({id:user.id,email:p.email||user.email||'',username:p.username||'',display_name:p.name||p.username||'',data:data,updated_at:new Date().toISOString()},{onConflict:'id'})}catch(e){console.warn(e);toast('Profil Supabase non finalisé. Réessaie.');return}}
-  save();try{localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');localStorage.removeItem('gs_oauth_provider_pending');sessionStorage.removeItem('gs_guest_session')}catch(e){}var ov=$('gs-onboard-v11');if(ov)ov.remove();var a=$('auth-screen');if(a){a.style.display='none';a.classList.remove('open')}try{if(typeof W.hideGates==='function')W.hideGates()}catch(e){}try{if(typeof W.bootApp==='function')W.bootApp();else if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}try{if(typeof W.goTab==='function')W.goTab('accueil',$('nb-accueil'))}catch(e){}toast('Compte créé')}
+  if(user&&sb()){stage('Préparation du profil…');try{var data=(typeof W.gsSafeSupabaseState==='function'?W.gsSafeSupabaseState(st):JSON.parse(JSON.stringify(st)));data.onboarded=true;data.onboardingComplete=true;data.authSetupStatus='completed';data.profil=data.profil||{};data.profil.username=p.username;data.profil.email=p.email||user.email||'';data.profil.name=p.name||p.username||'';data.profil.onboardingComplete=true;data.profil.authSetupStatus='completed';await withTimeout(sb().from('profiles').upsert({id:user.id,email:p.email||user.email||'',username:p.username||'',display_name:p.name||p.username||'',data:data,updated_at:new Date().toISOString()},{onConflict:'id'}),14000,'profile_upsert_timeout')}catch(e){console.warn(e);showErr('Profil en ligne non finalisé. Réessaie.');return false}}
+  save();try{localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');localStorage.removeItem('gs_oauth_provider_pending');sessionStorage.removeItem('gs_guest_session')}catch(e){}var ov=$('gs-onboard-v11');if(ov)ov.remove();var a=$('auth-screen');if(a){a.style.display='none';a.classList.remove('open')}try{if(typeof W.hideGates==='function')W.hideGates()}catch(e){}try{if(typeof W.bootApp==='function')W.bootApp();else if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}try{if(typeof W.goTab==='function')W.goTab('accueil',$('nb-accueil'))}catch(e){}toast('Compte créé');return false}finally{W.__gsAuthCreating=false;unlock()}}
+ W.gsFinishSignupAdventure=finish;
  W.renderOb11=render;W.renderAuth258=render;
- W.openOnboardingWizard=function(step,opts){opts=opts||{};var mode=opts.mode||'signup';if(opts.fresh&&mode!=='oauth')resetSignupDraft();W.OB11={step:typeof step==='number'?clamp(step,0,STEPS.length-1):(mode==='oauth'?idx('username'):0),total:STEPS.length,password:'',passwordConfirm:'',mode:mode,oauthPending:mode==='oauth'};if(mode==='oauth'&&W.OB11.step<idx('username'))W.OB11.step=idx('username');render()};
- W.ob11Prev=function(){capture();var cur=Number(W.OB11&&W.OB11.step||0);if(isOauth()&&cur<=idx('username')){if(typeof W.gsCancelOAuthOnboarding==='function')return W.gsCancelOAuthOnboarding();return false}if(cur<=0){var ov=$('gs-onboard-v11');if(ov)ov.remove();var a=$('auth-screen');if(a){a.style.display='flex';a.classList.add('open')}try{if(W.__gs264PrevAuthShow)return W.__gs264PrevAuthShow('landing')}catch(e){}return false}cur--;if(isOauth()&&cur===idx('password'))cur=idx('username');W.OB11.step=cur;render();return false};
- W.ob11Next=async function(){capture();var step=STEPS[W.OB11&&W.OB11.step||0];if(step==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(P().email||''))){toast('Ajoute un email valide.');return false}if(step==='password'&&!isOauth()){if(!passOk(W.OB11.password)){toast('Mot de passe : minimum 6 caractères, une majuscule et un caractère spécial.');return false}if(W.OB11.password!==W.OB11.passwordConfirm){toast('Les deux mots de passe ne correspondent pas.');return false}}if(step==='username'&&(!P().username||P().username.length<3)){toast('Choisis un username de 3 caractères minimum.');return false}if(step==='name'&&!(P().name||P().firstName||P().prenom)){toast('Ajoute ton prénom.');return false}if(step==='gender'&&!(P().gender||P().sexe)){toast('Choisis Homme, Femme ou Autre.');return false}if(step==='body'){syncBody();if(!P().age||!P().taille||!P().poids){toast('Renseigne âge, taille et poids.');return false}}if(step==='create'){await finish();return false}var n=Number(W.OB11.step||0)+1;if(isOauth()&&n===idx('password'))n=idx('username');W.OB11.step=Math.min(STEPS.length-1,n);render();return false};
- W.ob11SkipStep=function(){var step=STEPS[W.OB11&&W.OB11.step||0];if(['email','password','username','name','gender','body'].indexOf(step)>-1){toast('Cette étape est obligatoire.');return false}W.OB11.step=Math.min(STEPS.length-1,Number(W.OB11.step||0)+1);render();return false};
- function syncGymAliases(){var p=P(),s=S(),g=p.programGym||p.gym||p.salle||s.programGym||s.gym||'';if(!g)return;p.programGym=g;p.gym=g;p.salle=g;p.gymName=p.gymName||gymName(g);s.programGym=g;s.gym=g;save()}
+ W.openOnboardingWizard=function(step,opts){opts=opts||{};var mode=opts.mode||'signup';if(opts.fresh&&mode!=='oauth'&&mode!=='login')resetSignupDraft();var flow=mode==='login'?LOGIN_STEPS:(mode==='oauth'?OAUTH_STEPS:STEPS);var startStep=0;if(typeof step==='number')startStep=clamp(step,0,flow.length-1);if(mode==='oauth')startStep=0;W.OB11={step:startStep,total:flow.length,password:(W.OB11&&W.OB11.password)||'',passwordConfirm:(W.OB11&&W.OB11.passwordConfirm)||'',mode:mode,oauthPending:mode==='oauth'};try{var c0=cfg();setCfg({athleteType:c0.athleteType})}catch(e){}render()};
+ W.gsAuthGotoSignup264=function(){W.openOnboardingWizard(0,{mode:'signup',fresh:true});return false};
+ W.gsAuthEmailExists264=function(email){try{P().email=email||P().email||''}catch(e){}W.openOnboardingWizard(0,{mode:'login',fresh:false});setTimeout(function(){var i=$('ob11-main-input');if(i&&email)i.value=email;if(W.authShowErr)W.authShowErr('Ce compte existe déjà. Entre ton mot de passe pour te connecter.')},60);return false};
+ W.gsAuthLoginSubmit264=async function(){var em=String(P().email||'').trim(),pw=String(W.OB11&&W.OB11.password||'');if(!em||!pw){showErr('Entre ton email et ton mot de passe.');return false}if(!sb()){showErr('Connexion indisponible.');return false}var email=em,usedUsername=false;if(em.indexOf('@')<0||em.charAt(0)==='@'){usedUsername=true;try{var found=await findProfileForLogin(em);if(!found||!found.profile||!found.profile.email){showErr('Utilisateur introuvable. Vérifie ton @username.');return false}email=found.profile.email}catch(e){showErr('Utilisateur introuvable.');return false}}var done=setPrimaryLoading('Connexion…'),res;try{res=await withTimeout(sb().auth.signInWithPassword({email:email,password:pw}),14000,'login_timeout')}catch(e){res={error:e}}done();if(res&&res.error){showErr(usedUsername?'Ce @username existe mais la connexion a échoué. Utilise Google si ce compte vient de Google.':'Email ou mot de passe incorrect.');return false}var ov=$('gs-onboard-v11');if(ov)ov.remove();try{if(typeof W.afterAuth==='function')await W.afterAuth(res.data.user)}catch(e){}return false};
+ W.gsBackToAuthLanding264=function(){var ov=$('gs-onboard-v11');if(ov)ov.remove();var a=$('auth-screen');if(a){a.style.display='flex';a.classList.add('open')}try{['landing','login','signup-s1','signup-s2','signup-s3'].forEach(function(v){var el=$('auth-view-'+v);if(el)el.style.display=(v==='landing')?'':'none'})}catch(e){}try{['auth-err','auth-err-s1','auth-err-s2','auth-err-s3'].forEach(function(id){var el=$(id);if(el)el.textContent=''})}catch(e){}return false};
+ W.ob11Prev=function(){capture();var cur=Number(W.OB11&&W.OB11.step||0);if(cur<=0){if(isOauth()&&typeof W.gsCancelOAuthOnboarding==='function')return W.gsCancelOAuthOnboarding();return W.gsBackToAuthLanding264()}W.OB11.step=Math.max(0,cur-1);render();return false};
+ W.ob11Next=async function(){capture();var flow=visibleSteps(),cur=Number(W.OB11&&W.OB11.step||0),step=flow[cur];if(isLoginMode()){if(step==='loginId'){var em=String(P().email||'').trim();if(!em){showErr('Entre ton email ou @username.');return false}W.OB11.step=1;render();return false}if(step==='loginPassword'){var pw=String(($('ob11-password-input')||{}).value||W.OB11.password||'');if(!pw){showErr('Entre ton mot de passe.');return false}W.OB11.password=pw;return W.gsAuthLoginSubmit264()}return false}if(step==='account'){if(!await validateAccount())return false;W.OB11.step=Math.min(flow.length-1,cur+1);render();return false}if(step==='profile'&&!validateProfile())return false;if(step==='create')return finish();W.OB11.step=Math.min(flow.length-1,cur+1);render();return false};
+ W.ob11SkipStep=function(){toast('Cette étape est nécessaire pour créer ton compte.');return false};
+ function syncGymAliases(){return}
  function profileComplete(row){var d=row&&row.data||{},p=d.profil||{};return !!(d.onboardingComplete||d.onboarding_complete||d.authSetupStatus==='completed'||p.onboardingComplete||p.authSetupStatus==='completed')}
  async function ensureRow(user){if(!sb()||!user)return {profile:null};try{var r=await sb().from('profiles').select('id,email,username,display_name,data').eq('id',user.id).maybeSingle();if(r&&r.data)return {profile:r.data};await sb().from('profiles').upsert({id:user.id,email:user.email||'',username:null,display_name:(user.user_metadata&&(user.user_metadata.full_name||user.user_metadata.name))||'',data:{authSetupStatus:'pending_setup',onboardingComplete:false,profil:{email:user.email||'',authSetupStatus:'pending_setup',onboardingComplete:false}},updated_at:new Date().toISOString()},{onConflict:'id'});var r2=await sb().from('profiles').select('id,email,username,display_name,data').eq('id',user.id).maybeSingle();return {profile:r2&&r2.data?r2.data:null}}catch(e){return {profile:null,error:e}}}
  function metaName(user){var m=user&&user.user_metadata||{};return m.given_name||m.name||m.full_name||''}
- W.gsShowOAuthOnboarding=function(user,profile){var a=$('auth-screen');if(a){a.style.display='none';a.classList.remove('open')}var old=$('gs-onboard-v11');if(old)old.remove();assign(base());var st=S(),p=P();st.onboarded=false;st.onboardingComplete=false;st.authSetupStatus='pending_setup';st.guestMode=false;p.email=(user&&user.email)||'';p.name=(profile&&profile.display_name)||metaName(user)||'';p.firstName=p.firstName||p.name;p.prenom=p.prenom||p.name;p.username=normUsername((profile&&profile.username)||'');p.authSetupStatus='pending_setup';p.onboardingComplete=false;W._supaUser=user;try{_supaUser=user}catch(e){}save();W.openOnboardingWizard(idx('username'),{mode:'oauth'})};
+ W.gsShowOAuthOnboarding=function(user,profile){var a=$('auth-screen');if(a){a.style.display='none';a.classList.remove('open')}var old=$('gs-onboard-v11');if(old)old.remove();assign(base());var st=S(),p=P();st.onboarded=false;st.onboardingComplete=false;st.authSetupStatus='pending_setup';st.guestMode=false;p.email=(user&&user.email)||'';p.name=(profile&&profile.display_name)||metaName(user)||'';p.firstName=p.firstName||p.name;p.prenom=p.prenom||p.name;p.username=normUsername((profile&&profile.username)||'');p.authSetupStatus='pending_setup';p.onboardingComplete=false;W._supaUser=user;try{_supaUser=user}catch(e){}save();W.openOnboardingWizard(0,{mode:'oauth'})};
  W.doLoginGoogle=async function(){if(!sb()){W.authShowErr&&W.authShowErr('Connexion indisponible.');return}try{localStorage.setItem('gs_oauth_provider_pending','google')}catch(e){}var r=await sb().auth.signInWithOAuth({provider:'google',options:{redirectTo:W.location.origin,queryParams:{prompt:'select_account'}}});if(r.error){W.authShowErr&&W.authShowErr(r.error.message)}};
- W.afterAuth=async function(user){if(!user)return;W._supaUser=user;try{_supaUser=user}catch(e){}var a=$('auth-screen');if(a){a.style.display='none';a.classList.remove('open')}var ensured=await ensureRow(user),row=ensured.profile;if(!profileComplete(row)){W.gsShowOAuthOnboarding(user,row);return}try{if(typeof W.loadFromSupabase==='function')await W.loadFromSupabase(user.id)}catch(e){}var d=row&&row.data||{},pr=d.profil||{},p=P();p.email=(row&&row.email)||pr.email||user.email||p.email;p.username=(row&&row.username)||pr.username||p.username;p.name=(row&&row.display_name)||pr.name||p.name;p.firstName=p.firstName||p.name;p.prenom=p.prenom||p.name;S().onboarded=true;S().onboardingComplete=true;S().authSetupStatus='completed';S().guestMode=false;syncGymAliases();reconcileSquads();save();try{if(typeof W.hideGates==='function')W.hideGates()}catch(e){}try{if(typeof W.bootApp==='function')W.bootApp();else if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}};
+ W.afterAuth=async function(user){if(!user)return;W._supaUser=user;try{_supaUser=user}catch(e){}var a=$('auth-screen');if(a){a.style.display='none';a.classList.remove('open')}var ensured=await ensureRow(user),row=ensured.profile;if(!profileComplete(row)){W.gsShowOAuthOnboarding(user,row);return}try{if(typeof W.loadFromSupabase==='function')await W.loadFromSupabase(user.id)}catch(e){}var d=row&&row.data||{},pr=d.profil||{},p=P();p.email=(row&&row.email)||pr.email||user.email||p.email;p.username=(row&&row.username)||pr.username||p.username;p.name=(row&&row.display_name)||pr.name||p.name;p.firstName=p.firstName||p.name;p.prenom=p.prenom||p.name;S().onboarded=true;S().onboardingComplete=true;S().authSetupStatus='completed';S().guestMode=false;save();try{if(typeof W.hideGates==='function')W.hideGates()}catch(e){}try{if(typeof W.bootApp==='function')W.bootApp();else if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){}};
  W.initAuth=async function(){var a=$('auth-screen'),ob=$('onboard');if(a)a.style.display='flex';if(ob)ob.style.display='none';if(!sb()||!sb().auth){if(a&&typeof W.authShowView==='function')W.authShowView('landing');return}try{var ses=await sb().auth.getSession();if(ses&&ses.data&&ses.data.session&&ses.data.session.user){await W.afterAuth(ses.data.session.user);return}try{if(!W.__gs264AuthListener){W.__gs264AuthListener=true;sb().auth.onAuthStateChange(async function(ev,session){if((ev==='SIGNED_IN'||ev==='INITIAL_SESSION'||ev==='TOKEN_REFRESHED')&&session&&session.user)await W.afterAuth(session.user);if(ev==='SIGNED_OUT'){assign(base());W._supaUser=null;try{_supaUser=null}catch(e){}if(a){a.style.display='flex';a.classList.add('open')}if(typeof W.authShowView==='function')W.authShowView('landing')}})}}catch(e){}assign(base());if(a&&typeof W.authShowView==='function')W.authShowView('landing')}catch(e){console.warn('[GS264] initAuth',e)}};
- var prevAuthShow=W.authShowView;W.__gs264PrevAuthShow=prevAuthShow;W.authShowView=function(view){if(view==='signup'||view==='signup11'||view==='signup-s1'||view==='onboarding'){W.openOnboardingWizard(0,{mode:'signup',fresh:true});return false}if(view==='landing'){var ov=$('gs-onboard-v11');if(ov)ov.remove()}return typeof prevAuthShow==='function'?prevAuthShow.apply(this,arguments):undefined};
+ var prevAuthShow=W.authShowView;W.__gs264PrevAuthShow=prevAuthShow;W.authShowView=function(view){if(view==='signup'||view==='signup11'||view==='signup-s1'||view==='onboarding'){W.openOnboardingWizard(0,{mode:'signup',fresh:true});return false}if(view==='login'){var a=$('auth-screen');if(a){a.style.display='none';a.classList.remove('open')}W.openOnboardingWizard(0,{mode:'login',fresh:false});return false}if(view==='landing'){var ov=$('gs-onboard-v11');if(ov)ov.remove()}return typeof prevAuthShow==='function'?prevAuthShow.apply(this,arguments):undefined};
  function normalizeMember(m){return m&&typeof m==='object'?Object.assign({},m):(m?{id:String(m),name:String(m)}:null)}
  function uid(){return String((W._supaUser&&W._supaUser.id)||'')}
  function selfMember(role){var p=P();return {id:uid()||p.username||'local_me',user_id:uid(),username:p.username||'',name:p.name||p.firstName||p.prenom||'Toi',display_name:p.name||p.firstName||p.prenom||'Toi',me:true,role:role||'host'}}
@@ -27679,9 +28079,6 @@ el.innerHTML=chunks.join('');D.querySelectorAll('[data-gs-follow-id]').forEach(a
   };
 })();
 </script>
-</body>
-</html>
-
 <!-- G-SQUAD CONFORMITY PATCH - squad members / notifs / comments / profile loading -->
 <script id="gs-conformity-patch-265-js">
 (function(){
@@ -27866,196 +28263,305 @@ console.log('GS265 conformity patch loaded');
 </script>
 
 
-<script id="gs-social-service-266-js">
+<!-- G-SQUAD SOCIALSERVICE (2/2) - REBRANCHEMENTS : derniers, pour rester la couche autoritaire au-dessus des patches legacy -->
+<script id="gs-social-service-bind-js">
 (function(){
 'use strict';
-var W=window,D=document;
-function $(id){return D.getElementById(id)}
-function sb(){return W._supa||null}
-function uid(){try{return W._supaUser&&W._supaUser.id?String(W._supaUser.id):null}catch(e){return null}}
-function state(){try{return typeof W.safeState==='function'?W.safeState():typeof W.getState==='function'?W.getState():(W.state||W._gsState||{})}catch(e){return W.state||W._gsState||{}}}
-function profil(){var s=state();s.profil=s.profil||{};return s.profil}
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}
-function toast(m){try{if(typeof W.toast==='function')W.toast(m);else if(typeof W.notify==='function')W.notify(m);else console.log('[G-SQUAD]',m)}catch(e){}}
-function online(){return !!(sb()&&uid()&&(typeof navigator==='undefined'||navigator.onLine!==false))}
-function uuidish(v){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v||''))}
-function nameOfMe(){var p=profil();return p.name||p.display_name||p.firstName||p.prenom||p.username||'Un membre'}
-function usernameOfMe(){var p=profil();return p.username||''}
-function avatarOfMe(){var p=profil();return p.avatar||p.avatar_url||''}
-function connectionRequiredHTML(){return '<div class="gs-social-required" style="padding:22px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);border-radius:24px;margin:16px"><div style="font-size:22px;font-weight:1000;letter-spacing:-.04em;color:var(--txt);margin-bottom:6px">Connexion requise</div><div style="font-size:13px;color:var(--mut);font-weight:750;line-height:1.45">Les profils, Squads, demandes et notifications fonctionnent uniquement avec un compte connecté.</div></div>'}
-function requireOnlineUser(show){
-  if(online())return {id:uid(),client:sb()};
-  if(show!==false)toast('Connecte-toi pour utiliser le social.');
+var W=window, D=document;
+var SS=W.SocialService;
+if(!SS){ try{ console.warn('[GS] SocialService absent au rebranchement'); }catch(e){} return; }
+function toast(m){ try{ if(typeof W.toast==='function') W.toast(m); }catch(e){} }
+
+/* Follow */
+W.gsSocialToggleFollow = function(id, name, btn){ return SS.toggleFollow(id, name, btn); };
+W.gsGlobalFollowUser   = function(id, name, btn){ return SS.toggleFollow(id, name, btn); };
+W.gsFollow             = function(id, name, btn){ return SS.followUser(id, name); };
+W.gsToggleFollow       = function(id, name, btn){ return SS.toggleFollow(id, name, btn); };
+W.gsUnfollow           = function(id){ return SS.unfollowUser(id); };
+W.gsIsFollowing        = function(id){ return SS.getFollowStatus(id); };
+
+/* Squad : demande à rejoindre */
+W.gsRequestJoinSquad    = function(squadId, name, owner){ return SS.requestJoinSquad(squadId, name, owner); };
+W.gsRequestPrivateSquad = function(squadId, name, owner){ return SS.requestJoinSquad(squadId, name, owner); };
+W.gs190RequestSquad     = function(id, name, owner, btn){ if(btn){btn.textContent='Envoi…';btn.disabled=true;} return SS.requestJoinSquad(id, name, owner).then(function(res){ if(btn){btn.disabled=false; btn.textContent='Demande envoyée';} return res; }).catch(function(){ if(btn){btn.disabled=false;btn.textContent='Demander';} }); };
+W.gsGlobalRequestSquad  = function(id, name, owner, btn){ return W.gs190RequestSquad(id, name, owner, btn); };
+
+/* Squad : décisions hôte (par id réel) */
+W.gsAcceptPrivateSquadRequest = function(reqId){ return SS.acceptSquadJoinRequest(reqId); };
+W.gsRejectPrivateSquadRequest = function(reqId){ return SS.rejectSquadJoinRequest(reqId); };
+
+/* Squad : invitations */
+W.gsAcceptSquadInvite = function(notifId, squadId, squadName){
+  if(squadId) return SS.acceptSquadInviteBySquad(squadId).then(function(){ if(notifId) SS.markNotificationRead(notifId); });
+  return SS.acceptSquadInvite(notifId);
+};
+W.gsRefuseSquadInvite = function(notifId, squadId){
+  if(squadId) return SS.rejectSquadInviteBySquad(squadId).then(function(){ if(notifId) SS.markNotificationRead(notifId); });
+  return SS.rejectSquadInvite(notifId);
+};
+
+/* Quitter / retirer */
+W.gsLeaveSquad   = function(squadId){ return SS.leaveSquad(squadId); };
+W.gsRemoveMember = function(squadId, userId){ return SS.removeMember(squadId, userId); };
+
+/* Notifications : helpers unifiés */
+W.gsCreateSocialNotification = function(userId, type, name, extra){
+  extra=extra||{};
+  return SS.createNotification({ user_id:userId, type:type, title:extra.title, body:extra.body||name, entity_type:extra.entity_type, entity_id:extra.entity_id, squad_id:extra.squad_id, squad_name:extra.squad_name, payload:extra.payload });
+};
+W.gsLoadInbox        = function(filter){ return SS.loadInbox(filter); };
+W.gsMarkNotifRead    = function(id){ return SS.markNotificationRead(id); };
+W.gsMarkAllNotifRead = function(){ return SS.markAllRead(); };
+
+/* Friend system legacy : NEUTRALISÉ côté code (tables dormantes en base).
+   Modèle désormais = follow unilatéral. */
+W.sendFriendRequest      = function(targetId, targetName, btn){ return SS.followUser(targetId, targetName).then(function(r){ SS._paintFollowBtns(targetId, r); return r; }); };
+W.gsSendFriendFromSearch = function(targetId, targetName, btn){ return SS.toggleFollow(targetId, targetName, btn); };
+W.acceptFriend           = function(){ toast('Le système d’amis a été remplacé par le suivi (Suivre / Abonné).'); };
+W.rejectFriend           = function(){ toast('Le système d’amis a été remplacé par le suivi (Suivre / Abonné).'); };
+W.loadFriendRequests     = function(){ return Promise.resolve([]); };
+
+/* ---- Actions hôte : NEUTRALISATION du local, redirection SERVEUR ---- */
+function _cli(){ return W._supa||null; }
+function _meId(){ try{ return (W._supaUser&&W._supaUser.id)?String(W._supaUser.id):null; }catch(e){ return null; } }
+function _activeSquadId(){
+  try{
+    var s=(typeof W.activeSquad==='function'&&W.activeSquad())||(typeof W.squad==='function'&&W.squad())||null;
+    if(s&&s.id) return String(s.id);
+    if(W.__bsv3&&typeof W.__bsv3.activeSquadId==='function'){ var id=W.__bsv3.activeSquadId(); if(id) return String(id); }
+  }catch(e){}
   return null;
 }
-async function getProfile(userId){
-  if(!requireOnlineUser(false)||!userId)return null;
-  try{var r=await sb().from('profiles').select('id,email,username,display_name,avatar_url,data').eq('id',userId).maybeSingle();return r&&r.data?r.data:null}catch(e){return null}
-}
-function profileName(row){var d=row&&row.data||{},p=d.profil||{};return row&&row.display_name||p.name||p.firstName||p.prenom||row&&row.username||'Utilisateur'}
-function profileAvatar(row){var d=row&&row.data||{},p=d.profil||{};return row&&row.avatar_url||p.avatar||p.avatar_url||d.avatar_url||''}
-async function createNotification(args){
-  if(!requireOnlineUser(false)||!args||!args.recipient_id||String(args.recipient_id)===uid())return null;
-  var payload=Object.assign({},args.payload||{});
-  if(!payload.actor_name)payload.actor_name=nameOfMe();
-  if(!payload.actor_username)payload.actor_username=usernameOfMe();
-  if(!payload.actor_avatar)payload.actor_avatar=avatarOfMe();
-  var row={recipient_id:args.recipient_id,actor_id:args.actor_id||uid(),type:args.type||'activity',entity_type:args.entity_type||null,entity_id:args.entity_id==null?null:String(args.entity_id),status:'unread',payload:payload};
-  try{var r=await sb().from('notifications').insert(row).select('id').maybeSingle();return r&&r.data?r.data:null}catch(e){console.warn('[GS266] createNotification',e);return null}
-}
-async function followUser(targetId){
-  var u=requireOnlineUser();if(!u)return false;targetId=String(targetId||'');if(!targetId||targetId===uid()){toast('Profil indisponible.');return false}
+/* récupère la i-ème demande PENDING réelle (serveur) de la squad active */
+async function _pendingReqAt(i){
+  var sid=_activeSquadId(); if(!_cli()||!sid) return null;
   try{
-    var r=await sb().from('follows').upsert({follower_id:uid(),following_id:targetId},{onConflict:'follower_id,following_id'});
-    if(r&&r.error)throw r.error;
-    await createNotification({recipient_id:targetId,type:'follow',entity_type:'profiles',entity_id:uid(),payload:{body:nameOfMe()+' te suit.',actor_name:nameOfMe()}});
-    toast('Abonné.');
-    return true;
-  }catch(e){console.warn('[GS266] followUser',e);toast('Impossible de suivre ce profil.');return false}
+    var r=await _cli().from('private_squad_requests').select('id,requester_id,created_at')
+      .eq('squad_id',sid).eq('status','pending').order('created_at',{ascending:true});
+    var rows=r.data||[]; return rows[i]||rows[0]||null;
+  }catch(e){ return null; }
 }
-async function unfollowUser(targetId){
-  var u=requireOnlineUser();if(!u)return false;targetId=String(targetId||'');
-  try{var r=await sb().from('follows').delete().eq('follower_id',uid()).eq('following_id',targetId);if(r&&r.error)throw r.error;toast('Désabonné.');return true}catch(e){console.warn('[GS266] unfollowUser',e);toast('Impossible de se désabonner.');return false}
-}
-async function getFollowStatus(targetId){
-  if(!requireOnlineUser(false)||!targetId)return 'not_following';
-  try{var r=await sb().from('follows').select('following_id').eq('follower_id',uid()).eq('following_id',String(targetId)).maybeSingle();return r&&r.data?'following':'not_following'}catch(e){return 'not_following'}
-}
-async function fetchFollowMap(ids){
-  var out={};ids=(ids||[]).map(String).filter(Boolean);if(!ids.length||!requireOnlineUser(false))return out;
-  try{var r=await sb().from('follows').select('following_id').eq('follower_id',uid()).in('following_id',ids);(r.data||[]).forEach(function(x){out[String(x.following_id)]='following'});return out}catch(e){return out}
-}
-async function searchUsers(q){
-  if(!requireOnlineUser())return {login:true,users:[]};q=String(q||'').trim();if(q.length<2)return {users:[]};
-  try{var r=await sb().from('profiles').select('id,email,username,display_name,avatar_url,data').or('username.ilike.%'+q+'%,display_name.ilike.%'+q+'%').neq('id',uid()).limit(30);if(r.error)throw r.error;return {users:r.data||[]}}catch(e){console.warn('[GS266] searchUsers',e);return {error:e,users:[]}}
-}
-async function findSquad(squadId){
-  if(!requireOnlineUser(false)||!squadId)return null;
-  try{var r=await sb().from('private_squads').select('id,name,owner_id,host_id,created_by,squad_emoji,members_count,payload').eq('id',String(squadId)).maybeSingle();return r&&r.data?r.data:null}catch(e){return null}
-}
-async function requestJoinSquad(squadId,squadName,ownerId,btn){
-  var u=requireOnlineUser();if(!u)return false;squadId=String(squadId||'');if(!squadId){toast('Squad indisponible.');return false}
-  try{
-    if(btn){btn.disabled=true;btn.textContent='Envoi…'}
-    var sq=await findSquad(squadId);var host=ownerId||sq&&String(sq.host_id||sq.owner_id||sq.created_by||'');
-    var existing=await sb().from('private_squad_requests').select('id,status').eq('squad_id',squadId).eq('requester_id',uid()).in('status',['pending','accepted']).limit(1);
-    if(existing.data&&existing.data.length){var label=existing.data[0].status==='accepted'?'Membre':'Demande envoyée';if(btn)btn.textContent=label;toast(label);return true}
-    var row={squad_id:squadId,requester_id:uid(),status:'pending'};if(uuidish(host))row.host_id=host;
-    var ins=await sb().from('private_squad_requests').insert(row).select('id').maybeSingle();if(ins.error)throw ins.error;
-    if(uuidish(host))await createNotification({recipient_id:host,type:'squad_join_request',entity_type:'private_squad_requests',entity_id:ins.data&&ins.data.id,payload:{body:nameOfMe()+' veut rejoindre '+(squadName||sq&&sq.name||'ta Squad')+'.',squad_id:squadId,squad_name:squadName||sq&&sq.name||'Squad',requester_id:uid(),actor_name:nameOfMe()}});
-    if(btn){btn.textContent='Demande envoyée';btn.disabled=true}
-    toast('Demande envoyée.');return true;
-  }catch(e){console.warn('[GS266] requestJoinSquad',e);if(btn){btn.disabled=false;btn.textContent='Demander à rejoindre'}toast('Impossible d’envoyer la demande.');return false}
-}
-async function acceptSquadJoinRequest(requestId){
-  var u=requireOnlineUser();if(!u)return false;requestId=String(requestId||'');
-  try{
-    var got=await sb().from('private_squad_requests').select('*').eq('id',requestId).maybeSingle();if(got.error)throw got.error;var req=got.data;if(!req){toast('Demande introuvable.');return false}
-    var up=await sb().from('private_squad_requests').update({status:'accepted',handled_at:new Date().toISOString()}).eq('id',requestId);if(up.error)throw up.error;
-    var mem=await sb().from('private_squad_members').insert({squad_id:String(req.squad_id),user_id:req.requester_id,role:'member',status:'active',joined_at:new Date().toISOString()});if(mem.error){await sb().from('private_squad_members').update({role:'member',status:'active',joined_at:new Date().toISOString()}).eq('squad_id',String(req.squad_id)).eq('user_id',req.requester_id);}
-    await createNotification({recipient_id:req.requester_id,type:'squad_request_accepted',entity_type:'private_squad_requests',entity_id:requestId,payload:{body:'Ta demande de Squad a été acceptée.',squad_id:req.squad_id,actor_name:nameOfMe()}});
-    toast('Demande acceptée.');return true;
-  }catch(e){console.warn('[GS266] acceptSquadJoinRequest',e);toast('Impossible d’accepter.');return false}
-}
-async function rejectSquadJoinRequest(requestId){
-  var u=requireOnlineUser();if(!u)return false;requestId=String(requestId||'');
-  try{var got=await sb().from('private_squad_requests').select('*').eq('id',requestId).maybeSingle();var req=got&&got.data;var up=await sb().from('private_squad_requests').update({status:'refused',handled_at:new Date().toISOString()}).eq('id',requestId);if(up.error)throw up.error;if(req&&req.requester_id)await createNotification({recipient_id:req.requester_id,type:'squad_request_refused',entity_type:'private_squad_requests',entity_id:requestId,payload:{body:'Ta demande de Squad a été refusée.',squad_id:req.squad_id,actor_name:nameOfMe()}});toast('Demande refusée.');return true}catch(e){console.warn('[GS266] rejectSquadJoinRequest',e);toast('Impossible de refuser.');return false}
-}
-async function inviteUserToSquad(squadId,userId){
-  var u=requireOnlineUser();if(!u)return false;squadId=String(squadId||'');userId=String(userId||'');if(!squadId||!userId){toast('Invitation indisponible.');return false}
-  try{var sq=await findSquad(squadId);var ins=await sb().from('squad_invites').insert({squad_id:squadId,inviter_id:uid(),invited_user_id:userId,status:'pending'}).select('id').maybeSingle();if(ins.error)throw ins.error;await createNotification({recipient_id:userId,type:'squad_invite',entity_type:'squad_invites',entity_id:ins.data&&ins.data.id,payload:{body:nameOfMe()+' t’invite dans '+(sq&&sq.name||'sa Squad')+'.',squad_id:squadId,squad_name:sq&&sq.name||'Squad',actor_name:nameOfMe()}});toast('Invitation envoyée.');return true}catch(e){console.warn('[GS266] inviteUserToSquad',e);toast('Invitation impossible.');return false}
-}
-async function acceptSquadInvite(inviteId){
-  var u=requireOnlineUser();if(!u)return false;inviteId=String(inviteId||'');
-  try{var got=await sb().from('squad_invites').select('*').eq('id',inviteId).maybeSingle();if(got.error)throw got.error;var inv=got.data;if(!inv){toast('Invitation introuvable.');return false}var up=await sb().from('squad_invites').update({status:'accepted',handled_at:new Date().toISOString()}).eq('id',inviteId);if(up.error)throw up.error;var mem=await sb().from('private_squad_members').insert({squad_id:String(inv.squad_id),user_id:uid(),role:'member',status:'active',joined_at:new Date().toISOString()});if(mem.error){await sb().from('private_squad_members').update({role:'member',status:'active',joined_at:new Date().toISOString()}).eq('squad_id',String(inv.squad_id)).eq('user_id',uid());}await createNotification({recipient_id:inv.inviter_id,type:'squad_invite_accepted',entity_type:'squad_invites',entity_id:inviteId,payload:{body:nameOfMe()+' a accepté ton invitation Squad.',squad_id:inv.squad_id,actor_name:nameOfMe()}});toast('Invitation acceptée.');return true}catch(e){console.warn('[GS266] acceptSquadInvite',e);toast('Impossible d’accepter l’invitation.');return false}
-}
-async function rejectSquadInvite(inviteId){
-  var u=requireOnlineUser();if(!u)return false;inviteId=String(inviteId||'');
-  try{var got=await sb().from('squad_invites').select('*').eq('id',inviteId).maybeSingle();var inv=got&&got.data;var up=await sb().from('squad_invites').update({status:'refused',handled_at:new Date().toISOString()}).eq('id',inviteId);if(up.error)throw up.error;if(inv&&inv.inviter_id)await createNotification({recipient_id:inv.inviter_id,type:'squad_invite_refused',entity_type:'squad_invites',entity_id:inviteId,payload:{body:nameOfMe()+' a refusé ton invitation Squad.',squad_id:inv.squad_id,actor_name:nameOfMe()}});toast('Invitation refusée.');return true}catch(e){console.warn('[GS266] rejectSquadInvite',e);toast('Impossible de refuser l’invitation.');return false}
-}
-async function leaveSquad(squadId){var u=requireOnlineUser();if(!u)return false;try{await sb().from('private_squad_members').delete().eq('squad_id',String(squadId)).eq('user_id',uid());toast('Tu as quitté la Squad.');return true}catch(e){toast('Impossible de quitter.');return false}}
-async function removeMember(squadId,userId){var u=requireOnlineUser();if(!u)return false;try{await sb().from('private_squad_members').delete().eq('squad_id',String(squadId)).eq('user_id',String(userId));toast('Membre retiré.');return true}catch(e){toast('Impossible de retirer ce membre.');return false}}
-async function loadInbox(filter){
-  if(!requireOnlineUser(false))return [];
-  try{var q=sb().from('notifications').select('*').eq('recipient_id',uid()).neq('status','deleted').order('created_at',{ascending:false}).limit(60);var r=await q;if(r.error)throw r.error;var list=r.data||[];if(filter==='requests')list=list.filter(function(n){return /request|invite/.test(String(n.type||''))});if(filter==='squad')list=list.filter(function(n){return /^squad_/.test(String(n.type||''))});if(filter==='activity')list=list.filter(function(n){return !/request|invite/.test(String(n.type||''))&&n.type!=='follow'});return list}catch(e){console.warn('[GS266] loadInbox',e);return []}
-}
-async function markNotificationRead(id){if(!requireOnlineUser(false)||!id)return;try{await sb().from('notifications').update({status:'read'}).eq('id',id).eq('recipient_id',uid())}catch(e){}}
-async function markAllRead(){if(!requireOnlineUser(false))return;try{await sb().from('notifications').update({status:'read'}).eq('recipient_id',uid()).eq('status','unread')}catch(e){}}
-async function deleteNotification(id){if(!requireOnlineUser(false)||!id)return;try{await sb().from('notifications').update({status:'deleted'}).eq('id',id).eq('recipient_id',uid())}catch(e){}}
-function setFollowBtn(btn,status){if(!btn)return;btn.disabled=false;btn.classList.remove('pending','sent','following','primary');if(status==='following'){btn.textContent='Abonné';btn.classList.add('following');btn.setAttribute('data-social-action','unfollow')}else{btn.textContent='Suivre';btn.classList.add('primary');btn.setAttribute('data-social-action','follow')}}
-function setSquadBtn(btn,status){if(!btn)return;btn.disabled=false;btn.classList.remove('pending','following','primary');if(status==='pending'){btn.textContent='Demande envoyée';btn.classList.add('pending');btn.disabled=true}else if(status==='member'||status==='accepted'){btn.textContent='Membre';btn.classList.add('following')}else{btn.textContent='Demander à rejoindre';btn.classList.add('primary')}}
-function parseArgs(onclick){var m=String(onclick||'').match(/\((.*)\)/);if(!m)return [];try{return Function('return ['+m[1]+']')()}catch(e){return []}}
-async function syncVisibleFollowButtons(){
-  if(!requireOnlineUser(false))return;
-  var buttons=[].slice.call(D.querySelectorAll('button[onclick*="sendFriendRequest"],button[onclick*="gsGlobalAddFriend"],button[data-social-action="follow"],button[data-social-action="unfollow"]'));
-  var ids=[];buttons.forEach(function(b){var id=b.getAttribute('data-target')||b.getAttribute('data-user-id');if(!id){var args=parseArgs(b.getAttribute('onclick')||'');id=args[0]}if(id){b.setAttribute('data-target',String(id));ids.push(String(id));}});
-  var map=await fetchFollowMap(ids);buttons.forEach(function(b){var id=b.getAttribute('data-target');if(!id)return;setFollowBtn(b,map[id]||'not_following')});
-}
-function interceptClick(ev){
-  var btn=ev.target&&ev.target.closest&&ev.target.closest('button,[data-social-action]');if(!btn)return;
-  var action=btn.getAttribute('data-social-action'),onclick=btn.getAttribute('onclick')||'';
-  if(!action&&onclick.indexOf('sendFriendRequest')>-1)action='follow';
-  if(!action&&onclick.indexOf('gsGlobalAddFriend')>-1)action='follow';
-  if(!action&&onclick.indexOf('gsRequestPrivateSquad')>-1)action='request-squad';
-  if(!action&&onclick.indexOf('gsGlobalRequestSquad')>-1)action='request-squad';
-  if(!action&&onclick.indexOf('acceptFriend')>-1)action='accept-request';
-  if(!action&&onclick.indexOf('rejectFriend')>-1)action='reject-request';
-  if(!action)return;
-  ev.preventDefault();ev.stopPropagation();ev.stopImmediatePropagation();
-  var args=parseArgs(onclick),target=btn.getAttribute('data-target')||btn.getAttribute('data-user-id')||args[0],name=btn.getAttribute('data-name')||args[1],owner=btn.getAttribute('data-owner')||args[2];
-  Promise.resolve().then(async function(){
-    if(action==='follow'){if(await followUser(target)){setFollowBtn(btn,'following')}}
-    else if(action==='unfollow'){if(await unfollowUser(target)){setFollowBtn(btn,'not_following')}}
-    else if(action==='request-squad'){await requestJoinSquad(target,name,owner,btn)}
-    else if(action==='accept-request'){await acceptSquadJoinRequest(target);try{btn.closest('.gs-notif-card,.gs-ms-request-row,[data-gs-squad-notif]')&&btn.closest('.gs-notif-card,.gs-ms-request-row,[data-gs-squad-notif]').remove()}catch(e){}}
-    else if(action==='reject-request'){await rejectSquadJoinRequest(target);try{btn.closest('.gs-notif-card,.gs-ms-request-row,[data-gs-squad-notif]')&&btn.closest('.gs-notif-card,.gs-ms-request-row,[data-gs-squad-notif]').remove()}catch(e){}}
-    else if(action==='accept-invite'){await acceptSquadInvite(target)}
-    else if(action==='reject-invite'){await rejectSquadInvite(target)}
-  });
-}
-async function renderInbox(filter){
-  filter=filter||W.__GS266_INBOX_FILTER||'all';W.__GS266_INBOX_FILTER=filter;
-  if(!requireOnlineUser()){return}
-  var old=$('gs-notif-v4')||$('gs-notif-ov');if(old)old.remove();
-  var html='<div id="gs-notif-v4" onclick="if(event.target===this)this.remove()" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9800;display:flex;align-items:flex-end"><div style="width:100%;max-height:82vh;overflow:auto;background:#0F1824;border:1px solid rgba(255,255,255,.08);border-radius:28px 28px 0 0;padding:18px;padding-bottom:calc(env(safe-area-inset-bottom,18px) + 18px)"><div style="width:44px;height:5px;background:rgba(255,255,255,.12);border-radius:99px;margin:0 auto 16px"></div><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><div><div style="font-size:12px;color:var(--acc);font-weight:1000;text-transform:uppercase;letter-spacing:.12em">Notifications</div><div style="font-size:26px;font-weight:1000;letter-spacing:-.05em;color:var(--txt)">Social</div></div><button onclick="document.getElementById(\'gs-notif-v4\').remove()" style="width:38px;height:38px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--txt);font-size:20px">×</button></div><div style="display:flex;gap:8px;overflow:auto;margin-bottom:14px">';
-  [['all','Tout'],['requests','Demandes'],['squad','Squad'],['activity','Activité']].forEach(function(x){html+='<button data-social-filter="'+x[0]+'" style="border:1px solid rgba(255,255,255,.08);background:'+(filter===x[0]?'var(--txt)':'rgba(255,255,255,.045)')+';color:'+(filter===x[0]?'#071018':'var(--txt)')+';border-radius:999px;padding:9px 13px;font-size:12px;font-weight:1000;white-space:nowrap">'+x[1]+'</button>'});
-  html+='</div><div id="gs266-inbox-body"><div style="color:var(--mut);font-size:13px;font-weight:800;padding:12px">Chargement…</div></div></div></div>';D.body.insertAdjacentHTML('beforeend',html);
-  D.querySelectorAll('#gs-notif-v4 [data-social-filter]').forEach(function(b){b.onclick=function(e){e.stopPropagation();renderInbox(b.getAttribute('data-social-filter'))}});
-  var body=$('gs266-inbox-body'),items=await loadInbox(filter);
-  if(!body)return;if(!items.length){body.innerHTML='<div style="border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);border-radius:20px;padding:16px;color:var(--mut);font-size:13px;font-weight:850">Rien pour le moment.</div>';return}
-  body.innerHTML=items.map(function(n){var p=n.payload||{},type=String(n.type||''),title=p.title||type.replace(/_/g,' '),bodyTxt=p.body||p.message||'Nouvelle notification.',unread=n.status==='unread';var actions='';if(type==='squad_join_request')actions='<button data-social-action="accept-request" data-target="'+esc(n.entity_id)+'">Accepter</button><button data-social-action="reject-request" data-target="'+esc(n.entity_id)+'">Refuser</button>';if(type==='squad_invite')actions='<button data-social-action="accept-invite" data-target="'+esc(n.entity_id)+'">Accepter</button><button data-social-action="reject-invite" data-target="'+esc(n.entity_id)+'">Refuser</button>';return '<div class="gs-notif-card" data-notif-id="'+esc(n.id)+'" style="display:flex;gap:12px;align-items:flex-start;border:1px solid '+(unread?'rgba(143,185,255,.32)':'rgba(255,255,255,.08)')+';background:rgba(255,255,255,.045);border-radius:20px;padding:13px;margin-bottom:8px"><div style="width:40px;height:40px;border-radius:14px;background:rgba(143,185,255,.16);display:grid;place-items:center;color:var(--acc);font-weight:1000;flex-shrink:0">'+(type.indexOf('squad')===0?'S':'•')+'</div><div style="flex:1;min-width:0"><b style="display:block;color:var(--txt);font-size:14px">'+esc(title)+'</b><span style="display:block;color:var(--mut);font-size:12px;font-weight:750;line-height:1.4;margin-top:3px">'+esc(bodyTxt)+'</span><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'+actions+'<button data-social-mark-read="'+esc(n.id)+'">Lu</button><button data-social-delete-notif="'+esc(n.id)+'">Supprimer</button></div></div></div>'}).join('');
-}
-function normalizeSocialUI(){
-  [].slice.call(D.querySelectorAll('button[onclick*="sendFriendRequest"],button[onclick*="gsGlobalAddFriend"]')).forEach(function(b){var args=parseArgs(b.getAttribute('onclick')||'');if(args[0])b.setAttribute('data-target',String(args[0]));b.setAttribute('data-social-action','follow');if(/demande envoyée|ajouter|ami/i.test(b.textContent||''))b.textContent='Suivre'});
-  [].slice.call(D.querySelectorAll('button[onclick*="gsRequestPrivateSquad"],button[onclick*="gsGlobalRequestSquad"]')).forEach(function(b){var args=parseArgs(b.getAttribute('onclick')||'');if(args[0])b.setAttribute('data-target',String(args[0]));if(args[1])b.setAttribute('data-name',String(args[1]));if(args[2])b.setAttribute('data-owner',String(args[2]));b.setAttribute('data-social-action','request-squad');if(/^demander$|^demandé$/i.test((b.textContent||'').trim()))b.textContent='Demander à rejoindre'});
-  [].slice.call(D.querySelectorAll('button[onclick*="acceptFriend"]')).forEach(function(b){var args=parseArgs(b.getAttribute('onclick')||'');if(args[0])b.setAttribute('data-target',String(args[0]));b.setAttribute('data-social-action','accept-request')});
-  [].slice.call(D.querySelectorAll('button[onclick*="rejectFriend"]')).forEach(function(b){var args=parseArgs(b.getAttribute('onclick')||'');if(args[0])b.setAttribute('data-target',String(args[0]));b.setAttribute('data-social-action','reject-request')});
-}
-W.SocialService={requireOnlineUser:requireOnlineUser,followUser:followUser,unfollowUser:unfollowUser,getFollowStatus:getFollowStatus,fetchFollowMap:fetchFollowMap,searchUsers:searchUsers,createNotification:createNotification,loadInbox:loadInbox,markNotificationRead:markNotificationRead,markAllRead:markAllRead,deleteNotification:deleteNotification,requestJoinSquad:requestJoinSquad,acceptSquadJoinRequest:acceptSquadJoinRequest,rejectSquadJoinRequest:rejectSquadJoinRequest,inviteUserToSquad:inviteUserToSquad,acceptSquadInvite:acceptSquadInvite,rejectSquadInvite:rejectSquadInvite,leaveSquad:leaveSquad,removeMember:removeMember,setFollowBtn:setFollowBtn,setSquadBtn:setSquadBtn,connectionRequiredHTML:connectionRequiredHTML};
-W.gsRequireSocialReady=requireOnlineUser;
-W.sendFriendRequest=function(targetId,targetName,btn){return followUser(targetId).then(function(ok){if(ok)setFollowBtn(btn,'following');return ok})};
-W.gsGlobalAddFriend=function(id,name,btn){return W.sendFriendRequest(id,name,btn)};
-W.gsFollow=function(id,btn){return followUser(id).then(function(ok){if(ok)setFollowBtn(btn,'following')})};
-W.gsUnfollow=function(id,btn){return unfollowUser(id).then(function(ok){if(ok)setFollowBtn(btn,'not_following')})};
-W.gsToggleFollow=async function(id,btn){var st=await getFollowStatus(id);return st==='following'?W.gsUnfollow(id,btn):W.gsFollow(id,btn)};
-W.gsSetFollowBtn=setFollowBtn;
-W.fetchFollowMap=fetchFollowMap;W.getFollowStatus=getFollowStatus;
-W.loadFriendRequests=async function(){return loadInbox('requests')};
-W.acceptFriend=function(requestId){return acceptSquadJoinRequest(requestId)};
-W.rejectFriend=function(requestId){return rejectSquadJoinRequest(requestId)};
-W.gsRequestPrivateSquad=function(id,name,owner,btn){return requestJoinSquad(id,name,owner,btn)};
-W.gs190RequestSquad=W.gsRequestPrivateSquad;
-W.gsGlobalRequestSquad=function(id,name,owner,btn){return requestJoinSquad(id,name,owner,btn)};
-W.gsAcceptSquadInvite=function(notifOrInviteId,squadId,squadName){return acceptSquadInvite(notifOrInviteId)};
-W.gsRefuseSquadInvite=function(notifOrInviteId){return rejectSquadInvite(notifOrInviteId)};
-W.openNotifications=function(){return renderInbox('all')};
-W.gsNotificationsRefresh=function(){return loadInbox('all')};
-W.gsMarkNotificationRead=markNotificationRead;W.gsDeleteNotification=deleteNotification;
-W.doLoginApple=function(){if(W.authShowErr)W.authShowErr('Connexion Apple indisponible pour le moment. Utilise Google ou email.');else toast('Connexion Apple indisponible pour le moment.')};
-D.addEventListener('click',interceptClick,true);
-D.addEventListener('click',function(ev){var b=ev.target&&ev.target.closest&&ev.target.closest('[data-social-mark-read],[data-social-delete-notif]');if(!b)return;ev.preventDefault();ev.stopPropagation();if(b.hasAttribute('data-social-mark-read'))markNotificationRead(b.getAttribute('data-social-mark-read')).then(function(){b.closest('.gs-notif-card')&&b.closest('.gs-notif-card').classList.remove('unread')});if(b.hasAttribute('data-social-delete-notif'))deleteNotification(b.getAttribute('data-social-delete-notif')).then(function(){b.closest('.gs-notif-card')&&b.closest('.gs-notif-card').remove()})},true);
-try{new MutationObserver(function(){normalizeSocialUI();clearTimeout(W.__gs266FollowSyncTimer);W.__gs266FollowSyncTimer=setTimeout(syncVisibleFollowButtons,250)}).observe(D.documentElement,{childList:true,subtree:true})}catch(e){}
-if(D.readyState==='loading')D.addEventListener('DOMContentLoaded',function(){normalizeSocialUI();syncVisibleFollowButtons()});else{normalizeSocialUI();setTimeout(syncVisibleFollowButtons,300)}
-console.log('GS266 SocialService loaded — social serveur obligatoire, pas de fallback local.');
+/* accepte par INDEX (UI Ma Squad) OU par id direct (uuid) — toujours serveur */
+W.gsMsAcceptRequest = async function(arg){
+  if(typeof arg==='string' && /[0-9a-f-]{16,}/i.test(arg)) return SS.acceptSquadJoinRequest(arg);
+  var req=await _pendingReqAt(Number(arg)||0);
+  if(!req){ toast('Demande introuvable côté serveur.'); return; }
+  var res=await SS.acceptSquadJoinRequest(req.id);
+  try{ if(typeof W.gsMsGo==='function') W.gsMsGo(2); }catch(e){}
+  return res;
+};
+W.gsMsRefuseRequest = async function(arg){
+  if(typeof arg==='string' && /[0-9a-f-]{16,}/i.test(arg)) return SS.rejectSquadJoinRequest(arg);
+  var req=await _pendingReqAt(Number(arg)||0);
+  if(!req){ toast('Demande introuvable côté serveur.'); return; }
+  var res=await SS.rejectSquadJoinRequest(req.id);
+  try{ if(typeof W.gsMsGo==='function') W.gsMsGo(2); }catch(e){}
+  return res;
+};
+W.gsMsRemoveMember = function(userId){
+  var sid=_activeSquadId(); if(!sid){ toast('Squad introuvable.'); return; }
+  return SS.removeMember(sid, userId).then(function(){ try{ if(typeof W.gsMsGo==='function') W.gsMsGo(1); }catch(e){} });
+};
+W.gsMsInviteMember = function(userId){
+  var sid=_activeSquadId(); if(!sid){ toast('Crée ou ouvre ta Squad d’abord.'); return; }
+  return SS.inviteUserToSquad(sid, userId);
+};
+W.gsMsLeaveActiveSquad = function(){
+  var sid=_activeSquadId(); if(!sid){ toast('Aucune Squad à quitter.'); return; }
+  return SS.leaveSquad(sid);
+};
+
+try{ console.log('[GS] SocialService rebranché (couche autoritaire serveur-only).'); }catch(e){}
 })();
 </script>
+
+<!-- G-SQUAD AUTH FIX - erreurs visibles (wizard inclus) + toggle mot de passe + login cohérent -->
+<script id="gs-auth-fix-js">
+(function(){
+'use strict';
+var W=window, D=document;
+function $(id){ return D.getElementById(id); }
+function toast(m){ try{ if(typeof W.toast==='function') W.toast(m); else if(typeof W.notify==='function') W.notify(m); }catch(e){} }
+
+/* ---- 1. ERREUR TOUJOURS VISIBLE (y compris dans le wizard gs-onboard-v11) ---- */
+function ensureWizardErrSlot(){
+  var ov=$('gs-onboard-v11'); if(!ov) return null;
+  var slot=$('gs-ob11-err'); if(slot) return slot;
+  slot=D.createElement('div'); slot.id='gs-ob11-err'; slot.className='gs-ob11-err264';
+  slot.setAttribute('role','alert'); slot.setAttribute('aria-live','assertive');
+  // place le message au-dessus du bouton principal si on le trouve, sinon dans le shell
+  var btn=ov.querySelector('.gs-ob11-next,.gs-ob11-cta,[data-ob11-next],button[onclick*="Next"]');
+  var host=(btn&&btn.parentNode)|| ov.querySelector('.gs-ob11-shell') || ov.querySelector('.gs-ob11-aside') || ov;
+  if(btn&&btn.parentNode){ btn.parentNode.insertBefore(slot, btn); }
+  else { host.appendChild(slot); }
+  return slot;
+}
+var _prevAuthShowErr = W.authShowErr;
+W.authShowErr = function(msg){
+  var m = (msg==null?'':String(msg));
+  var wiz=$('gs-onboard-v11');
+  if(wiz){
+    var slot=ensureWizardErrSlot();
+    if(slot){ slot.textContent=m; if(m){ slot.classList.add('has-msg'); } else { slot.classList.remove('has-msg'); } if(m) try{ slot.scrollIntoView({block:'nearest'}); }catch(e){} return; }
+  }
+  // sinon : comportement statique d'origine
+  if(typeof _prevAuthShowErr==='function'){ try{ _prevAuthShowErr(m); }catch(e){} }
+  var anyVisible=['auth-err','auth-err-s1','auth-err-s2','auth-err-s3'].some(function(id){var el=$(id);return el&&el.textContent;});
+  if(m && !anyVisible) toast(m);
+};
+
+/* ---- 2. TOGGLE MOT DE PASSE : icône œil, robuste, délégué ---- */
+var EYE='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+var EYE_OFF='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"></path><path d="M10.6 10.6a3 3 0 0 0 2.8 2.8"></path><path d="M9.9 5.3A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a17.8 17.8 0 0 1-3 3.9M6.1 6.1A17.9 17.9 0 0 0 2 12s3.5 7 10 7a10.7 10.7 0 0 0 4-.8"></path></svg>';
+function wrapEye(input){
+  if(!input || input.dataset.gsEye==='1') return;
+  if((input.getAttribute('type')||'').toLowerCase()!=='password') return;
+  input.dataset.gsEye='1';
+  var wrap=input.parentNode;
+  // assure un conteneur positionné
+  if(!wrap || !/gs-(pwd|ob11-pass)wrap|gs-eye-wrap/.test(wrap.className||'')){
+    var w=D.createElement('div'); w.className='gs-eye-wrap'; w.style.position='relative';
+    input.parentNode.insertBefore(w, input); w.appendChild(input); wrap=w;
+  } else { wrap.style.position=wrap.style.position||'relative'; }
+  input.style.paddingRight='52px';
+  var btn=D.createElement('button');
+  btn.type='button'; btn.className='gs-eye-btn'; btn.setAttribute('aria-label','Afficher le mot de passe');
+  btn.innerHTML=EYE;
+  btn.onclick=function(){
+    var show=(input.getAttribute('type')||'').toLowerCase()==='password';
+    input.setAttribute('type', show?'text':'password');
+    btn.innerHTML=show?EYE_OFF:EYE;
+    btn.setAttribute('aria-label', show?'Masquer le mot de passe':'Afficher le mot de passe');
+  };
+  wrap.appendChild(btn);
+}
+function scanEyes(scope){
+  scope=scope||D;
+  try{
+    // Œil uniquement sur les champs SANS bouton texte (login statique + login wizard).
+    // Le wizard SIGNUP a son propre bouton "Afficher les mots de passe" (gsAuthTogglePasswords264).
+    var loginWizard = !!(W.OB11 && W.OB11.mode==='login');
+    var ids=['auth-password','auth-password2','gs-current-password'];
+    if(loginWizard) ids.push('ob11-password-input');
+    ids.forEach(function(id){ var el=$(id); if(el) wrapEye(el); });
+  }catch(e){}
+}
+W.gsScanEyes264=scanEyes;
+// style du bouton œil
+var st=D.createElement('style'); st.textContent=
+'.gs-eye-wrap{position:relative;width:100%}'+
+'.gs-eye-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#cfd6df;cursor:pointer;padding:0;z-index:2}'+
+'.gs-eye-btn:hover{background:rgba(255,255,255,.09)}'+
+'.gs-ob11-err264{display:none;color:#ff6b7a;font-size:13px;font-weight:700;text-align:center;margin:0;min-height:0}'+
+'.gs-ob11-err264.has-msg{display:block;margin:10px 0;min-height:18px}'+
+'.gs-ob11-skip-inline{background:transparent;border:1px solid rgba(255,255,255,.18);color:#cfd6df;border-radius:14px;padding:0 18px;cursor:pointer;font-weight:600}'+
+'.gs-ob11-skip-inline:hover{background:rgba(255,255,255,.06)}'+'.gs-pwd-toggle264{width:100%;margin-top:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);color:#cfd6df;border-radius:14px;padding:12px;cursor:pointer;font-weight:600}'+'.gs-pwd-toggle264:hover{background:rgba(255,255,255,.08)}';
+D.head.appendChild(st);
+// scan initial + à chaque mutation (le wizard re-render à chaque étape)
+scanEyes();
+try{
+  var mo=new MutationObserver(function(){ scanEyes(); });
+  mo.observe(D.body,{childList:true,subtree:true});
+}catch(e){}
+// re-scan quand on change de vue auth
+['authShowView','openOnboardingWizard'].forEach(function(fn){
+  var prev=W[fn];
+  if(typeof prev==='function' && !prev.__gsEyeWrap){
+    W[fn]=function(){ var r=prev.apply(this,arguments); setTimeout(function(){scanEyes();},30); return r; };
+    W[fn].__gsEyeWrap=true;
+  }
+});
+
+/* ---- 3. LOGIN COHÉRENT : 'login' ouvre le wizard en mode login (email -> password -> connexion).
+   Le moteur gs264 supporte désormais mode:'login' (2 étapes, pas d'inscription). ---- */
+(function(){
+  var prev=W.authShowView;
+  if(typeof prev!=='function' || prev.__gsLoginRoute) return;
+  W.authShowView=function(view){
+    if(view==='login' && typeof W.openOnboardingWizard==='function'){
+      try{ var a=$('auth-screen'); if(a){ a.style.display='none'; a.classList.remove('open'); } }catch(e){}
+      try{ W.openOnboardingWizard(0,{mode:'login',fresh:false}); return false; }catch(e){}
+    }
+    return prev.apply(this,arguments);
+  };
+  W.authShowView.__gsLoginRoute=true;
+})();
+
+try{ console.log('[GS] Auth fix chargé : erreurs visibles + toggle œil + login wizard.'); }catch(e){}
+try{ window.GS_BUILD='auth-v6-2026-05-22'; console.log('%c[GS] BUILD '+window.GS_BUILD,'color:#4ade80;font-weight:bold'); }catch(e){}
+})();
+</script>
+
+<style id="gs-online-boundary-20260522-css">
+.gs-online-lock-ov{position:fixed;inset:0;z-index:2147483200;background:rgba(2,6,12,.46);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}.gs-online-lock-card{width:min(420px,100%);border-radius:28px;background:linear-gradient(180deg,rgba(19,26,37,.98),rgba(8,12,18,.98));border:1px solid rgba(255,255,255,.10);box-shadow:0 24px 70px rgba(0,0,0,.42);padding:20px;color:var(--txt,#F5F3EE)}.gs-online-lock-kicker{font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:1000;color:rgba(143,185,255,.9);margin-bottom:10px}.gs-online-lock-card h3{margin:0;font-size:23px;line-height:1.05;letter-spacing:-.04em}.gs-online-lock-card p{margin:10px 0 0;color:var(--txt2,rgba(245,243,238,.68));font-size:13px;line-height:1.45;font-weight:750}.gs-online-lock-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:18px}.gs-online-lock-actions button{height:46px;border-radius:16px;border:1px solid rgba(255,255,255,.10);font-weight:1000;cursor:pointer}.gs-online-lock-actions .main{border:0;background:var(--txt,#F5F3EE);color:#071018}.gs-online-lock-actions .ghost{background:rgba(255,255,255,.055);color:var(--txt,#F5F3EE)}.gs-online-locked-card{position:relative}.gs-online-locked-card:after{content:'Connexion requise';position:absolute;right:14px;top:14px;border-radius:999px;background:rgba(143,185,255,.13);border:1px solid rgba(143,185,255,.28);color:#DDEBFF;font-size:10px;font-weight:1000;letter-spacing:.06em;text-transform:uppercase;padding:6px 8px;pointer-events:none}@media(max-width:430px){.gs-online-lock-actions{grid-template-columns:1fr}.gs-online-lock-card{border-radius:24px}}
+</style>
+<script id="gs-online-boundary-20260522-js">
+(function(){
+ 'use strict';
+ if(window.__GS_ONLINE_BOUNDARY_20260522__)return;window.__GS_ONLINE_BOUNDARY_20260522__=true;
+ var W=window,D=document;
+ function $(id){return D.getElementById(id)}
+ function hasClient(){return !!(W._supa&&W._supa.auth)}
+ function user(){return W._supaUser||null}
+ function uid(){try{return user()&&user().id?String(user().id):''}catch(e){return ''}}
+ function isPendingSetup(){try{var s=W.state||{};return s.authSetupStatus==='pending_setup'||s.onboardingComplete===false&&!s.onboarded}catch(e){return false}}
+ function hasNetwork(){return !(navigator&&navigator.onLine===false)}
+ function canUseOnlineSocial(){return !!(hasClient()&&uid()&&hasNetwork()&&!isPendingSetup())}
+ function esc(v){return String(v==null?'':v).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]})}
+ function rm(){var old=$('gs-online-lock-ov');if(old)old.remove()}
+ function showAuth(view){rm();try{var auth=$('auth-screen');if(auth){auth.style.display='flex';auth.classList.add('open')}}catch(e){}try{if(typeof W.authShowView==='function')return W.authShowView(view||'login')}catch(e){} }
+ function titleFor(label){return label||'Cette zone'}
+ function messageFor(label){if(!hasClient())return 'Connexion indisponible. Réessaie en ligne.';if(!uid())return titleFor(label)+' est disponible avec un compte connecté.';if(!hasNetwork())return 'Mode hors ligne. Tes données personnelles restent disponibles, pas le social.';if(isPendingSetup())return 'Termine ton profil pour accéder au social.';return titleFor(label)+' est disponible avec un compte connecté.'}
+ function lock(label){label=titleFor(label);rm();var html='<div id="gs-online-lock-ov" class="gs-online-lock-ov" onclick="if(event.target===this)this.remove()"><div class="gs-online-lock-card"><div class="gs-online-lock-kicker">G-SQUAD ONLINE</div><h3>Connexion requise</h3><p>'+esc(messageFor(label))+'</p><div class="gs-online-lock-actions"><button type="button" class="main" onclick="window.gsOnlineBoundaryLogin&&window.gsOnlineBoundaryLogin()">Se connecter</button><button type="button" class="ghost" onclick="window.gsOnlineBoundarySignup&&window.gsOnlineBoundarySignup()">Créer un compte</button></div></div></div>';D.body.insertAdjacentHTML('beforeend',html);return false}
+ W.gsOnlineBoundaryLogin=function(){return showAuth('login')};
+ W.gsOnlineBoundarySignup=function(){return showAuth('signup-s1')};
+ W.gsIsConnectedUser=function(){return !!uid()};
+ W.gsIsOnlineSocialReady=canUseOnlineSocial;
+ W.gsRequireOnlineFeature=function(label){return canUseOnlineSocial()?true:lock(label)};
+ var clickRules=[
+  ['[onclick*="openSearchModal"]','la recherche sociale'],
+  ['[onclick*="openSocialSearch"]','la recherche sociale'],
+  ['[onclick*="openLeaderboard"]','le classement global'],
+  ['[onclick*="openXPLeaderboard"]','le classement global'],
+  ['[onclick*="openNotifications"]','les notifications sociales'],
+  ['[onclick*="openNotifCenter"]','les notifications sociales'],
+  ['[onclick*="gsOpenBattleSquadPage"]','Battle Squad'],
+  ['[onclick*="gsOpenBattleSquad"]','Battle Squad'],
+  ['[onclick*="openBattleSquad"]','Battle Squad'],
+  ['[onclick*="gsOpenMaSquad"]','Ma Squad'],
+  ['[onclick*="openMaSquad"]','Ma Squad'],
+  ['[onclick*="gsGlobalFollowUser"]','les abonnements'],
+  ['[onclick*="gsSocialToggleFollow"]','les abonnements'],
+  ['[onclick*="gsToggleFollow"]','les abonnements'],
+  ['[data-public-act="follow"]','les abonnements'],
+  ['#nb-battle','Battle Squad'],
+  ['[data-tab="battle"]','Battle Squad'],
+  ['[data-panel="battle"]','Battle Squad'],
+  ['[data-bsv4-action]','Battle Squad']
+ ];
+ function clickLabel(target){if(!target||!target.closest)return '';for(var i=0;i<clickRules.length;i++){try{if(target.closest(clickRules[i][0]))return clickRules[i][1]}catch(e){}}return ''}
+ D.addEventListener('click',function(ev){var label=clickLabel(ev.target);if(!label)return;if(canUseOnlineSocial())return;ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();lock(label);return false},true);
+ function guard(name,label){var fn=W[name];if(typeof fn!=='function'||fn.__gsOnlineBoundary)return;W[name]=function(){if(!W.gsRequireOnlineFeature(label))return false;return fn.apply(this,arguments)};W[name].__gsOnlineBoundary=true}
+ function install(){[
+  ['openSearchModal','la recherche sociale'],['openSocialSearch','la recherche sociale'],
+  ['openLeaderboard','le classement global'],['openXPLeaderboard','le classement global'],
+  ['openNotifications','les notifications sociales'],['openNotifCenter','les notifications sociales'],
+  ['openFriendProfile','les profils publics'],['openFollowersList','les abonnés'],
+  ['gsGlobalSearchOpenProfile','les profils publics'],['gsOpenLbProfile','les profils publics'],['lbOpenProfile','les profils publics'],
+  ['gsGlobalFollowUser','les abonnements'],['gsSocialToggleFollow','les abonnements'],['gsToggleFollow','les abonnements'],['gsFollow','les abonnements'],['gsUnfollow','les abonnements'],
+  ['gsOpenMaSquad','Ma Squad'],['openMaSquad','Ma Squad'],['gsOpenPrivateSquads','Ma Squad'],['gsOpenPrivateSquadSearch','les Squads'],
+  ['gsOpenBattleSquadPage','Battle Squad'],['gsOpenBattleSquad','Battle Squad'],['openBattleSquadPage','Battle Squad'],
+  ['gs190RequestSquad','les demandes de Squad'],['gsRequestJoinSquad','les demandes de Squad'],['gsRequestPrivateSquad','les demandes de Squad'],['gsGlobalRequestSquad','les demandes de Squad'],
+  ['gsAddUserToSquad','les invitations Squad'],['gsSendSquadInvite','les invitations Squad'],
+  ['gsAcceptSquadInvite','les invitations Squad'],['gsRefuseSquadInvite','les invitations Squad'],['gsAcceptPrivateSquadRequest','les demandes de Squad'],['gsRejectPrivateSquadRequest','les demandes de Squad'],
+  ['postSquadStory','le feed Squad'],['gsSendProfileReaction','les réactions sociales']
+ ].forEach(function(x){guard(x[0],x[1])})}
+ function decorate(){try{if(canUseOnlineSocial())return;D.querySelectorAll('.gs-r-global-rank,[onclick*="openLeaderboard"],[onclick*="openSearchModal"],[onclick*="gsOpenBattleSquad"],[onclick*="gsOpenMaSquad"]').forEach(function(el){if(el&&el.classList)el.classList.add('gs-online-locked-card')})}catch(e){}}
+ install();decorate();var tries=0,t=setInterval(function(){install();decorate();tries++;if(tries>8)clearInterval(t)},900);
+ try{new MutationObserver(function(){decorate()}).observe(D.body,{childList:true,subtree:true})}catch(e){}
+ try{console.log('[GS] Online boundary chargé : social/recherche/classement/Battle réservés au compte connecté.')}catch(e){}
+})();
+</script>
+
+</body>
+</html>
