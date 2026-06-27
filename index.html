@@ -31296,15 +31296,14 @@ console.log('[GS] 279 series display + duration fix loaded');
 </script>
 
 
+
 <!-- ============================================================================
-     G-SQUAD — AUTH FINALE (refonte complète, autorité unique) — 2026-06
-     Carte blanche : un SEUL contrôleur, un SEUL écran, un SEUL listener.
-     Connexion Google / email / @username + mot de passe.
-     Sas anti-flash : on vérifie la session AVANT d'afficher l'écran
-     (corrige le "connecté tout seul sans pouvoir taper le mot de passe").
+     G-SQUAD — AUTH FINALE v2 (refonte + anti-freeze) — 2026-06
+     Autorité unique. Connexion Google / email / @username + mot de passe.
+     Sas anti-flash AVEC délais maximum sur chaque appel réseau + chien de garde :
+     le démarrage ne peut plus rester bloqué sur "Vérification de ta session…".
      Nouveau compte -> wizard d'onboarding existant (salle, objectifs, BMR, IMC).
-     Reconnexion + sauvegarde cloud de TOUTES les données.
-     Placé en dernier : "dernière définition gagne".
+     Reconnexion + sauvegarde cloud. Placé en dernier : "dernière définition gagne".
      ============================================================================ -->
 <style id="gs-auth-final-css">
 #auth-screen{position:fixed;inset:0;z-index:4000;display:none;align-items:center;justify-content:center;padding:24px;
@@ -31341,8 +31340,8 @@ console.log('[GS] 279 series display + duration fix loaded');
 .gsa-inp::placeholder{color:rgba(139,152,168,.7);font-weight:700}
 .gsa-inp:focus{border-color:rgba(143,185,255,.55);background:rgba(143,185,255,.06)}
 .gsa-field{position:relative}
-.gsa-eye{position:absolute;right:12px;top:14px;width:34px;height:34px;border:0;background:none;color:var(--mut,#8B98A8);
-  font-size:13px;font-weight:900;cursor:pointer;border-radius:10px}
+.gsa-eye{position:absolute;right:12px;top:14px;width:auto;height:34px;padding:0 10px;border:0;background:none;color:var(--mut,#8B98A8);
+  font-size:12px;font-weight:900;cursor:pointer;border-radius:10px}
 .gsa-err{min-height:18px;font-size:12.5px;font-weight:800;color:#FF7A89;margin:2px 2px 12px;line-height:1.35}
 .gsa-back{background:none;border:0;color:var(--mut,#8B98A8);font-size:13px;font-weight:900;cursor:pointer;padding:0 0 18px;display:flex;align-items:center;gap:6px}
 .gsa-foot{text-align:center;font-size:11px;font-weight:700;color:rgba(139,152,168,.65);margin-top:18px;line-height:1.5}
@@ -31374,9 +31373,18 @@ function ls(){ try{return W.localStorage;}catch(e){return null;} }
 function metaAvatar(u){var m=(u&&u.user_metadata)||{};return m.avatar_url||m.picture||'';}
 function metaName(u){var m=(u&&u.user_metadata)||{};return String(m.full_name||m.name||m.display_name||'').trim();}
 
-/* ---------- état du sas ---------- */
-var sessionChecked=false;  // a-t-on fini de vérifier la session au démarrage ?
-var entered=false;         // est-on déjà entré dans l'app ?
+/* ----- garde-fou universel : aucune attente réseau infinie ----- */
+function withTimeout(p, ms, fb){
+  return new Promise(function(resolve){
+    var done=false;
+    var t=setTimeout(function(){ if(!done){done=true;resolve(fb);} }, ms);
+    Promise.resolve(p).then(function(v){ if(!done){done=true;clearTimeout(t);resolve(v);} },
+                            function(){ if(!done){done=true;clearTimeout(t);resolve(fb);} });
+  });
+}
+
+/* ----- état du sas ----- */
+var sessionChecked=false, entered=false, watchdogArmed=false;
 
 function profileComplete(row){
   if(!row)return false;
@@ -31386,19 +31394,16 @@ function profileComplete(row){
   var n=String(row.display_name||row.first_name||pr.name||'').trim();
   return !!(u.length>=3 && n.length>=1);
 }
+function localComplete(){ var p=P(); return !!(S().onboarded && normU(p.username||'').length>=3 && String(p.name||'').trim()); }
 
-/* ======================== ÉCRAN AUTH (markup propre) ======================== */
+/* ======================== ÉCRAN AUTH ======================== */
 var GOOGLE_SVG='<svg aria-hidden="true" viewBox="0 0 24 24" style="width:19px;height:19px;flex:0 0 auto"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9c-.3 1.4-1 2.5-2.1 3.3v2.7h3.4c2-1.8 3.4-4.6 3.4-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.4-2.7c-.9.6-2.2 1-3.8 1-2.9 0-5.3-1.9-6.2-4.6H2.3v2.8C4.1 20.5 7.8 23 12 23z"/><path fill="#FBBC05" d="M5.8 14c-.2-.6-.4-1.3-.4-2s.1-1.4.4-2V7.2H2.3C1.5 8.6 1 10.2 1 12s.5 3.4 1.3 4.8L5.8 14z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.1-3.1C17.5 2.1 15 1 12 1 7.8 1 4.1 3.5 2.3 7.2L5.8 10c.9-2.7 3.3-4.6 6.2-4.6z"/></svg>';
 
 function screenHtml(){
   return ''
   +'<div class="gsa-wrap">'
   +'  <div class="gsa-brand"><div class="gsa-logo">G-SQUAD</div><div class="gsa-tag">Entraîne-toi. Progresse. Domine.</div></div>'
-
-  /* --- SAS : vérification de session --- */
   +'  <div id="gsa-checking" class="gsa-card"><div class="gsa-spin"></div><div class="gsa-load">Vérification de ta session…</div></div>'
-
-  /* --- LANDING --- */
   +'  <div id="gsa-landing" class="gsa-card" style="display:none">'
   +'    <h2 class="gsa-h">Bienvenue</h2>'
   +'    <p class="gsa-p">Rejoins ta Squad et suis ta progression.</p>'
@@ -31410,8 +31415,6 @@ function screenHtml(){
   +'      <button type="button" class="gsa-btn link" onclick="window.gsAuthSkip&&window.gsAuthSkip()">Continuer sans compte · sans le social</button>'
   +'    </div>'
   +'  </div>'
-
-  /* --- LOGIN --- */
   +'  <div id="gsa-login" class="gsa-card" style="display:none">'
   +'    <button type="button" class="gsa-back" onclick="window.authShowView&&window.authShowView(\'landing\')">← Retour</button>'
   +'    <h2 class="gsa-h">Te revoilà</h2>'
@@ -31426,25 +31429,15 @@ function screenHtml(){
   +'    <button type="button" class="gsa-btn google" style="margin-top:11px" onclick="window.doLoginGoogle&&window.doLoginGoogle()">'+GOOGLE_SVG+'<span>Continuer avec Google</span></button>'
   +'    <button type="button" class="gsa-btn link" style="margin-top:6px" onclick="window.gsAuthGoSignup&&window.gsAuthGoSignup()">Pas encore de compte ? En créer un</button>'
   +'  </div>'
-
   +'  <div class="gsa-foot">En continuant, tu acceptes d\u2019entraîner ta Squad sérieusement. 💪</div>'
   +'</div>';
 }
-
-function buildScreen(){
-  var a=$('auth-screen');
-  if(!a){ a=D.createElement('div'); a.id='auth-screen'; D.body.appendChild(a); }
-  a.className='auth-screen';
-  a.innerHTML=screenHtml();
-  a.__gsBuilt=true;
-}
+function buildScreen(){ var a=$('auth-screen'); if(!a){ a=D.createElement('div'); a.id='auth-screen'; D.body.appendChild(a); } a.className='auth-screen'; a.innerHTML=screenHtml(); a.__gsBuilt=true; }
 function ensureScreen(){ var a=$('auth-screen'); if(!a||!a.__gsBuilt)buildScreen(); return $('auth-screen'); }
 
 function showView(v){
   var a=ensureScreen();
-  /* tant que la session n'est pas vérifiée, on ne montre QUE le sas */
-  if(!sessionChecked && v!=='checking'){ v='checking'; }
-  /* si on est déjà dans l'app, on ne ré-affiche jamais l'écran d'auth */
+  if(!sessionChecked && v!=='checking' && v!=='hidden'){ v='checking'; }
   if(entered && v!=='hidden'){ a.style.display='none'; a.classList.remove('open'); return; }
   if(v==='hidden'){ a.style.display='none'; a.classList.remove('open'); return; }
   a.style.display='flex'; a.classList.add('open');
@@ -31453,7 +31446,6 @@ function showView(v){
   var target=$(map[v]||'gsa-landing'); if(target)target.style.display='block';
   if(v==='login'){ setTimeout(function(){ var e=$('auth-email'); if(e&&!e.value)try{e.focus();}catch(_){ } },120); }
 }
-/* authShowView : seule autorité d'affichage de l'écran (gagne sur les anciens) */
 function authShowView(view){
   if(view==='signup'||view==='signup-s1'||view==='signup11'||view==='onboarding'){ return goSignup(); }
   if(view==='login'){ showView('login'); return false; }
@@ -31465,11 +31457,11 @@ function authShowErr(msg){ var e=$('auth-err'); if(e)e.textContent=msg||''; if(m
 function setAuthLoading(b){ var btn=$('auth-login-btn'); if(btn){ btn.textContent=b?'Connexion…':'Se connecter'; btn.disabled=!!b; btn.style.opacity=b?'.7':'1'; } }
 W.gsAuthToggleEye=function(){ var i=$('auth-password'),e=$('auth-eye'); if(!i)return; if(i.type==='password'){i.type='text'; if(e)e.textContent='MASQUER';} else {i.type='password'; if(e)e.textContent='VOIR';} };
 
-/* ======================== ACTIONS AUTH ======================== */
+/* ======================== ACTIONS ======================== */
 async function emailForUsername(u){
   u=normU(u); if(!u)return '';
-  try{ if(sb().rpc){ var r=await sb().rpc('gs_email_for_username',{p_username:u}); if(r&&!r.error&&r.data){ var v=Array.isArray(r.data)?(r.data[0]&&(r.data[0].email||r.data[0])):(r.data.email||r.data); if(v)return String(v); } } }catch(e){}
-  try{ var d=await sb().from('profiles').select('email').eq('username',u).maybeSingle(); if(d&&d.data&&d.data.email)return String(d.data.email); }catch(e){}
+  try{ if(sb().rpc){ var r=await withTimeout(sb().rpc('gs_email_for_username',{p_username:u}),7000,null); if(r&&!r.error&&r.data){ var v=Array.isArray(r.data)?(r.data[0]&&(r.data[0].email||r.data[0])):(r.data.email||r.data); if(v)return String(v); } } }catch(e){}
+  try{ var d=await withTimeout(sb().from('profiles').select('email').eq('username',u).maybeSingle(),7000,null); if(d&&d.data&&d.data.email)return String(d.data.email); }catch(e){}
   return '';
 }
 async function login(){
@@ -31480,17 +31472,14 @@ async function login(){
   authShowErr(''); setAuthLoading(true);
   var email=input, usedUsername=false;
   if(input.indexOf('@')<0 || input.charAt(0)==='@'){
-    usedUsername=true;
-    email=await emailForUsername(input);
+    usedUsername=true; email=await emailForUsername(input);
     if(!email){ setAuthLoading(false); authShowErr('Ce @username est introuvable.'); return false; }
   }
   var res;
-  try{ res=await sb().auth.signInWithPassword({email:email,password:pass}); }catch(e){ res={error:e}; }
+  try{ res=await withTimeout(sb().auth.signInWithPassword({email:email,password:pass}),15000,{error:{message:'timeout'}}); }catch(e){ res={error:e}; }
   setAuthLoading(false);
   if(res&&res.error){
-    authShowErr(usedUsername
-      ? 'Connexion impossible. Si ce compte vient de Google, utilise « Continuer avec Google ».'
-      : 'Email ou mot de passe incorrect.');
+    authShowErr(usedUsername ? 'Connexion impossible. Si ce compte vient de Google, utilise « Continuer avec Google ».' : 'Email ou mot de passe incorrect.');
     return false;
   }
   return afterAuth(res.data.user);
@@ -31503,40 +31492,36 @@ async function google(){
   if(r&&r.error){ authShowErr(r.error.message||'Connexion Google impossible. Vérifie la config Supabase (provider + URL de redirection).'); }
   return false;
 }
-function goSignup(){
-  try{ if(typeof W.openOnboardingWizard==='function'){ W.openOnboardingWizard(0,{mode:'signup',fresh:true}); return false; } }catch(e){}
-  showView('login'); return false;
-}
+function goSignup(){ try{ if(typeof W.openOnboardingWizard==='function'){ W.openOnboardingWizard(0,{mode:'signup',fresh:true}); return false; } }catch(e){} showView('login'); return false; }
 W.gsAuthGoSignup=goSignup;
 W.gsAuthSkip=function(){
   try{ var s=ls(); if(s){s.setItem('gs_skip_auth','1');s.setItem('gs_auth_skipped','1');} }catch(e){}
   try{ if(typeof W.sessionStorage!=='undefined')W.sessionStorage.setItem('gs_guest_session','1'); }catch(e){}
   var s=S(); s.guestMode=true; s.onboarded=true; rawSave();
-  entered=true; showView('hidden');
+  entered=true; sessionChecked=true; showView('hidden');
   try{ if(typeof W.hideGates==='function')W.hideGates(); }catch(e){}
   try{ if(typeof W.bootApp==='function')W.bootApp(); else if(typeof W.bootSafe==='function')W.bootSafe(); }catch(e){}
   return false;
 };
 
-/* ======================== RÉSOLUTION / ENTRÉE APP ======================== */
+/* ======================== RÉSOLUTION ======================== */
+function minimalRow(user){ return {id:user.id,email:user.email||'',username:'',display_name:metaName(user)||'',data:{profil:{email:user.email||'',name:metaName(user)||''}}}; }
 async function ensureRow(user){
-  if(!sb()||!user||!user.id)return null;
-  var r=null;
-  try{ r=await sb().from('profiles').select('id,email,username,display_name,first_name,avatar_url,onboarding_complete,data').eq('id',user.id).maybeSingle(); }catch(e){}
+  if(!sb()||!user||!user.id)return minimalRow(user);
+  var r=await withTimeout(sb().from('profiles').select('id,email,username,display_name,first_name,avatar_url,onboarding_complete,data').eq('id',user.id).maybeSingle(),6000,{__t:true});
+  if(r&&r.__t)return minimalRow(user);
   var row=r&&r.data||null;
   if(row)return row;
-  var payload={ id:user.id, email:String(user.email||'').toLowerCase()||null, avatar_url:metaAvatar(user)||null,
-    data:{profil:{email:user.email||'',name:metaName(user)||''}}, updated_at:now() };
-  try{ await sb().from('profiles').upsert(payload,{onConflict:'id'}); }catch(e){}
-  try{ var r2=await sb().from('profiles').select('id,email,username,display_name,first_name,avatar_url,onboarding_complete,data').eq('id',user.id).maybeSingle(); row=r2&&r2.data||payload; }catch(e){ row=payload; }
-  return row;
+  var payload={ id:user.id, email:String(user.email||'').toLowerCase()||null, avatar_url:metaAvatar(user)||null, data:{profil:{email:user.email||'',name:metaName(user)||''}}, updated_at:now() };
+  await withTimeout(sb().from('profiles').upsert(payload,{onConflict:'id'}),6000,null);
+  return payload;
 }
 async function loadCloud(userId){
-  try{ if(typeof W.loadFromSupabase==='function'){ await W.loadFromSupabase(userId); return true; } }catch(e){}
+  try{ if(typeof W.loadFromSupabase==='function'){ await withTimeout(W.loadFromSupabase(userId),6000,false); return true; } }catch(e){}
   try{
-    var r=await sb().from('profiles').select('id,email,username,display_name,data').eq('id',userId).maybeSingle();
+    var r=await withTimeout(sb().from('profiles').select('id,email,username,display_name,data').eq('id',userId).maybeSingle(),6000,null);
     if(r&&r.data){ var st=S(); if(r.data.data&&typeof r.data.data==='object'){try{Object.assign(st,r.data.data);}catch(e){}} st.profil=st.profil||{};
-      if(r.data.username)st.profil.username=normU(r.data.username); if(r.data.display_name)st.profil.name=r.data.display_name; if(r.data.email)st.profil.email=r.data.email; rawSave(); return true; }
+      if(r.data.username)st.profil.username=normU(r.data.username); if(r.data.display_name)st.profil.name=r.data.display_name; if(r.data.email)st.profil.email=r.data.email; rawSave(); }
   }catch(e){}
   return false;
 }
@@ -31544,7 +31529,7 @@ async function enterApp(user){
   W._supaUser=user; try{ if(typeof _supaUser!=='undefined')_supaUser=user; }catch(e){}
   await loadCloud(user.id);
   var s=S(); s.guestMode=false; s.onboarded=true; s.onlineUserId=user.id; s.currentUserId=user.id; rawSave();
-  entered=true; showView('hidden');
+  entered=true; sessionChecked=true; showView('hidden');
   try{ if(typeof W.hideGates==='function')W.hideGates(); }catch(e){}
   try{ if(typeof W.bootApp==='function')W.bootApp(); else if(typeof W.bootSafe==='function')W.bootSafe(); }catch(e){}
   try{ if(typeof W.gsSetupRealtimeV9==='function')W.gsSetupRealtimeV9(); }catch(e){}
@@ -31552,7 +31537,9 @@ async function enterApp(user){
 }
 function openSetup(user,row){
   W._supaUser=user; try{ if(typeof _supaUser!=='undefined')_supaUser=user; }catch(e){}
-  if($('gs-onboard-v11'))return; /* wizard déjà ouvert : ne pas réinitialiser */
+  sessionChecked=true;
+  if($('gs-onboard-v11'))return;
+  showView('hidden');
   try{ if(typeof W.gsShowOAuthOnboarding==='function'){ W.gsShowOAuthOnboarding(user,row); return; } }catch(e){}
   try{ if(typeof W.openOnboardingWizard==='function'){ W.openOnboardingWizard(0,{mode:'oauth'}); return; } }catch(e){}
   showView('landing');
@@ -31562,8 +31549,10 @@ async function afterAuth(user){
   if(!user||!user.id)return false;
   var t=Date.now(); if(authLock.id===user.id && (t-authLock.at)<900)return false; authLock={id:user.id,at:t};
   W._supaUser=user; try{ if(typeof _supaUser!=='undefined')_supaUser=user; }catch(e){}
+  if(localComplete()){ return enterApp(user); }
   var row=await ensureRow(user);
   if(profileComplete(row)){ return enterApp(user); }
+  if(localComplete()){ return enterApp(user); }
   openSetup(user,row); return false;
 }
 
@@ -31574,12 +31563,10 @@ async function cloudSaveNow(){
   if(!online())return false;
   var s=S(), p=P();
   if(!s || (!s.onboarded && !(p.username||p.name)))return false;
-  var data=safeState();
-  var str=''; try{ str=JSON.stringify(data); }catch(e){}
+  var data=safeState(); var str=''; try{ str=JSON.stringify(data); }catch(e){}
   if(str && str===lastPayloadStr)return true;
-  var payload={ id:uid(), email:(p.email||(W._supaUser&&W._supaUser.email)||null), username:(normU(p.username||'')||null),
-    display_name:(p.name||p.username||null), data:data, updated_at:now() };
-  try{ var r=await sb().from('profiles').upsert(payload,{onConflict:'id'}); if(r&&r.error)return false; lastPayloadStr=str; return true; }
+  var payload={ id:uid(), email:(p.email||(W._supaUser&&W._supaUser.email)||null), username:(normU(p.username||'')||null), display_name:(p.name||p.username||null), data:data, updated_at:now() };
+  try{ var r=await withTimeout(sb().from('profiles').upsert(payload,{onConflict:'id'}),9000,{error:{message:'timeout'}}); if(r&&r.error)return false; lastPayloadStr=str; return true; }
   catch(e){ return false; }
 }
 W.gsCloudSaveNow=cloudSaveNow;
@@ -31595,7 +31582,7 @@ setInterval(function(){ try{ if(online())scheduleCloudSave(0); }catch(e){} }, 30
 D.addEventListener('visibilitychange',function(){ try{ if(D.hidden&&online())cloudSaveNow(); }catch(e){} });
 W.addEventListener('pagehide',function(){ try{ if(online())cloudSaveNow(); }catch(e){} });
 
-/* ======================== DÉCONNEXION (confirmation custom, pas de confirm()) ======================== */
+/* ======================== DÉCONNEXION ======================== */
 function logoutAskHtml(){
   return '<div id="gs-logout-confirm" style="position:fixed;inset:0;z-index:2147483600;background:rgba(3,6,10,.74);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:22px" onclick="if(event.target===this)gsLogoutConfirm(false)">'
     +'<div style="width:min(420px,100%);background:linear-gradient(180deg,rgba(18,25,34,.99),rgba(9,13,18,.99));border:1px solid rgba(255,255,255,.12);border-radius:26px;padding:24px;color:#F5F3EE;box-shadow:0 28px 90px rgba(0,0,0,.55)">'
@@ -31619,7 +31606,7 @@ async function doLogoutNow(){
   var u=uid();
   try{ await cloudSaveNow(); }catch(e){}
   try{ if(u){ var s=ls(); if(s)s.setItem('gs_logout_backup_'+u, JSON.stringify(safeState()).slice(0,3000000)); } }catch(e){}
-  try{ if(sb()&&sb().auth&&sb().auth.signOut)await sb().auth.signOut(); }catch(e){}
+  try{ if(sb()&&sb().auth&&sb().auth.signOut)await withTimeout(sb().auth.signOut(),6000,null); }catch(e){}
   W._supaUser=null; try{ if(typeof _supaUser!=='undefined')_supaUser=null; }catch(e){} try{W.currentUser=null;}catch(e){}
   clearAuthLocal();
   try{ if(typeof W.assignState==='function'&&typeof W.baseState==='function')W.assignState(W.baseState()); }catch(e){}
@@ -31632,15 +31619,24 @@ W.gsLogoutConfirm=function(go){ var ov=$('gs-logout-confirm'); if(ov)ov.remove()
 /* ======================== SESSION / SAS ======================== */
 async function validateSession(){
   if(!sb()||!sb().auth)return null;
-  try{ var r=await sb().auth.getSession(); var ss=r&&r.data&&r.data.session; return (ss&&ss.user)?ss.user:null; }
-  catch(e){ return null; }
+  var r=await withTimeout((async function(){ try{ return await sb().auth.getSession(); }catch(e){ return null; } })(), 3500, null);
+  try{ var ss=r&&r.data&&r.data.session; return (ss&&ss.user)?ss.user:null; }catch(e){ return null; }
+}
+function armWatchdog(){
+  if(watchdogArmed)return; watchdogArmed=true;
+  setTimeout(function(){
+    if(entered || $('gs-onboard-v11'))return;
+    sessionChecked=true;
+    if(uid() && S().onboarded){ enterApp(W._supaUser||{id:uid()}); return; }
+    if(localComplete()){ entered=true; showView('hidden'); try{W.bootApp&&W.bootApp();}catch(e){} return; }
+    showView('landing');
+  }, 7000);
 }
 async function gate(){
   ensureScreen();
   var ob=$('onboard'); if(ob)ob.style.display='none';
-  /* si un wizard est déjà ouvert (ex: création en cours), on ne touche à rien */
-  if($('gs-onboard-v11')){ return; }
-  /* pas de Supabase : pas de sas, on montre la landing (ou app si invité déjà onboardé) */
+  if($('gs-onboard-v11'))return;
+  armWatchdog();
   if(!sb()||!sb().auth){
     sessionChecked=true;
     if(S().onboarded && (S().guestMode || (S().profil&&S().profil.name))){ entered=true; showView('hidden'); try{W.bootApp&&W.bootApp();}catch(e){} return; }
@@ -31657,12 +31653,11 @@ async function gate(){
   var user=await validateSession();
   sessionChecked=true;
   if(user){ await afterAuth(user); return; }
-  /* invité déjà onboardé sans compte : on le laisse dans l'app */
   if(S().guestMode && S().onboarded){ entered=true; showView('hidden'); try{W.bootApp&&W.bootApp();}catch(e){} return; }
   showView('landing');
 }
 
-/* ======================== BRANCHEMENT (gagne car chargé en dernier) ======================== */
+/* ======================== BRANCHEMENT ======================== */
 W.authShowView=authShowView;
 W.authShowErr=authShowErr;
 W.setAuthLoading=setAuthLoading;
@@ -31677,16 +31672,14 @@ W.gsLogout=logout; W.logout=logout; W.deconnexion=logout;
 W.gsValidateSupabaseSessionOrReset=validateSession;
 W.skipAuth=W.gsAuthSkip;
 
-/* neutralise les anciens "afterAuth/initAuth" qui pourraient ré-afficher la landing
-   par-dessus l'app : ils passent désormais tous par nos versions gardées. */
 if(D.readyState==='loading'){ D.addEventListener('DOMContentLoaded',function(){ buildScreen(); setTimeout(gate,40); }); }
 else { buildScreen(); setTimeout(gate,40); }
-/* re-vérifie au retour d'onglet (ex: retour de Google) sans jamais déconnecter */
 D.addEventListener('visibilitychange',function(){ if(!D.hidden && !entered){ validateSession().then(function(u){ if(u){sessionChecked=true;afterAuth(u);} }); } });
 
-try{ console.log('[GS] AUTH FINALE (refonte) active — sas anti-flash + Google/email/@username + sauvegarde cloud.'); }catch(e){}
+try{ console.log('[GS] AUTH FINALE v2 active — anti-freeze (timeouts + watchdog) + Google/email/@username + cloud.'); }catch(e){}
 })();
 </script>
+
 
 </body>
 </html>
