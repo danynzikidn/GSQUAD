@@ -16724,7 +16724,302 @@ var oldPush=window.pushSquadEvent;window.pushSquadEvent=function(type,payload,op
     '<div class="section">Activités sportives</div>'+outdoorTable+ 
     '<div class="section">Performances</div>'+perfTable+ 
     '<script>window.onload=function(){setTimeout(function(){try{window.print()}catch(e){}},250)}<\/script>'+ 
-    '</body></html>';
+    '
+
+<!-- G-SQUAD PATCH 281 — exercice DB cohérente + son timer 3s -->
+<script id="gs-281-exercise-db-alias-sound-fix">
+(function(){
+  var W=window,D=document;
+  function S(){return W.state||(W.state={})}
+  function A(v){return Array.isArray(v)?v:[]}
+  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function JS(v){return String(v==null?'':v).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' ')}
+  function N(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[’']/g,' ').replace(/[-_]/g,' ').replace(/\s+/g,' ').trim()}
+  function C(v){return N(v).replace(/\s+/g,'')}
+  function save(){try{if(typeof W.sv==='function')W.sv();else if(typeof sv==='function')sv()}catch(e){}}
+  var CABLE={
+    n:'Pull-over câble / Cable Pullover',
+    g:'dos',
+    t:'Câble',
+    m:'Grand dorsal, grand dentelé, bras tendus',
+    s:'3 x 12–15 reps',
+    xp:10,
+    xpCss:'iso',
+    note:'Isolation du grand dorsal à la poulie. Garde les bras presque tendus et tire la barre vers les cuisses sans transformer le mouvement en triceps.',
+    yt:'https://www.youtube.com/results?search_query=pull-over+cable+straight+arm+pulldown+technique',
+    tk:'https://www.tiktok.com/search?q='+encodeURIComponent('cable pullover technique'),
+    alias:'pull over pullover pull-over pull over cable pull-over cable pull-over câble cable pullover straight arm pulldown tirage bras tendus tirage bras tendu pull-over poulie pull over poulie pullover poulie'
+  };
+  var ALIAS={
+    'pull over cable':1,'pull over câble':1,'pull-over cable':1,'pull-over câble':1,'cable pullover':1,'pullover cable':1,'pullover câble':1,'pull over poulie':1,'pull-over poulie':1,'pullover poulie':1,'straight arm pulldown':1,'straight-arm pulldown':1,'tirage bras tendus':1,'tirage bras tendu':1,'tirage bras tendus poulie':1,'tirage bras tendu poulie':1
+  };
+  function cableish(name){var x=N(name);return !!(ALIAS[x]||/pull\s*over/.test(x)&&(/cable|cable|poulie/.test(x))||/pullover/.test(x)&&(/cable|poulie/.test(x))||/straight\s*arm\s*pulldown/.test(x)||/tirage\s*bras\s*tendu/.test(x))}
+  function sameCable(ex){return cableish(ex&&ex.n||'')||cableish(ex&&ex.alias||'')}
+  function ensureExerciseDb(){
+    W.EXOS_DB=W.EXOS_DB||[];
+    var db=W.EXOS_DB;
+    var found=db.find(sameCable);
+    if(found){Object.keys(CABLE).forEach(function(k){if(!found[k]||k==='alias')found[k]=CABLE[k]});found.n=found.n||CABLE.n;found.g=found.g||'dos';found.t=found.t||'Câble';}
+    else db.push(Object.assign({},CABLE));
+    // Garde-fou produit: tout exercice déjà présent dans un programme local devient cherchable.
+    var seen={}; db.forEach(function(e){if(e&&e.n)seen[C(e.n)]=1});
+    function addFallback(ex){
+      if(!ex||!ex.n)return;
+      if(cableish(ex.n))return; // l'entrée officielle ci-dessus couvre les variantes câble/poulie.
+      var k=C(ex.n); if(!k||seen[k])return; seen[k]=1;
+      db.push({n:ex.n,g:ex.g||ex.group||'dos',t:ex.t||'Exercice',m:ex.m||ex.note||'Exercice proposé par ton programme',s:ex.s||'',yt:ex.yt||('https://www.youtube.com/results?search_query='+encodeURIComponent(ex.n+' technique')),tk:ex.tt||ex.tk||('https://www.tiktok.com/search?q='+encodeURIComponent(ex.n+' training')),alias:ex.alias||''});
+    }
+    A(W.DAYS).forEach(function(d){A(d&&d.exercises).forEach(addFallback)});
+    try{var cd=S().customDays||{};Object.keys(cd).forEach(function(k){A(cd[k]).forEach(addFallback)})}catch(e){}
+  }
+  function cableAliases(){return ['pull over','pull-over','pullover','pull over cable','pull-over cable','pull-over câble','pull over câble','cable pullover','pullover cable','pull-over poulie','pull over poulie','pullover poulie','straight arm pulldown','tirage bras tendus','tirage bras tendu','tirage bras tendus poulie','tirage bras tendu poulie','grand dorsal poulie','bras tendus poulie'];}
+  var oldAliases=W.gsExerciseAliases;
+  W.gsExerciseAliases=function(ex){
+    var arr=[];
+    try{arr=oldAliases?A(oldAliases(ex)).slice():[]}catch(e){arr=[]}
+    if(sameCable(ex)){arr=arr.concat(cableAliases())}
+    var extra=String((ex&&ex.alias)||'').split(/[;,|]/).concat(String((ex&&ex.a)||'').split(/[;,|]/));
+    arr=arr.concat(extra);
+    var out=[],seen={}; arr.forEach(function(x){x=String(x||'').trim();if(!x)return;var k=C(x);if(!seen[k]){seen[k]=1;out.push(x)}});return out;
+  };
+  function text(ex){var al=[];try{al=W.gsExerciseAliases?W.gsExerciseAliases(ex):[]}catch(e){}return N([ex&&ex.n,ex&&ex.g,ex&&ex.t,ex&&ex.m,ex&&ex.note,ex&&ex.alias,ex&&ex.a,al.join(' ')].join(' '))}
+  function match(ex,q){q=N(q);if(!q)return true;var qc=C(q),hay=text(ex),hc=C(hay);if(hay.indexOf(q)>-1||hc.indexOf(qc)>-1)return true;return false}
+  function rank(ex,q,currentName,currentGroup){q=N(q);var qc=C(q),n=N(ex&&ex.n),score=50;if(currentName&&N(currentName)===n)score-=20;if(currentName&&sameCable({n:currentName})&&sameCable(ex))score-=18;if(currentGroup&&N(ex&&ex.g)===N(currentGroup))score-=6;if(n.indexOf(q)===0||C(n).indexOf(qc)===0)score-=12;else if(text(ex).indexOf(q)>-1)score-=7;if(sameCable(ex)&&(/pull|poulie|cable|pullover|bras/.test(q)))score-=12;return score;}
+  var oldMatches=W.gsExerciseMatchesSearch, oldRank=W.gsExerciseSearchRank;
+  W.gsExerciseMatchesSearch=function(ex,q){ensureExerciseDb();if(match(ex,q))return true;try{return oldMatches?oldMatches(ex,q):false}catch(e){return false}};
+  W.gsExerciseSearchRank=function(ex,q){try{var r=oldRank?oldRank(ex,q):50;return Math.min(r,rank(ex,q,'',''))}catch(e){return rank(ex,q,'','')}};
+  W.gsReplaceExercise=function(exIdx){
+    ensureExerciseDb();
+    var ds=W.DAYS||[],d=ds[W.cDay||0]; if(!d)return;
+    var old=D.getElementById('gs-replace-ex-ov'); if(old)old.remove();
+    var cur=A(d.exercises)[exIdx]||{},curG=cur.g||'';
+    var all=A(W.EXOS_DB).filter(function(e){return e&&e.n&&!e.activity});
+    function dedupe(list){var out=[],seen={};list.forEach(function(e){var k=sameCable(e)?'cable-pullover':C(e.n);if(!seen[k]){seen[k]=1;out.push(e)}});return out}
+    function list(q){q=String(q||'');var arr=all.filter(function(e){return !q||match(e,q)});arr.sort(function(a,b){return rank(a,q,cur.n,curG)-rank(b,q,cur.n,curG)||String(a.n||'').localeCompare(String(b.n||''),'fr')});return dedupe(arr).slice(0,45)}
+    function rows(items,q){return items.map(function(e){var meta=[e.g,e.t,e.m].filter(Boolean).join(' · ');return '<button type="button" onclick="gsConfirmReplaceEx('+exIdx+',\''+JS(e.n)+'\',\''+JS(e.s||cur.s||'')+'\',\''+JS(e.g||'')+'\')" style="display:flex;justify-content:space-between;gap:10px;width:100%;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:13px;margin-bottom:8px;text-align:left;color:var(--txt)"><div style="min-width:0"><div style="font-size:14px;font-weight:900;line-height:1.25">'+E(e.n)+'</div><div style="font-size:11px;color:var(--mut);margin-top:3px;line-height:1.35">'+E(meta||'Exercice')+'</div>'+(q&&sameCable(e)?'<div style="font-size:10px;color:var(--acc);font-weight:900;margin-top:5px">Alias: pull-over câble / tirage bras tendus</div>':'')+'</div></button>'}).join('')||'<div style="color:var(--mut);text-align:center;padding:20px">Aucun résultat</div>'}
+    W._gsReplaceRows=function(q){ensureExerciseDb();var el=D.getElementById('gs-replace-ex-list');if(el)el.innerHTML=rows(list(q),q)};
+    D.body.insertAdjacentHTML('beforeend','<div id="gs-replace-ex-ov" style="position:fixed;inset:0;z-index:3900;background:rgba(0,0,0,.78);display:flex;align-items:flex-end" onclick="if(event.target===this)this.remove()"><div style="width:100%;max-height:88vh;overflow-y:auto;background:var(--bg);border-radius:28px 28px 0 0;border:1px solid rgba(255,255,255,.08);padding:18px;padding-bottom:calc(env(safe-area-inset-bottom,20px)+18px)"><div style="font-size:20px;font-weight:1000;color:var(--txt);margin-bottom:12px">Changer l’exercice</div><input value="" placeholder="Rechercher dans la bibliothèque..." oninput="window._gsReplaceRows(this.value)" style="width:100%;padding:13px 14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.06);border-radius:14px;color:var(--txt);font-size:15px;margin-bottom:12px;box-sizing:border-box"><div id="gs-replace-ex-list">'+rows(list(''),'')+'</div><button onclick="document.getElementById(\'gs-replace-ex-ov\').remove()" style="width:100%;margin-top:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--txt);border-radius:18px;padding:14px;font-weight:1000">Annuler</button></div></div>');
+    setTimeout(function(){var ov=D.getElementById('gs-replace-ex-ov');var i=ov&&ov.querySelector('input');if(i){try{i.focus()}catch(e){}}},40);
+  };
+  function playLongTimerSound(){
+    try{
+      var Ctx=W.AudioContext||W.webkitAudioContext;if(!Ctx)return;
+      var ctx=W.__gsTimerAudioCtx||(W.__gsTimerAudioCtx=new Ctx());
+      if(ctx.state==='suspended')ctx.resume().catch(function(){});
+      var now=ctx.currentTime+0.03;
+      var master=ctx.createGain();master.gain.setValueAtTime(0.0001,now);master.connect(ctx.destination);
+      master.gain.linearRampToValueAtTime(0.22,now+0.03);
+      master.gain.setValueAtTime(0.22,now+2.85);
+      master.gain.linearRampToValueAtTime(0.0001,now+3.05);
+      for(var i=0;i<6;i++){
+        var start=now+i*0.48;
+        var osc=ctx.createOscillator(),g=ctx.createGain();
+        osc.type='sine';osc.frequency.setValueAtTime(i%2?1046:880,start);
+        g.gain.setValueAtTime(0.0001,start);
+        g.gain.linearRampToValueAtTime(0.9,start+0.025);
+        g.gain.setValueAtTime(0.9,start+0.22);
+        g.gain.linearRampToValueAtTime(0.0001,start+0.32);
+        osc.connect(g);g.connect(master);osc.start(start);osc.stop(start+0.34);
+      }
+    }catch(e){}
+  }
+  W.gsPlayTimerSound3s=playLongTimerSound;
+  W.notifyRestDone=function(){
+    try{playLongTimerSound()}catch(e){}
+    try{if(navigator.vibrate)navigator.vibrate([180,90,180,90,180,90,260])}catch(e){}
+    try{
+      if('Notification' in W){
+        var exName='';try{exName=(W.DAYS&&DAYS[W.cDay]&&DAYS[W.cDay].exercises[W.cEx]?DAYS[W.cDay].exercises[W.cEx].n:'')}catch(_){ }
+        var fire=function(){new Notification('G-SQUAD',{body:exName?'Repos terminé. Prochain exercice: '+exName:'Repos terminé. Reprends ta séance.',tag:'rest-done',silent:false})};
+        if(Notification.permission==='granted')fire();
+        else if(Notification.permission==='default')Notification.requestPermission().then(function(p){if(p==='granted')fire()});
+      }
+    }catch(e){}
+  };
+  ensureExerciseDb();
+  try{if(typeof W.renderBib==='function')W.renderBib()}catch(e){}
+  try{console.log('[GS281] Exercise DB aliases + timer 3s sound active')}catch(e){}
+})();
+</script>
+
+<script>
+(function(){
+  'use strict';
+  var W=window,D=document;
+  var PATCH='GS282_EXERCISE_SEARCH_FINAL_OVERRIDE';
+  function norm(v){
+    return String(v||'')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[’']/g,'')
+      .replace(/[-_\/]+/g,' ')
+      .replace(/\s+/g,' ')
+      .toLowerCase().trim();
+  }
+  function esc(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function sameName(a,b){return norm(a)===norm(b);}
+  function cablePullover(){
+    return {
+      n:'Pull-over câble / Cable Pullover',
+      g:'dos',
+      t:'Câble',
+      m:'Grand dorsal, grand dentelé, bras tendus, isolation dos',
+      s:'3×12-15',
+      yt:'https://www.youtube.com/results?search_query=cable+pullover+straight+arm+pulldown+technique',
+      aliases:[
+        'pull over','pullover','pull-over','pull o','pull-over cable','pull over cable',
+        'pull-over câble','pull over câble','pull-over poulie','pull over poulie','poulie',
+        'cable pullover','straight arm pulldown','straight-arm pulldown',
+        'tirage bras tendus','tirage bras tendu','tirage bras droit','tirage bras droits',
+        'extension bras tendus poulie','extension bras tendu poulie','cable straight arm'
+      ]
+    };
+  }
+  function asExercise(x){
+    if(!x||typeof x!=='object')return null;
+    var name=x.n||x.name||x.title||x.exercise||x.exercice;
+    if(!name)return null;
+    return {
+      n:String(name),
+      g:String(x.g||x.group||x.muscle||x.category||x.cat||''),
+      t:String(x.t||x.type||x.material||x.materiel||''),
+      m:String(x.m||x.muscles||x.target||''),
+      s:String(x.s||x.sets||x.reps||''),
+      yt:x.yt||x.youtube||'',
+      aliases:Array.isArray(x.aliases)?x.aliases.slice():[]
+    };
+  }
+  function gatherFromDays(out){
+    var pools=[];
+    ['DAYS','days','PROGRAM_DAYS','PROGRAM','program','currentProgram'].forEach(function(k){
+      try{ if(W[k]) pools.push(W[k]); }catch(e){}
+    });
+    try{
+      Object.keys(localStorage||{}).forEach(function(k){
+        if(!/day|program|plan|gs/i.test(k))return;
+        try{ var v=JSON.parse(localStorage.getItem(k)); if(v) pools.push(v); }catch(e){}
+      });
+    }catch(e){}
+    function walk(v,depth){
+      if(!v||depth>5)return;
+      if(Array.isArray(v)){v.forEach(function(it){walk(it,depth+1);});return;}
+      if(typeof v==='object'){
+        var ex=asExercise(v); if(ex) out.push(ex);
+        if(Array.isArray(v.exercises))walk(v.exercises,depth+1);
+        if(Array.isArray(v.items))walk(v.items,depth+1);
+        if(Array.isArray(v.days))walk(v.days,depth+1);
+        if(Array.isArray(v.plan))walk(v.plan,depth+1);
+      }
+    }
+    pools.forEach(function(p){walk(p,0);});
+  }
+  function buildDB(){
+    var raw=[];
+    try{ if(Array.isArray(W.EXOS_DB)) W.EXOS_DB.forEach(function(e){var x=asExercise(e); if(x&&!e.activity)raw.push(x);}); }catch(e){}
+    gatherFromDays(raw);
+    raw.push(cablePullover());
+    var seen={}, out=[];
+    raw.forEach(function(e){
+      if(!e||!e.n)return;
+      var key=norm(e.n);
+      var isCable=sameName(e.n,'Pull-over câble / Cable Pullover')||norm((e.aliases||[]).join(' ')).indexOf('straight arm pulldown')>-1;
+      if(norm(e.n).indexOf('pull over cable')>-1||norm(e.n).indexOf('pull over cable pullover')>-1||norm(e.n).indexOf('pull over cable')>-1)isCable=true;
+      if(norm(e.n).indexOf('pull over cable')>-1||norm(e.n).indexOf('pull over cable')>-1)isCable=true;
+      if(isCable)key='pull over cable canonical';
+      if(!seen[key]){seen[key]=e;out.push(e);}
+    });
+    var hasCable=out.some(function(e){return sameName(e.n,'Pull-over câble / Cable Pullover')||norm(e.n).indexOf('pull over cable')>-1||norm((e.aliases||[]).join(' ')).indexOf('straight arm pulldown')>-1;});
+    if(!hasCable)out.unshift(cablePullover());
+    try{
+      if(Array.isArray(W.EXOS_DB) && !W.EXOS_DB.some(function(e){return sameName(e&&e.n,'Pull-over câble / Cable Pullover');})){
+        W.EXOS_DB.push(cablePullover());
+      }
+    }catch(e){}
+    return out;
+  }
+  function hay(e){return norm([e.n,e.g,e.t,e.m,e.s,(e.aliases||[]).join(' ')].join(' '));}
+  function score(e,q,currentGroup,currentName){
+    var h=hay(e), n=norm(e.n), nq=norm(q), s=0;
+    if(currentName && sameName(e.n,currentName))s-=100;
+    if(n.indexOf('pull over cable')>-1||n.indexOf('pull over cable pullover')>-1||sameName(e.n,'Pull-over câble / Cable Pullover'))s-=80;
+    if(nq){
+      if(n===nq)s-=60;
+      else if(n.indexOf(nq)===0)s-=45;
+      else if(h.indexOf(nq)>-1)s-=30;
+      var words=nq.split(' ').filter(Boolean);
+      if(words.length && words.every(function(w){return h.indexOf(w)>-1;}))s-=20;
+    }
+    if(currentGroup && norm(e.g)===norm(currentGroup))s-=8;
+    return s;
+  }
+  function filterDB(db,q,currentGroup,currentName){
+    var nq=norm(q);
+    var list;
+    if(!nq){list=db.slice();}
+    else{
+      var words=nq.split(' ').filter(Boolean);
+      list=db.filter(function(e){
+        var h=hay(e), n=norm(e.n);
+        return h.indexOf(nq)>-1 || words.every(function(w){return h.indexOf(w)>-1;}) || (nq==='pull' && (n.indexOf('pull')>-1||h.indexOf('traction')>-1));
+      });
+    }
+    return list.sort(function(a,b){return score(a,nq,currentGroup,currentName)-score(b,nq,currentGroup,currentName);});
+  }
+  function renderRows(exIdx,list,cur){
+    var root=D.getElementById('gs-replace-ex-list');
+    if(!root)return;
+    if(!list.length){root.innerHTML='<div style="color:var(--mut);text-align:center;padding:20px">Aucun résultat</div>';return;}
+    root.innerHTML=list.slice(0,60).map(function(e,i){
+      var meta=[e.g,e.t].filter(Boolean).join(' · ');
+      var badge=sameName(e.n,cur&&cur.n)?'<span style="font-size:10px;font-weight:1000;color:#071018;background:var(--txt);padding:4px 8px;border-radius:999px">ACTUEL</span>':'';
+      return '<button type="button" data-gs282-ex="'+i+'" style="display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:13px;margin-bottom:8px;text-align:left;color:var(--txt)"><div><div style="font-size:14px;font-weight:900">'+esc(e.n)+'</div><div style="font-size:11px;color:var(--mut);margin-top:2px">'+esc(meta||e.m||'')+'</div></div>'+badge+'</button>';
+    }).join('');
+    Array.prototype.forEach.call(root.querySelectorAll('[data-gs282-ex]'),function(btn){
+      btn.addEventListener('click',function(){
+        var e=list[Number(btn.getAttribute('data-gs282-ex'))];
+        if(!e)return;
+        try{
+          if(typeof W.gsConfirmReplaceEx==='function') W.gsConfirmReplaceEx(exIdx,e.n,e.s||((cur&&cur.s)||''),e.g||((cur&&cur.g)||''));
+          else {
+            var ds=W.DAYS||[], d=ds[W.cDay||0];
+            if(d&&d.exercises&&d.exercises[exIdx]){d.exercises[exIdx].n=e.n;d.exercises[exIdx].s=e.s||d.exercises[exIdx].s;d.exercises[exIdx].g=e.g||d.exercises[exIdx].g;}
+            if(typeof W.render==='function')W.render();
+          }
+        }catch(err){console.error('[GS282] replace failed',err);}
+        var ov=D.getElementById('gs-replace-ex-ov'); if(ov)ov.remove();
+      });
+    });
+  }
+  function currentExercise(exIdx){
+    var d=null;
+    try{d=W.DAYS&&W.DAYS[W.cDay||0];}catch(e){}
+    if(d&&Array.isArray(d.exercises)&&d.exercises[exIdx])return asExercise(d.exercises[exIdx])||{};
+    return {};
+  }
+  W.gsReplaceExercise=function(exIdx){
+    var old=D.getElementById('gs-replace-ex-ov'); if(old)old.remove();
+    var cur=currentExercise(exIdx);
+    var db=buildDB();
+    var currentGroup=cur.g||'';
+    var q='';
+    function redraw(){renderRows(exIdx,filterDB(db,q,currentGroup,cur.n),cur);}
+    D.body.insertAdjacentHTML('beforeend','<div id="gs-replace-ex-ov" style="position:fixed;inset:0;z-index:3900;background:rgba(0,0,0,.78);display:flex;align-items:flex-end" onclick="if(event.target===this)this.remove()"><div style="width:100%;max-height:88vh;overflow-y:auto;background:var(--bg);border-radius:28px 28px 0 0;border:1px solid rgba(255,255,255,.08);padding:18px;padding-bottom:calc(env(safe-area-inset-bottom,20px)+18px)"><div style="font-size:20px;font-weight:1000;color:var(--txt);margin-bottom:12px">Changer l’exercice</div><input id="gs282-replace-search" placeholder="Rechercher : pull-over, poulie, tirage bras tendus..." autocomplete="off" style="width:100%;padding:13px 14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.06);border-radius:14px;color:var(--txt);font-size:15px;margin-bottom:12px;box-sizing:border-box"><div id="gs-replace-ex-list"></div><button type="button" id="gs282-replace-cancel" style="width:100%;margin-top:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--txt);border-radius:18px;padding:14px;font-weight:1000">Annuler</button></div></div>');
+    var input=D.getElementById('gs282-replace-search');
+    var cancel=D.getElementById('gs282-replace-cancel');
+    if(input){input.addEventListener('input',function(){q=input.value;redraw();}); setTimeout(function(){try{input.focus();}catch(e){}},30);}
+    if(cancel)cancel.addEventListener('click',function(){var ov=D.getElementById('gs-replace-ex-ov'); if(ov)ov.remove();});
+    W._gsReplaceRows=function(val){q=val||'';redraw();};
+    redraw();
+  };
+  function arm(){
+    try{buildDB();}catch(e){}
+    W.__GS282_EXERCISE_SEARCH_OVERRIDE=true;
+    try{console.log('['+PATCH+'] active: final gsReplaceExercise override with cable pullover aliases');}catch(e){}
+  }
+  if(D.readyState==='loading')D.addEventListener('DOMContentLoaded',arm); else arm();
+})();
+</script>
+
+</body></html>';
   try{w.document.open();w.document.write(html);w.document.close()}catch(e){}
 };
 
@@ -31701,6 +31996,183 @@ try{console.log('[GS] AUTH FINALE v3 active \u2014 landing imm\u00e9diate + sess
 </script>
 
 
+
+<script>
+(function(){
+  'use strict';
+  var W=window,D=document;
+  var PATCH='GS282_EXERCISE_SEARCH_FINAL_OVERRIDE';
+  function norm(v){
+    return String(v||'')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[’']/g,'')
+      .replace(/[-_\/]+/g,' ')
+      .replace(/\s+/g,' ')
+      .toLowerCase().trim();
+  }
+  function esc(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function sameName(a,b){return norm(a)===norm(b);}
+  function cablePullover(){
+    return {
+      n:'Pull-over câble / Cable Pullover',
+      g:'dos',
+      t:'Câble',
+      m:'Grand dorsal, grand dentelé, bras tendus, isolation dos',
+      s:'3×12-15',
+      yt:'https://www.youtube.com/results?search_query=cable+pullover+straight+arm+pulldown+technique',
+      aliases:[
+        'pull over','pullover','pull-over','pull o','pull-over cable','pull over cable',
+        'pull-over câble','pull over câble','pull-over poulie','pull over poulie','poulie',
+        'cable pullover','straight arm pulldown','straight-arm pulldown',
+        'tirage bras tendus','tirage bras tendu','tirage bras droit','tirage bras droits',
+        'extension bras tendus poulie','extension bras tendu poulie','cable straight arm'
+      ]
+    };
+  }
+  function asExercise(x){
+    if(!x||typeof x!=='object')return null;
+    var name=x.n||x.name||x.title||x.exercise||x.exercice;
+    if(!name)return null;
+    return {
+      n:String(name),
+      g:String(x.g||x.group||x.muscle||x.category||x.cat||''),
+      t:String(x.t||x.type||x.material||x.materiel||''),
+      m:String(x.m||x.muscles||x.target||''),
+      s:String(x.s||x.sets||x.reps||''),
+      yt:x.yt||x.youtube||'',
+      aliases:Array.isArray(x.aliases)?x.aliases.slice():[]
+    };
+  }
+  function gatherFromDays(out){
+    var pools=[];
+    ['DAYS','days','PROGRAM_DAYS','PROGRAM','program','currentProgram'].forEach(function(k){
+      try{ if(W[k]) pools.push(W[k]); }catch(e){}
+    });
+    try{
+      Object.keys(localStorage||{}).forEach(function(k){
+        if(!/day|program|plan|gs/i.test(k))return;
+        try{ var v=JSON.parse(localStorage.getItem(k)); if(v) pools.push(v); }catch(e){}
+      });
+    }catch(e){}
+    function walk(v,depth){
+      if(!v||depth>5)return;
+      if(Array.isArray(v)){v.forEach(function(it){walk(it,depth+1);});return;}
+      if(typeof v==='object'){
+        var ex=asExercise(v); if(ex) out.push(ex);
+        if(Array.isArray(v.exercises))walk(v.exercises,depth+1);
+        if(Array.isArray(v.items))walk(v.items,depth+1);
+        if(Array.isArray(v.days))walk(v.days,depth+1);
+        if(Array.isArray(v.plan))walk(v.plan,depth+1);
+      }
+    }
+    pools.forEach(function(p){walk(p,0);});
+  }
+  function buildDB(){
+    var raw=[];
+    try{ if(Array.isArray(W.EXOS_DB)) W.EXOS_DB.forEach(function(e){var x=asExercise(e); if(x&&!e.activity)raw.push(x);}); }catch(e){}
+    gatherFromDays(raw);
+    raw.push(cablePullover());
+    var seen={}, out=[];
+    raw.forEach(function(e){
+      if(!e||!e.n)return;
+      var key=norm(e.n);
+      var isCable=sameName(e.n,'Pull-over câble / Cable Pullover')||norm((e.aliases||[]).join(' ')).indexOf('straight arm pulldown')>-1;
+      if(norm(e.n).indexOf('pull over cable')>-1||norm(e.n).indexOf('pull over cable pullover')>-1||norm(e.n).indexOf('pull over cable')>-1)isCable=true;
+      if(norm(e.n).indexOf('pull over cable')>-1||norm(e.n).indexOf('pull over cable')>-1)isCable=true;
+      if(isCable)key='pull over cable canonical';
+      if(!seen[key]){seen[key]=e;out.push(e);}
+    });
+    var hasCable=out.some(function(e){return sameName(e.n,'Pull-over câble / Cable Pullover')||norm(e.n).indexOf('pull over cable')>-1||norm((e.aliases||[]).join(' ')).indexOf('straight arm pulldown')>-1;});
+    if(!hasCable)out.unshift(cablePullover());
+    try{
+      if(Array.isArray(W.EXOS_DB) && !W.EXOS_DB.some(function(e){return sameName(e&&e.n,'Pull-over câble / Cable Pullover');})){
+        W.EXOS_DB.push(cablePullover());
+      }
+    }catch(e){}
+    return out;
+  }
+  function hay(e){return norm([e.n,e.g,e.t,e.m,e.s,(e.aliases||[]).join(' ')].join(' '));}
+  function score(e,q,currentGroup,currentName){
+    var h=hay(e), n=norm(e.n), nq=norm(q), s=0;
+    if(currentName && sameName(e.n,currentName))s-=100;
+    if(n.indexOf('pull over cable')>-1||n.indexOf('pull over cable pullover')>-1||sameName(e.n,'Pull-over câble / Cable Pullover'))s-=80;
+    if(nq){
+      if(n===nq)s-=60;
+      else if(n.indexOf(nq)===0)s-=45;
+      else if(h.indexOf(nq)>-1)s-=30;
+      var words=nq.split(' ').filter(Boolean);
+      if(words.length && words.every(function(w){return h.indexOf(w)>-1;}))s-=20;
+    }
+    if(currentGroup && norm(e.g)===norm(currentGroup))s-=8;
+    return s;
+  }
+  function filterDB(db,q,currentGroup,currentName){
+    var nq=norm(q);
+    var list;
+    if(!nq){list=db.slice();}
+    else{
+      var words=nq.split(' ').filter(Boolean);
+      list=db.filter(function(e){
+        var h=hay(e), n=norm(e.n);
+        return h.indexOf(nq)>-1 || words.every(function(w){return h.indexOf(w)>-1;}) || (nq==='pull' && (n.indexOf('pull')>-1||h.indexOf('traction')>-1));
+      });
+    }
+    return list.sort(function(a,b){return score(a,nq,currentGroup,currentName)-score(b,nq,currentGroup,currentName);});
+  }
+  function renderRows(exIdx,list,cur){
+    var root=D.getElementById('gs-replace-ex-list');
+    if(!root)return;
+    if(!list.length){root.innerHTML='<div style="color:var(--mut);text-align:center;padding:20px">Aucun résultat</div>';return;}
+    root.innerHTML=list.slice(0,60).map(function(e,i){
+      var meta=[e.g,e.t].filter(Boolean).join(' · ');
+      var badge=sameName(e.n,cur&&cur.n)?'<span style="font-size:10px;font-weight:1000;color:#071018;background:var(--txt);padding:4px 8px;border-radius:999px">ACTUEL</span>':'';
+      return '<button type="button" data-gs282-ex="'+i+'" style="display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:13px;margin-bottom:8px;text-align:left;color:var(--txt)"><div><div style="font-size:14px;font-weight:900">'+esc(e.n)+'</div><div style="font-size:11px;color:var(--mut);margin-top:2px">'+esc(meta||e.m||'')+'</div></div>'+badge+'</button>';
+    }).join('');
+    Array.prototype.forEach.call(root.querySelectorAll('[data-gs282-ex]'),function(btn){
+      btn.addEventListener('click',function(){
+        var e=list[Number(btn.getAttribute('data-gs282-ex'))];
+        if(!e)return;
+        try{
+          if(typeof W.gsConfirmReplaceEx==='function') W.gsConfirmReplaceEx(exIdx,e.n,e.s||((cur&&cur.s)||''),e.g||((cur&&cur.g)||''));
+          else {
+            var ds=W.DAYS||[], d=ds[W.cDay||0];
+            if(d&&d.exercises&&d.exercises[exIdx]){d.exercises[exIdx].n=e.n;d.exercises[exIdx].s=e.s||d.exercises[exIdx].s;d.exercises[exIdx].g=e.g||d.exercises[exIdx].g;}
+            if(typeof W.render==='function')W.render();
+          }
+        }catch(err){console.error('[GS282] replace failed',err);}
+        var ov=D.getElementById('gs-replace-ex-ov'); if(ov)ov.remove();
+      });
+    });
+  }
+  function currentExercise(exIdx){
+    var d=null;
+    try{d=W.DAYS&&W.DAYS[W.cDay||0];}catch(e){}
+    if(d&&Array.isArray(d.exercises)&&d.exercises[exIdx])return asExercise(d.exercises[exIdx])||{};
+    return {};
+  }
+  W.gsReplaceExercise=function(exIdx){
+    var old=D.getElementById('gs-replace-ex-ov'); if(old)old.remove();
+    var cur=currentExercise(exIdx);
+    var db=buildDB();
+    var currentGroup=cur.g||'';
+    var q='';
+    function redraw(){renderRows(exIdx,filterDB(db,q,currentGroup,cur.n),cur);}
+    D.body.insertAdjacentHTML('beforeend','<div id="gs-replace-ex-ov" style="position:fixed;inset:0;z-index:3900;background:rgba(0,0,0,.78);display:flex;align-items:flex-end" onclick="if(event.target===this)this.remove()"><div style="width:100%;max-height:88vh;overflow-y:auto;background:var(--bg);border-radius:28px 28px 0 0;border:1px solid rgba(255,255,255,.08);padding:18px;padding-bottom:calc(env(safe-area-inset-bottom,20px)+18px)"><div style="font-size:20px;font-weight:1000;color:var(--txt);margin-bottom:12px">Changer l’exercice</div><input id="gs282-replace-search" placeholder="Rechercher : pull-over, poulie, tirage bras tendus..." autocomplete="off" style="width:100%;padding:13px 14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.06);border-radius:14px;color:var(--txt);font-size:15px;margin-bottom:12px;box-sizing:border-box"><div id="gs-replace-ex-list"></div><button type="button" id="gs282-replace-cancel" style="width:100%;margin-top:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--txt);border-radius:18px;padding:14px;font-weight:1000">Annuler</button></div></div>');
+    var input=D.getElementById('gs282-replace-search');
+    var cancel=D.getElementById('gs282-replace-cancel');
+    if(input){input.addEventListener('input',function(){q=input.value;redraw();}); setTimeout(function(){try{input.focus();}catch(e){}},30);}
+    if(cancel)cancel.addEventListener('click',function(){var ov=D.getElementById('gs-replace-ex-ov'); if(ov)ov.remove();});
+    W._gsReplaceRows=function(val){q=val||'';redraw();};
+    redraw();
+  };
+  function arm(){
+    try{buildDB();}catch(e){}
+    W.__GS282_EXERCISE_SEARCH_OVERRIDE=true;
+    try{console.log('['+PATCH+'] active: final gsReplaceExercise override with cable pullover aliases');}catch(e){}
+  }
+  if(D.readyState==='loading')D.addEventListener('DOMContentLoaded',arm); else arm();
+})();
+</script>
 
 </body>
 </html>
