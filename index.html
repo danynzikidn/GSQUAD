@@ -31295,5 +31295,318 @@ console.log('[GS] 279 series display + duration fix loaded');
 })();
 </script>
 
+
+<!-- ============================================================
+     G-SQUAD — CONTRÔLEUR AUTH FINAL (2026-06)
+     Autorité unique : connexion Google / email / @username,
+     déconnexion fiable (sans confirm() qui bloque en PWA),
+     reconnexion + sauvegarde cloud de TOUTES les données.
+     Placé en dernier : "dernière définition gagne".
+     ============================================================ -->
+<script id="gs-auth-final-2026-06-js">
+(function(){
+'use strict';
+if(window.__GS_AUTH_FINAL_2026_06__)return; window.__GS_AUTH_FINAL_2026_06__=true;
+var W=window, D=document;
+
+function $(id){return D.getElementById(id);}
+function sb(){return W._supa||null;}
+function uid(){try{return String((W._supaUser&&W._supaUser.id)||'');}catch(e){return '';}}
+function online(){return !!(sb()&&sb().auth&&uid());}
+function now(){return new Date().toISOString();}
+function S(){ if(typeof W.S==='function'){try{return W.S();}catch(e){}} W.state=W.state||{}; return W.state; }
+function P(){ var s=S(); s.profil=s.profil||{}; return s.profil; }
+function normU(v){return String(v||'').trim().replace(/^@/,'').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();}
+function toast(m){try{if(typeof W.toast==='function')return W.toast(m); if(typeof W.notify==='function')return W.notify(m);}catch(e){} try{console.log('[G-SQUAD]',m);}catch(_){}}
+function authErr(m){ try{ if(typeof W.authShowErr==='function')return W.authShowErr(m); }catch(e){} toast(m); }
+function setLoading(b){ try{ if(typeof W.setAuthLoading==='function')W.setAuthLoading(b); }catch(e){} }
+function rawSave(){ try{ if(typeof W.__gsRawSave==='function')return W.__gsRawSave(); if(typeof W.save==='function')return W.save(); }catch(e){} }
+function safeState(){ try{ return (typeof W.gsSafeSupabaseState==='function')?W.gsSafeSupabaseState(S()):JSON.parse(JSON.stringify(S())); }catch(e){ return {profil:{}}; } }
+function ls(){ try{return W.localStorage;}catch(e){return null;} }
+
+/* Un profil est "complet" dès qu'il a un @username + un nom : suffisant pour
+   reconnecter un compte existant sans renvoyer vers l'onboarding. */
+function profileComplete(row){
+  if(!row)return false;
+  var d=(row.data&&typeof row.data==='object')?row.data:{};
+  var pr=(d.profil&&typeof d.profil==='object')?d.profil:{};
+  var u=normU(row.username||pr.username||'');
+  var n=String(row.display_name||row.first_name||pr.name||'').trim();
+  return !!(u.length>=3 && n.length>=1);
+}
+function metaAvatar(u){var m=(u&&u.user_metadata)||{};return m.avatar_url||m.picture||'';}
+function metaName(u){var m=(u&&u.user_metadata)||{};return String(m.full_name||m.name||m.display_name||'').trim();}
+
+/* ---------------- LANDING / écran auth ---------------- */
+function showLanding(){
+  var ov=$('gs-onboard-v11'); if(ov)ov.remove();
+  var a=$('auth-screen'); if(a){a.style.display='flex'; a.classList&&a.classList.add('open');}
+  var ob=$('onboard'); if(ob)ob.style.display='none';
+  try{ if(typeof W.authShowView==='function')W.authShowView('landing'); }catch(e){}
+  try{ D.body.classList.remove('modal-open','search-open','gs-search-open'); }catch(e){}
+}
+function hideAuthUI(){
+  ['auth-screen','onboard'].forEach(function(id){var el=$(id); if(el){el.style.display='none'; el.classList&&el.classList.remove('open');}});
+  var ov=$('gs-onboard-v11'); if(ov)ov.remove();
+}
+
+/* ---------------- Chargement des données depuis le cloud ---------------- */
+async function loadCloud(userId){
+  try{ if(typeof W.loadFromSupabase==='function'){ await W.loadFromSupabase(userId); return true; } }catch(e){ try{console.warn('[GS auth] loadFromSupabase',e);}catch(_){} }
+  try{
+    var r=await sb().from('profiles').select('id,email,username,display_name,data').eq('id',userId).maybeSingle();
+    if(r&&r.data){
+      var st=S();
+      if(r.data.data&&typeof r.data.data==='object'){ try{ Object.assign(st, r.data.data); }catch(e){} }
+      st.profil=st.profil||{};
+      if(r.data.username)st.profil.username=normU(r.data.username);
+      if(r.data.display_name)st.profil.name=r.data.display_name;
+      if(r.data.email)st.profil.email=r.data.email;
+      rawSave();
+      return true;
+    }
+  }catch(e){ try{console.warn('[GS auth] loadCloud fallback',e);}catch(_){} }
+  return false;
+}
+
+/* ---------------- Créer / garantir la ligne profil ---------------- */
+async function ensureRow(user){
+  if(!sb()||!user||!user.id)return null;
+  var r=null;
+  try{ r=await sb().from('profiles').select('id,email,username,display_name,first_name,avatar_url,onboarding_complete,data').eq('id',user.id).maybeSingle(); }catch(e){}
+  var row=r&&r.data||null;
+  if(row)return row;
+  /* Nouveau compte (souvent Google) : on crée une ligne minimale. */
+  var payload={
+    id:user.id,
+    email:String(user.email||'').toLowerCase()||null,
+    avatar_url:metaAvatar(user)||null,
+    data:{profil:{email:user.email||'', name:metaName(user)||''}},
+    updated_at:now()
+  };
+  try{ await sb().from('profiles').upsert(payload,{onConflict:'id'}); }catch(e){ try{console.warn('[GS auth] insert profil minimal',e);}catch(_){} }
+  try{ var r2=await sb().from('profiles').select('id,email,username,display_name,first_name,avatar_url,onboarding_complete,data').eq('id',user.id).maybeSingle(); row=r2&&r2.data||payload; }catch(e){ row=payload; }
+  return row;
+}
+
+/* ---------------- Entrée dans l'app ---------------- */
+async function enterApp(user){
+  W._supaUser=user; try{ if(typeof _supaUser!=='undefined')_supaUser=user; }catch(e){}
+  hideAuthUI();
+  await loadCloud(user.id);
+  var s=S(); s.guestMode=false; s.onboarded=true; s.onlineUserId=user.id; s.currentUserId=user.id; rawSave();
+  try{ if(typeof W.hideGates==='function')W.hideGates(); }catch(e){}
+  try{ if(typeof W.bootApp==='function')W.bootApp(); else if(typeof W.bootSafe==='function')W.bootSafe(); }catch(e){ try{console.warn('[GS auth] boot',e);}catch(_){} }
+  try{ if(typeof W.gsSetupRealtimeV9==='function')W.gsSetupRealtimeV9(); }catch(e){}
+  return true;
+}
+
+/* ---------------- Nouveau profil → onboarding (choix @username) ---------------- */
+function openSetup(user,row){
+  W._supaUser=user; try{ if(typeof _supaUser!=='undefined')_supaUser=user; }catch(e){}
+  try{ if(typeof W.gsShowOAuthOnboarding==='function'){ W.gsShowOAuthOnboarding(user,row); return; } }catch(e){}
+  try{ if(typeof W.openOnboardingWizard==='function'){ W.openOnboardingWizard(0,{mode:'oauth'}); return; } }catch(e){}
+  var a=$('auth-screen'); if(a){a.style.display='flex'; a.classList.add('open');}
+}
+
+/* ---------------- Résolution après connexion ---------------- */
+var authLock={id:'',at:0};
+async function afterAuth(user){
+  if(!user||!user.id)return false;
+  var t=Date.now(); if(authLock.id===user.id && (t-authLock.at)<900)return false; authLock={id:user.id,at:t};
+  W._supaUser=user; try{ if(typeof _supaUser!=='undefined')_supaUser=user; }catch(e){}
+  var row=await ensureRow(user);
+  if(profileComplete(row)){ return enterApp(user); }
+  openSetup(user,row); return false;
+}
+
+/* ---------------- @username → email (RPC sécurisée, fallback direct) ---------------- */
+async function emailForUsername(u){
+  u=normU(u); if(!u)return '';
+  try{ if(sb().rpc){ var r=await sb().rpc('gs_email_for_username',{p_username:u}); if(r&&!r.error&&r.data){ var v=Array.isArray(r.data)?(r.data[0]&&(r.data[0].email||r.data[0])):(r.data.email||r.data); if(v)return String(v); } } }catch(e){}
+  try{ var d=await sb().from('profiles').select('email').eq('username',u).maybeSingle(); if(d&&d.data&&d.data.email)return String(d.data.email); }catch(e){}
+  return '';
+}
+
+/* ---------------- Connexion email OU @username ---------------- */
+async function login(){
+  var inp=$('auth-email'), pwd=$('auth-password');
+  var input=String((inp&&inp.value)||'').trim();
+  var pass=String((pwd&&pwd.value)||'');
+  if(!input||!pass){ try{W.authShowView&&W.authShowView('login');}catch(e){} authErr('Entre ton email ou @username et ton mot de passe.'); return false; }
+  if(!sb()||!sb().auth){ authErr('Connexion indisponible. Réessaie en ligne.'); return false; }
+  setLoading(true);
+  var email=input, usedUsername=false;
+  if(input.indexOf('@')<0 || input.charAt(0)==='@'){
+    usedUsername=true;
+    email=await emailForUsername(input);
+    if(!email){ setLoading(false); authErr('Utilisateur introuvable. Vérifie ton @username (ou installe la fonction SQL gs_email_for_username).'); return false; }
+  }
+  var res;
+  try{ res=await sb().auth.signInWithPassword({email:email,password:pass}); }catch(e){ res={error:e}; }
+  setLoading(false);
+  if(res&&res.error){
+    authErr(usedUsername
+      ? 'Connexion impossible pour ce @username. Si ce compte a été créé avec Google, utilise « Continuer avec Google ».'
+      : 'Email ou mot de passe incorrect.');
+    return false;
+  }
+  return afterAuth(res.data.user);
+}
+
+/* ---------------- Connexion Google ---------------- */
+async function google(){
+  if(!sb()||!sb().auth){ authErr('Connexion indisponible.'); return false; }
+  try{ var s=ls(); if(s)s.setItem('gs_oauth_provider_pending','google'); }catch(e){}
+  var r;
+  try{
+    r=await sb().auth.signInWithOAuth({provider:'google',options:{redirectTo:W.location.origin,queryParams:{prompt:'select_account'}}});
+  }catch(e){ r={error:e}; }
+  if(r&&r.error){ authErr(r.error.message||'Connexion Google impossible. Vérifie que Google est activé dans Supabase et que l\u2019URL de redirection est autorisée.'); }
+  return false;
+}
+
+/* ---------------- Sauvegarde cloud (debounce + filet de sécurité) ---------------- */
+var cloudTimer=null, lastPayloadStr='';
+function scheduleCloudSave(delay){
+  if(!online())return;
+  if(cloudTimer)clearTimeout(cloudTimer);
+  cloudTimer=setTimeout(function(){cloudSaveNow();}, (typeof delay==='number'?delay:1800));
+}
+async function cloudSaveNow(){
+  if(!online())return false;
+  var s=S(), p=P();
+  /* Ne jamais écraser le cloud avec un état vide/non initialisé. */
+  if(!s || (!s.onboarded && !(p.username||p.name)))return false;
+  var data=safeState();
+  var payload={
+    id:uid(),
+    email:(p.email||(W._supaUser&&W._supaUser.email)||null),
+    username:(normU(p.username||'')||null),
+    display_name:(p.name||p.username||null),
+    data:data,
+    updated_at:now()
+  };
+  var str='';
+  try{ str=JSON.stringify(data); }catch(e){}
+  if(str && str===lastPayloadStr)return true; /* rien n'a changé */
+  try{
+    var r=await sb().from('profiles').upsert(payload,{onConflict:'id'});
+    if(r&&r.error){ try{console.warn('[GS auth] cloud save error',r.error);}catch(_){} return false; }
+    lastPayloadStr=str;
+    return true;
+  }catch(e){ try{console.warn('[GS auth] cloud save',e);}catch(_){} return false; }
+}
+W.gsCloudSaveNow=cloudSaveNow;
+
+/* On enveloppe window.save pour pousser vers le cloud après chaque sauvegarde locale. */
+(function wrapSave(){
+  var orig=W.save;
+  if(typeof orig==='function' && !orig.__gsCloudWrapped){
+    W.__gsRawSave=orig;
+    var wrapped=function(){ var r; try{ r=orig.apply(this,arguments); }finally{ try{ scheduleCloudSave(1800); }catch(e){} } return r; };
+    wrapped.__gsCloudWrapped=true;
+    try{ W.save=wrapped; }catch(e){}
+  }
+})();
+/* Filet de sécurité : sauvegarde périodique + à la mise en arrière-plan. */
+setInterval(function(){ try{ if(online())scheduleCloudSave(0); }catch(e){} }, 30000);
+D.addEventListener('visibilitychange',function(){ try{ if(D.hidden&&online())cloudSaveNow(); }catch(e){} });
+W.addEventListener('pagehide',function(){ try{ if(online())cloudSaveNow(); }catch(e){} });
+
+/* ---------------- Déconnexion fiable (confirmation custom, pas de confirm()) ---------------- */
+function logoutAskHtml(){
+  return '<div id="gs-logout-confirm" style="position:fixed;inset:0;z-index:2147483600;background:rgba(3,6,10,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;padding:22px" onclick="if(event.target===this)gsLogoutConfirm(false)">'
+    +'<div style="width:min(420px,100%);background:linear-gradient(180deg,rgba(16,23,32,.99),rgba(7,10,15,.99));border:1px solid rgba(255,255,255,.12);border-radius:26px;padding:24px;color:#F5F3EE;box-shadow:0 28px 90px rgba(0,0,0,.55)">'
+    +'<div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#8da0bd;font-weight:1000;margin-bottom:8px">Compte</div>'
+    +'<div style="font-size:24px;font-weight:1000;letter-spacing:-.04em;line-height:1.05">Se déconnecter ?</div>'
+    +'<div style="font-size:13px;color:rgba(245,243,238,.66);font-weight:700;margin-top:10px;line-height:1.4">Tes données sont sauvegardées en ligne. Tu les retrouveras à la reconnexion.</div>'
+    +'<div style="display:flex;gap:10px;margin-top:20px">'
+    +'<button type="button" onclick="gsLogoutConfirm(false)" style="flex:1;padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;font-size:14px;font-weight:1000;font-family:inherit">Annuler</button>'
+    +'<button type="button" onclick="gsLogoutConfirm(true)" style="flex:1;padding:14px;border-radius:16px;border:1px solid rgba(255,122,137,.3);background:rgba(255,122,137,.14);color:#FF7A89;font-size:14px;font-weight:1000;font-family:inherit">Se déconnecter</button>'
+    +'</div></div></div>';
+}
+function logout(){
+  if($('gs-logout-confirm'))return;
+  D.body.insertAdjacentHTML('beforeend', logoutAskHtml());
+}
+function clearAuthLocal(){
+  var s=ls(); if(!s)return;
+  try{
+    for(var i=s.length-1;i>=0;i--){
+      var k=s.key(i)||'';
+      var low=k.toLowerCase();
+      if(k.indexOf('sb-')===0 || low.indexOf('supabase')>-1 || low.indexOf('gotrue')>-1 ||
+         k.indexOf('gs_auth_uid')>-1 || k.indexOf('gs_online_auth')>-1 || k.indexOf('gs_strict_auth')>-1 ||
+         k==='gs_oauth_provider_pending' || k==='gs_auth_authority_uid_p1' || k==='gs_force_auth_reload'){
+        try{ s.removeItem(k); }catch(e){}
+      }
+    }
+  }catch(e){}
+}
+async function doLogoutNow(){
+  if(cloudTimer){try{clearTimeout(cloudTimer);}catch(e){}}
+  var u=uid();
+  /* Sauvegarde finale + filet local namespacé (au cas où le réseau échoue). */
+  try{ await cloudSaveNow(); }catch(e){}
+  try{ if(u){ var s=ls(); if(s)s.setItem('gs_logout_backup_'+u, JSON.stringify(safeState()).slice(0,3000000)); } }catch(e){}
+  try{ if(sb()&&sb().auth&&sb().auth.signOut)await sb().auth.signOut(); }catch(e){ try{console.warn('[GS auth] signOut',e);}catch(_){} }
+  W._supaUser=null; try{ if(typeof _supaUser!=='undefined')_supaUser=null; }catch(e){} try{W.currentUser=null;}catch(e){}
+  clearAuthLocal();
+  try{ if(typeof W.assignState==='function'&&typeof W.baseState==='function')W.assignState(W.baseState()); }catch(e){}
+  /* On coupe les éventuels timers sociaux/feed. */
+  ['_feedInterval','_battleRefreshInterval','_bossCheckInterval'].forEach(function(k){ try{ if(W[k]){clearInterval(W[k]);W[k]=null;} }catch(e){} });
+  lastPayloadStr='';
+  showLanding();
+  toast('Déconnecté');
+}
+W.gsLogoutConfirm=function(go){
+  var ov=$('gs-logout-confirm'); if(ov)ov.remove();
+  if(go===true){ doLogoutNow(); }
+};
+
+/* ---------------- Validation de session NON destructive ---------------- */
+async function validateSession(){
+  if(!sb()||!sb().auth)return null;
+  try{ var r=await sb().auth.getSession(); var ss=r&&r.data&&r.data.session; return (ss&&ss.user)?ss.user:null; }
+  catch(e){ try{console.warn('[GS auth] validateSession (non bloquant)',e);}catch(_){} return null; }
+}
+
+/* ---------------- Init : une seule autorité, un seul listener ---------------- */
+async function init(){
+  var a=$('auth-screen'), ob=$('onboard');
+  if(ob)ob.style.display='none';
+  if(!sb()||!sb().auth){ if(a){a.style.display='flex';a.classList.add('open');} try{W.authShowView&&W.authShowView('landing');}catch(e){} return; }
+  if(!W.__GS_AUTH_FINAL_LISTENER__){
+    W.__GS_AUTH_FINAL_LISTENER__=true;
+    try{
+      sb().auth.onAuthStateChange(async function(ev,session){
+        if((ev==='SIGNED_IN'||ev==='INITIAL_SESSION'||ev==='TOKEN_REFRESHED')&&session&&session.user){ await afterAuth(session.user); }
+        if(ev==='SIGNED_OUT'){ W._supaUser=null; try{ if(typeof _supaUser!=='undefined')_supaUser=null; }catch(e){} showLanding(); }
+      });
+    }catch(e){ try{console.warn('[GS auth] listener',e);}catch(_){} }
+  }
+  var user=await validateSession();
+  if(user){ await afterAuth(user); return; }
+  if(a){a.style.display='flex';a.classList.add('open');} try{W.authShowView&&W.authShowView('landing');}catch(e){}
+}
+
+/* ---------------- Branchement des autorités (gagne car chargé en dernier) ---------------- */
+W.gsAuthInit=init;
+W.initAuth=init;
+W.doLogin=login;
+W.gsAuthLoginSubmit264=login;
+W.doLoginGoogle=google;
+W.afterAuth=afterAuth;
+W.resolveAuthEntry=afterAuth;
+W.gsLogout=logout; W.logout=logout; W.deconnexion=logout;
+W.gsValidateSupabaseSessionOrReset=validateSession;
+W.gsValidateSession=validateSession;
+
+setTimeout(function(){ try{ init(); }catch(e){ try{console.warn('[GS auth] init',e);}catch(_){} } }, 60);
+try{ console.log('[GS] Contrôleur Auth FINAL 2026-06 actif (Google/email/@username + déconnexion + sauvegarde cloud).'); }catch(e){}
+})();
+</script>
+
 </body>
 </html>
