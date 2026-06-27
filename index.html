@@ -32176,3 +32176,199 @@ try{console.log('[GS] AUTH FINALE v3 active \u2014 landing imm\u00e9diate + sess
 
 </body>
 </html>
+
+<!-- G-SQUAD 283 — AUTH RECONNECT + PROFILE REPAIR FINAL -->
+<script id="gs-283-auth-reconnect-profile-repair-js">
+(function(){
+  'use strict';
+  if(window.__GS283_AUTH_RECONNECT_PROFILE_REPAIR__)return;
+  window.__GS283_AUTH_RECONNECT_PROFILE_REPAIR__=true;
+  var W=window,D=document;
+  function $(id){return D.getElementById(id)}
+  function sb(){return W._supa||null}
+  function S(){try{return typeof W.S==='function'?W.S():(W.state=W.state||{})}catch(e){W.state=W.state||{};return W.state}}
+  function P(){var s=S();s.profil=s.profil||{};return s.profil}
+  function save(){try{if(typeof W.__gsRawSave==='function')return W.__gsRawSave();if(typeof W.save==='function')return W.save()}catch(e){}}
+  function toast(m){try{if(typeof W.toast==='function')return W.toast(m);if(typeof W.notify==='function')return W.notify(m)}catch(e){}}
+  function showErr(m){try{if(typeof W.authShowErr==='function')W.authShowErr(m);else toast(m)}catch(e){}}
+  function normEmail(v){return String(v||'').trim().toLowerCase()}
+  function normUsername(v){return String(v||'').trim().replace(/^@/,'').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()}
+  function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim())}
+  function passOk(v){v=String(v||'');return v.length>=6&&/[A-Z]/.test(v)&&/[^A-Za-z0-9]/.test(v)}
+  function now(){return new Date().toISOString()}
+  function meta(user,k){try{return (user&&user.user_metadata&&user.user_metadata[k])||''}catch(e){return ''}}
+  function metaName(user){return String(meta(user,'display_name')||meta(user,'full_name')||meta(user,'name')||meta(user,'given_name')||'').trim()}
+  function withTimeout(p,ms,fb){return new Promise(function(resolve){var done=false,t=setTimeout(function(){if(!done){done=true;resolve(fb)}},ms||8000);Promise.resolve(p).then(function(v){if(!done){done=true;clearTimeout(t);resolve(v)}},function(e){if(!done){done=true;clearTimeout(t);resolve(fb&&typeof fb==='object'?Object.assign({},fb,{error:e}):fb)}})})}
+  function statePayload(){var st;try{st=(typeof W.gsSafeSupabaseState==='function')?W.gsSafeSupabaseState(S()):JSON.parse(JSON.stringify(S()))}catch(e){st={profil:{}}}st.profil=st.profil||{};try{if(st.profil.avatar&&String(st.profil.avatar).indexOf('data:image')===0)st.profil.avatar=''}catch(e){}return st}
+  function isComplete(row){
+    if(!row)return false;
+    var d=(row.data&&typeof row.data==='object')?row.data:{},p=(d.profil&&typeof d.profil==='object')?d.profil:{};
+    var u=normUsername(row.username||p.username||''),n=String(row.display_name||row.first_name||p.name||p.firstName||p.prenom||'').trim();
+    return !!(d.onboarded||d.onboardingComplete||d.onboarding_complete||row.onboarding_complete||d.authSetupStatus==='completed'||p.onboardingComplete||p.authSetupStatus==='completed'||(u.length>=3&&n.length>=1));
+  }
+  function setUser(user){W._supaUser=user||null;try{if(typeof _supaUser!=='undefined')_supaUser=user||null}catch(e){}try{W.currentUser=user||null}catch(e){}}
+  function clearSignupDrafts(){try{localStorage.removeItem('gs_signup_draft_v1');localStorage.removeItem('gs_signup_completed_email');sessionStorage.removeItem('gs_signup_just_completed')}catch(e){}}
+  function clearAuthFlags(){try{localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');localStorage.removeItem('gs_force_auth_reload');sessionStorage.removeItem('gs_guest_session')}catch(e){}}
+  function resetStateForUser(){try{if(typeof W.assignState==='function'&&typeof W.baseState==='function'){W.assignState(W.baseState());return}}catch(e){}try{W.state={}}catch(e){}}
+  async function findProfileByUsername(u){
+    if(!sb()||!sb().from)return null;u=normUsername(u);if(!u)return null;
+    var r=await withTimeout(sb().from('profiles').select('id,email,username,display_name,data').eq('username',u).maybeSingle(),8000,null);
+    return r&&r.data?r.data:null;
+  }
+  async function usernameTaken(u,ignoreId){
+    if(!sb()||!sb().from)return false;u=normUsername(u);if(!u)return false;
+    try{var q=sb().from('profiles').select('id').eq('username',u).limit(1);if(ignoreId)q=q.neq('id',ignoreId);var r=await withTimeout(q,8000,null);return !!(r&&r.data&&r.data.length)}catch(e){return false}
+  }
+  async function repairProfile(user,opts){
+    opts=opts||{};if(!user||!user.id)return null;
+    var row=null;
+    if(sb()&&sb().from){
+      try{var r=await withTimeout(sb().from('profiles').select('id,email,username,display_name,first_name,avatar_url,onboarding_complete,data,updated_at').eq('id',user.id).maybeSingle(),9000,null);row=r&&r.data?r.data:null}catch(e){}
+    }
+    var p=P(),d=(row&&row.data&&typeof row.data==='object')?row.data:{},dp=(d.profil&&typeof d.profil==='object')?d.profil:{};
+    var email=normEmail(row&&row.email||dp.email||user.email||p.email||'');
+    var username=normUsername(row&&row.username||dp.username||meta(user,'username')||p.username||'');
+    var name=String(row&&row.display_name||row&&row.first_name||dp.name||dp.firstName||dp.prenom||metaName(user)||p.name||p.firstName||p.prenom||username||'').trim();
+    var mergedData=Object.assign({},d||{});mergedData.profil=Object.assign({},dp||{});
+    if(email)mergedData.profil.email=email;if(username)mergedData.profil.username=username;if(name){mergedData.profil.name=name;mergedData.profil.firstName=mergedData.profil.firstName||name;mergedData.profil.prenom=mergedData.profil.prenom||name}
+    if(!row){mergedData.onboarded=false;mergedData.onboardingComplete=false;mergedData.authSetupStatus='pending_setup';mergedData.profil.onboardingComplete=false;mergedData.profil.authSetupStatus='pending_setup'}
+    var payload={id:user.id,email:email||null,username:username||null,display_name:name||null,avatar_url:(row&&row.avatar_url)||meta(user,'avatar_url')||meta(user,'picture')||null,data:mergedData,updated_at:now()};
+    if(sb()&&sb().from){try{await withTimeout(sb().from('profiles').upsert(payload,{onConflict:'id'}),9000,null)}catch(e){console.warn('[GS283] profile repair upsert failed',e)}}
+    return Object.assign({},row||{},payload);
+  }
+  function applyRow(user,row,keepLocal){
+    if(!keepLocal)resetStateForUser();
+    var st=S(),p=P(),data=(row&&row.data&&typeof row.data==='object')?row.data:null;
+    if(data){try{Object.assign(st,data)}catch(e){}}
+    st.profil=st.profil||{};p=st.profil;
+    var dp=(data&&data.profil)||{};
+    p.email=normEmail((row&&row.email)||dp.email||(user&&user.email)||p.email||'');
+    p.username=normUsername((row&&row.username)||dp.username||p.username||'');
+    p.name=String((row&&row.display_name)||dp.name||dp.firstName||dp.prenom||p.name||metaName(user)||p.username||'').trim();
+    p.firstName=p.firstName||p.name;p.prenom=p.prenom||p.name;p.display_name=p.display_name||p.name;
+    st.guestMode=false;st.onlineUserId=user&&user.id;st.currentUserId=user&&user.id;st.authUserId=user&&user.id;st.supabaseUserId=user&&user.id;
+    var complete=isComplete(row)||!!(p.username&&p.name);
+    st.onboarded=!!complete;st.onboardingComplete=!!complete;st.authSetupStatus=complete?'completed':'pending_setup';
+    p.onboardingComplete=!!complete;p.authSetupStatus=complete?'completed':'pending_setup';
+    save();return complete;
+  }
+  function hideAuthScreens(){
+    ['auth-screen','onboard','gs-onboard-v11','gs-logout-confirm'].forEach(function(id){var el=$(id);if(!el)return;if(id==='gs-onboard-v11'||id==='gs-logout-confirm')el.remove();else{el.style.display='none';if(el.classList)el.classList.remove('open')}});
+  }
+  async function bootIntoApp(user,row,keepLocal){
+    setUser(user);clearAuthFlags();var complete=applyRow(user,row,!!keepLocal);
+    if(!complete){openProfileRepairWizard(user,row);return false}
+    hideAuthScreens();try{if(typeof W.hideGates==='function')W.hideGates()}catch(e){}
+    try{if(typeof W.bootApp==='function')W.bootApp();else if(typeof W.bootSafe==='function')W.bootSafe()}catch(e){console.warn('[GS283] boot failed',e)}
+    try{if(typeof W.gsSetupRealtimeV9==='function')W.gsSetupRealtimeV9()}catch(e){}
+    return true;
+  }
+  function openProfileRepairWizard(user,row){
+    setUser(user);clearAuthFlags();try{var a=$('auth-screen');if(a){a.style.display='none';a.classList.remove('open')}}catch(e){}
+    var st=S(),p=P();st.guestMode=false;st.onboarded=false;st.onboardingComplete=false;st.authSetupStatus='pending_setup';p.email=normEmail((row&&row.email)||(user&&user.email)||p.email||'');p.username=normUsername((row&&row.username)||p.username||'');p.name=String((row&&row.display_name)||p.name||metaName(user)||'').trim();save();
+    try{if(typeof W.gsShowOAuthOnboarding==='function'){W.gsShowOAuthOnboarding(user,row);return false}}catch(e){}
+    try{if(typeof W.__gsOpenOnboardingWizardOrig==='function'){W.__gsOpenOnboardingWizardOrig(0,{mode:'oauth'});return false}}catch(e){}
+    try{if(typeof W.openOnboardingWizard==='function'){W.openOnboardingWizard(0,{mode:'oauth'});return false}}catch(e){}
+    showErr('Profil incomplet. Complète ton profil pour continuer.');return false;
+  }
+  W.gs283AfterAuth=async function(user,opts){opts=opts||{};if(!user||!user.id)return false;setUser(user);var row=await repairProfile(user,opts);return bootIntoApp(user,row,!!opts.keepLocal)};
+  W.afterAuth=function(user){return W.gs283AfterAuth(user,{keepLocal:false})};
+  W.resolveAuthEntry=W.afterAuth;
+  W.gsAuthRepairCurrentProfile=async function(){var u=W._supaUser;if(!u&&sb()&&sb().auth){try{var r=await sb().auth.getUser();u=r&&r.data&&r.data.user}catch(e){}}if(u)return W.gs283AfterAuth(u,{keepLocal:true});showErr('Aucune session à réparer.');return false};
+  async function login(){
+    var input=String(($('auth-email')||$('ob11-main-input')||{}).value||P().email||'').trim();
+    var pass=String(($('auth-password')||$('ob11-password-input')||{}).value||(W.OB11&&W.OB11.password)||'');
+    if(!input||!pass){showErr('Entre ton email ou @username et ton mot de passe.');return false}
+    if(!sb()||!sb().auth){showErr('Connexion indisponible. Réessaie en ligne.');return false}
+    var email=input,usedUsername=false;
+    if(input.indexOf('@')<0||input.charAt(0)==='@'){
+      usedUsername=true;var prof=await findProfileByUsername(input);
+      if(!prof){showErr('Ce @username est introuvable.');return false}
+      if(!prof.email){showErr('Profil incomplet. Connecte-toi avec ton email.');return false}
+      email=prof.email;
+    }
+    showErr('');var btn=D.querySelector('#gs-onboard-v11 .gs-ob11-actions .primary')||$('auth-login-btn'),old=btn?btn.textContent:'';if(btn){btn.disabled=true;btn.textContent='Connexion…'}
+    var res;try{res=await withTimeout(sb().auth.signInWithPassword({email:normEmail(email),password:pass}),15000,{error:{message:'timeout'}})}catch(e){res={error:e}}
+    if(btn){btn.disabled=false;btn.textContent=old||'Se connecter'}
+    if(res&&res.error){showErr(usedUsername?'Ce @username existe, mais la connexion a échoué. Si ce compte utilise Google, connecte-toi avec Google.':'Email ou mot de passe incorrect. Si ce compte utilise Google, connecte-toi avec Google.');return false}
+    var user=res&&res.data&&res.data.user;if(!user){showErr('Connexion impossible. Réessaie.');return false}
+    return W.gs283AfterAuth(user,{keepLocal:false});
+  }
+  W.doLogin=login;W.gsAuthLoginSubmit264=login;
+  W.doLoginGoogle=async function(){
+    if(!sb()||!sb().auth){showErr('Connexion Google indisponible.');return false}
+    try{localStorage.setItem('gs_oauth_provider_pending','google')}catch(e){}
+    var r;try{r=await sb().auth.signInWithOAuth({provider:'google',options:{redirectTo:W.location.origin,queryParams:{prompt:'select_account'}}})}catch(e){r={error:e}}
+    if(r&&r.error)showErr(r.error.message||'Connexion Google impossible.');return false;
+  };
+  function authFlow(){if(W.OB11&&W.OB11.mode==='login')return ['loginId','loginPassword'];if(W.OB11&&(W.OB11.mode==='oauth'||W.OB11.oauthPending))return ['profile','training','athlete','rhythm','create'];return ['account','profile','training','athlete','rhythm','create']}
+  function currentStep(){var f=authFlow(),i=Math.max(0,Math.min(f.length-1,Number(W.OB11&&W.OB11.step||0)));return f[i]}
+  function captureAuthFields(){
+    W.OB11=W.OB11||{step:0,mode:'signup',password:'',passwordConfirm:''};var p=P(),step=currentStep();
+    if(step==='loginId'){var li=String(($('ob11-main-input')||{}).value||'').trim();if(li)p.email=li}
+    if(step==='loginPassword'){var lp=String(($('ob11-password-input')||{}).value||'');if(lp)W.OB11.password=lp}
+    if(step==='account'){p.email=normEmail(($('auth-email-compact')||{}).value||p.email||'');W.OB11.password=String(($('ob11-password-input')||{}).value||W.OB11.password||'');W.OB11.passwordConfirm=String(($('ob11-password-confirm')||{}).value||W.OB11.passwordConfirm||'')}
+    if(step==='profile'){var u=normUsername(($('auth-username-profile')||{}).value||p.username||'');if(u)p.username=u;var n=String(($('auth-name')||{}).value||'').trim();if(n){p.name=n;p.firstName=n;p.prenom=n;p.display_name=n};['auth-age','auth-height','auth-weight'].forEach(function(id){var el=$(id);if(el&&el.value){if(id==='auth-age')p.age=el.value;if(id==='auth-height')p.taille=el.value;if(id==='auth-weight')p.poids=el.value}})}
+    save();
+  }
+  function stepForward(){var f=authFlow();W.OB11.step=Math.min(f.length-1,Number(W.OB11.step||0)+1);if(typeof W.renderOb11==='function')W.renderOb11()}
+  async function finishSignupOrSetup(){
+    captureAuthFields();var p=P(),email=normEmail(p.email),pass=String(W.OB11&&W.OB11.password||''),confirm=String(W.OB11&&W.OB11.passwordConfirm||''),username=normUsername(p.username),name=String(p.name||p.firstName||p.prenom||username||'').trim();
+    if(W.OB11&&(W.OB11.mode==='oauth'||W.OB11.oauthPending)&&W._supaUser){var row=await repairProfile(W._supaUser,{setup:true});row.username=username||row.username;row.display_name=name||row.display_name;row.email=email||row.email;if(username||name){try{var data=statePayload();data.onboarded=true;data.onboardingComplete=true;data.authSetupStatus='completed';data.profil=data.profil||{};data.profil.username=username;data.profil.name=name;data.profil.email=row.email;data.profil.onboardingComplete=true;data.profil.authSetupStatus='completed';await withTimeout(sb().from('profiles').upsert({id:W._supaUser.id,email:row.email||W._supaUser.email||null,username:username||null,display_name:name||username||null,data:data,updated_at:now()},{onConflict:'id'}),12000,null)}catch(e){}}return W.gs283AfterAuth(W._supaUser,{keepLocal:false})}
+    if(!validEmail(email)){W.OB11.step=0;W.renderOb11&&W.renderOb11();showErr('Ajoute un email valide.');return false}
+    if(!passOk(pass)){W.OB11.step=0;W.renderOb11&&W.renderOb11();showErr('Mot de passe : minimum 6 caractères, une majuscule et un caractère spécial.');return false}
+    if(pass!==confirm){W.OB11.step=0;W.renderOb11&&W.renderOb11();showErr('Les deux mots de passe ne correspondent pas.');return false}
+    if(!username||username.length<3){W.OB11.step=1;W.renderOb11&&W.renderOb11();showErr('Choisis un username de 3 caractères minimum.');return false}
+    if(await usernameTaken(username,null)){W.OB11.step=1;W.renderOb11&&W.renderOb11();showErr('Ce @username est déjà pris.');return false}
+    if(!sb()||!sb().auth){showErr('Connexion indisponible. Réessaie en ligne.');return false}
+    var btn=D.querySelector('#gs-onboard-v11 .gs-ob11-actions .primary'),old=btn?btn.textContent:'';if(btn){btn.disabled=true;btn.textContent='Création du compte…'}
+    var res;try{res=await withTimeout(sb().auth.signUp({email:email,password:pass,options:{data:{username:username,display_name:name||username}}}),16000,{error:{message:'timeout'}})}catch(e){res={error:e}}
+    if(btn){btn.disabled=false;btn.textContent=old||'Créer mon compte'}
+    if(res&&res.error){var msg=String(res.error.message||'');W.OB11.step=0;W.renderOb11&&W.renderOb11();if(/already|registered|exist|déjà/i.test(msg))showErr('Un compte existe déjà avec cet email. Connecte-toi.');else showErr(msg||'Création du compte impossible.');return false}
+    var user=res&&res.data&&res.data.user;if(!user){showErr('Création en attente. Vérifie ton email puis reconnecte-toi.');return false}
+    if(user.identities&&user.identities.length===0){W.OB11.step=0;W.renderOb11&&W.renderOb11();showErr('Un compte existe déjà avec cet email. Connecte-toi.');return false}
+    setUser(user);var data=statePayload();data.onboarded=true;data.onboardingComplete=true;data.authSetupStatus='completed';data.profil=data.profil||{};data.profil.email=email;data.profil.username=username;data.profil.name=name||username;data.profil.onboardingComplete=true;data.profil.authSetupStatus='completed';try{await withTimeout(sb().from('profiles').upsert({id:user.id,email:email,username:username,display_name:name||username,data:data,updated_at:now()},{onConflict:'id'}),12000,null)}catch(e){console.warn('[GS283] signup profile upsert failed',e)}clearSignupDrafts();toast('Compte créé');return W.gs283AfterAuth(user,{keepLocal:false});
+  }
+  W.gsFinishSignupAdventure=finishSignupOrSetup;
+  W.ob11Next=async function(){
+    captureAuthFields();var step=currentStep();
+    if(W.OB11&&W.OB11.mode==='login'){
+      if(step==='loginId'){if(!String(P().email||'').trim()){showErr('Entre ton email ou @username.');return false}stepForward();return false}
+      if(step==='loginPassword'){if(!String(W.OB11.password||'').trim()){showErr('Entre ton mot de passe.');return false}return login()}
+      return false;
+    }
+    if(step==='account'){
+      var email=normEmail(P().email),pass=String(W.OB11.password||''),confirm=String(W.OB11.passwordConfirm||'');
+      if(!validEmail(email)){showErr('Ajoute un email valide.');return false}
+      if(!passOk(pass)){showErr('Mot de passe : minimum 6 caractères, une majuscule et un caractère spécial.');return false}
+      if(pass!==confirm){showErr('Les deux mots de passe ne correspondent pas.');return false}
+      stepForward();return false;
+    }
+    if(step==='profile'){
+      var u=normUsername(P().username),n=String(P().name||P().firstName||P().prenom||'').trim();
+      if(!u||u.length<3){showErr('Choisis un username de 3 caractères minimum.');return false}
+      if(!n){showErr('Ajoute ton prénom.');return false}
+      stepForward();return false;
+    }
+    if(step==='create')return finishSignupOrSetup();
+    stepForward();return false;
+  };
+  W.gsAuthLoginSubmit264=login;
+  W.doLogin=login;
+  W.gsLogout=async function(){
+    try{if(sb()&&sb().auth)await withTimeout(sb().auth.signOut(),8000,null)}catch(e){}
+    setUser(null);try{localStorage.removeItem('gs_auth_uid');localStorage.removeItem('gs_online_auth_user_id');localStorage.removeItem('gs_last_auth_uid');localStorage.removeItem('gs_strict_auth_uid_v7');localStorage.removeItem('gs_skip_auth');localStorage.removeItem('gs_auth_skipped');sessionStorage.removeItem('gs_guest_session')}catch(e){}
+    resetStateForUser();var a=$('auth-screen');if(a){a.style.display='flex';a.classList.add('open')}try{if(typeof W.authShowView==='function')W.authShowView('landing')}catch(e){}toast('Déconnecté');return false;
+  };
+  W.logout=W.gsLogout;W.deconnexion=W.gsLogout;
+  W.initAuth=async function(){
+    try{var ob=$('onboard');if(ob)ob.style.display='none'}catch(e){}
+    if(!sb()||!sb().auth){try{if(typeof W.authShowView==='function')W.authShowView('landing')}catch(e){}return false}
+    var r=await withTimeout(sb().auth.getSession(),6000,null),user=r&&r.data&&r.data.session&&r.data.session.user;
+    if(user)return W.gs283AfterAuth(user,{keepLocal:false});
+    try{if(typeof W.authShowView==='function')W.authShowView('landing')}catch(e){}return false;
+  };
+  if(sb()&&sb().auth&&!W.__GS283_AUTH_LISTENER__){W.__GS283_AUTH_LISTENER__=true;try{sb().auth.onAuthStateChange(function(ev,session){if((ev==='SIGNED_IN'||ev==='INITIAL_SESSION'||ev==='TOKEN_REFRESHED')&&session&&session.user)W.gs283AfterAuth(session.user,{keepLocal:false});if(ev==='SIGNED_OUT'){setUser(null)}})}catch(e){}}
+  try{console.log('[GS283] Auth reconnect + profile repair actif') }catch(e){}
+})();
+</script>
