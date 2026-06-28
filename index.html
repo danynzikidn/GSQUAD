@@ -32372,3 +32372,302 @@ try{console.log('[GS] AUTH FINALE v3 active \u2014 landing imm\u00e9diate + sess
   try{console.log('[GS283] Auth reconnect + profile repair actif') }catch(e){}
 })();
 </script>
+
+<!-- G-SQUAD AUTH MASTER v1 -->
+<script id="gs-auth-master-v1">
+(function () {
+  'use strict';
+  if (window.__GS_AUTH_MASTER_V1__) return;
+  window.__GS_AUTH_MASTER_V1__ = true;
+
+  /* 1. Neutralise tous les anciens guards de listeners */
+  ['__gs264AuthListener','__gsAuthListenerV9','__GS_P1_AUTH_LISTENER__',
+   '__GS283_AUTH_LISTENER__','__GS_AUTH_FINAL_LISTENER__','__GS_AUTH_FINAL_REBUILD__']
+  .forEach(function(k){ window[k] = true; });
+
+  var W = window;
+
+  /* 2. Utilitaires */
+  function sb()   { return W._supa || W.supabaseClient || null; }
+  function el(id) { return document.getElementById(id); }
+  function wt(p, ms) {
+    return Promise.race([p, new Promise(function(r){ setTimeout(function(){ r(null); }, ms); })]);
+  }
+
+  /* 3. State helpers */
+  function getState() {
+    try { if (typeof W.S === 'function') return W.S() || {}; } catch(e) {}
+    var keys = ['gsquad_v3','ath7','gsquad_v2','gsquad_v1'];
+    for (var i = 0; i < keys.length; i++) {
+      try {
+        var v = localStorage.getItem(keys[i]);
+        if (v) { var s = JSON.parse(v); if (s && typeof s === 'object') return s; }
+      } catch(e) {}
+    }
+    return {};
+  }
+  function saveState() {
+    try { if (typeof W.save === 'function') { W.save(); return; } } catch(e) {}
+    try { if (typeof W.sv  === 'function') { W.sv();   return; } } catch(e) {}
+  }
+  function resetState() {
+    try {
+      if (typeof W.assignState === 'function' && typeof W.baseState === 'function') {
+        W.assignState(W.baseState()); saveState(); return;
+      }
+    } catch(e) {}
+    try {
+      if (typeof W.assign === 'function' && typeof W.base === 'function') {
+        W.assign(W.base()); saveState(); return;
+      }
+    } catch(e) {}
+  }
+  function localComplete() {
+    try {
+      var s = getState(), p = s.profil || {};
+      return !!(s.onboarded && p.name && p.username);
+    } catch(e) { return false; }
+  }
+
+  /* 4. Profil serveur complet ? */
+  function profileComplete(row) {
+    if (!row) return false;
+    var d = row.data || {}, pr = d.profil || {};
+    return !!( (row.username || pr.username || '').trim() &&
+               (row.display_name || pr.name || '').trim() );
+  }
+
+  /* 5. Session perimee (> 8h ou jour precedent) */
+  function isStaleSession(session) {
+    if (!session || !session.created_at) return false;
+    try {
+      var d = new Date(session.created_at), now = new Date();
+      return (now - d) > 8 * 3600000 || d.toDateString() !== now.toDateString();
+    } catch(e) { return false; }
+  }
+
+  /* 6. Flags */
+  var wizardAllowed = false;
+  var entered       = false;
+  var gateCalled    = false;
+  var lock          = { id: null, at: 0 };
+
+  /* 7. Ecran auth */
+  function showAuth() {
+    var a = el('auth-screen');
+    if (a) { a.style.display = 'flex'; a.classList.add('open'); }
+    var ob = el('onboard');
+    if (ob) ob.style.display = 'none';
+    wizardAllowed = false;
+    try { if (typeof W.authShowView === 'function') W.authShowView('landing'); } catch(e) {}
+  }
+  function hideAuth() {
+    var a = el('auth-screen');
+    if (a) { a.style.display = 'none'; a.classList.remove('open'); }
+    var ob = el('onboard');
+    if (ob) ob.style.display = 'none';
+  }
+
+  /* 8. Sync profil cloud vers local */
+  function syncRowToState(user, row) {
+    try {
+      var s = getState();
+      var d = row ? (row.data || {}) : {};
+      var pr = d.profil || {};
+      s.profil = s.profil || {};
+      if (row && row.email)        s.profil.email    = row.email;
+      if (row && row.username)     s.profil.username = row.username;
+      if (row && row.display_name) s.profil.name     = row.display_name;
+      if (pr.email    && !s.profil.email)    s.profil.email    = pr.email;
+      if (pr.username && !s.profil.username) s.profil.username = pr.username;
+      if (pr.name     && !s.profil.name)     s.profil.name     = pr.name;
+      s.profil.firstName = s.profil.firstName || s.profil.name;
+      s.profil.prenom    = s.profil.prenom    || s.profil.name;
+      if (user && user.email && !s.profil.email) s.profil.email = user.email;
+      s.onboarded = true; s.onboardingComplete = true;
+      s.authSetupStatus = 'completed'; s.guestMode = false;
+      try { if (typeof W.assignState === 'function') W.assignState(s); } catch(e) {}
+      saveState();
+    } catch(e) {}
+  }
+
+  /* 9. Entree dans l'app */
+  function enterApp(user, row) {
+    if (entered) return;
+    entered = true;
+    wizardAllowed = true;
+    hideAuth();
+    if (row) syncRowToState(user, row);
+    try {
+      if (typeof W.bootApp === 'function') W.bootApp();
+      else if (typeof W.bootSafe === 'function') W.bootSafe();
+    } catch(e) { console.warn('[GS-AUTH] boot:', e); }
+    if (sb() && user) {
+      setTimeout(function() {
+        try { if (typeof W.loadFromSupabase === 'function') W.loadFromSupabase(user.id); } catch(e) {}
+      }, 800);
+    }
+  }
+
+  /* 10. afterAuth : point central unique */
+  async function afterAuth(user) {
+    if (!user || !user.id) return false;
+
+    var now = Date.now();
+    if (lock.id === user.id && now - lock.at < 1500) return false;
+    lock = { id: user.id, at: now };
+
+    W._supaUser = user;
+    try { window._supaUser = user; } catch(e) {}
+    try { localStorage.setItem('gs_auth_uid', user.id); } catch(e) {}
+    try { localStorage.setItem('gs_online_auth_user_id', user.id); } catch(e) {}
+
+    hideAuth();
+
+    /* Chemin rapide : etat local deja complet */
+    if (localComplete()) {
+      enterApp(user, null);
+      if (sb()) {
+        wt(sb().from('profiles')
+          .select('id,email,username,display_name,data')
+          .eq('id', user.id).maybeSingle(), 5000)
+          .then(function(res) {
+            if (res && res.data) syncRowToState(user, res.data);
+          }).catch(function(){});
+      }
+      return true;
+    }
+
+    /* Chemin complet : fetch profil serveur */
+    if (!sb()) { showAuth(); return false; }
+
+    var row = null;
+    try {
+      var res = await wt(
+        sb().from('profiles')
+          .select('id,email,username,display_name,data')
+          .eq('id', user.id).maybeSingle(),
+        6000
+      );
+      row = res && res.data || null;
+    } catch(e) {}
+
+    if (profileComplete(row)) {
+      enterApp(user, row);
+      return true;
+    }
+
+    if (localComplete()) {
+      enterApp(user, row);
+      return true;
+    }
+
+    /* Profil incomplet : onboarding OAuth */
+    wizardAllowed = true;
+    if (typeof W.gsShowOAuthOnboarding === 'function') {
+      W.gsShowOAuthOnboarding(user, row);
+    } else if (typeof W.openOnboardingWizard === 'function') {
+      W.openOnboardingWizard(0, { mode: 'oauth' });
+    }
+    return false;
+  }
+
+  /* 11. gate : initAuth unique avec guard anti-doublon */
+  async function gate() {
+    if (gateCalled) return;
+    gateCalled = true;
+
+    var ob = el('onboard');
+    if (ob) ob.style.display = 'none';
+
+    if (!sb() || !sb().auth) { showAuth(); return; }
+
+    var r = null;
+    try { r = await wt(sb().auth.getSession(), 4000); } catch(e) {}
+
+    var session = r && r.data && r.data.session;
+
+    if (session && isStaleSession(session)) {
+      try { await sb().auth.signOut({ scope: 'local' }); } catch(e) {}
+      session = null;
+    }
+
+    var user = session && session.user;
+    if (user) { await afterAuth(user); return; }
+    showAuth();
+  }
+
+  /* 12. Listener unique onAuthStateChange */
+  if (sb() && sb().auth) {
+    try {
+      sb().auth.onAuthStateChange(function(ev, session) {
+        var ok = ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION' || ev === 'TOKEN_REFRESHED';
+        if (ok && session && session.user) {
+          afterAuth(session.user);
+        }
+        if (ev === 'SIGNED_OUT') {
+          entered = false; gateCalled = false;
+          lock = { id: null, at: 0 };
+          wizardAllowed = false;
+          W._supaUser = null;
+          try { window._supaUser = null; } catch(e) {}
+          resetState();
+          showAuth();
+        }
+      });
+    } catch(e) {}
+  }
+
+  /* 13. Guard openOnboardingWizard */
+  (function() {
+    if (W.openOnboardingWizard && W.openOnboardingWizard.__gsMaster) return;
+    var orig = W.openOnboardingWizard;
+    W.openOnboardingWizard = function(step, opts) {
+      opts = opts || {};
+      var mode = opts.mode || 'signup';
+      if (!wizardAllowed && (mode === 'oauth' || mode === 'signup' || opts.fresh)) {
+        console.warn('[GS-AUTH] wizard bloque - wizardAllowed=false');
+        return;
+      }
+      if (typeof orig === 'function') orig.call(W, step, opts);
+    };
+    W.openOnboardingWizard.__gsMaster = true;
+  })();
+
+  /* 14. Autosave 30s + visibilitychange + pagehide */
+  setInterval(function() { if (entered) saveState(); }, 30000);
+  try {
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'hidden' && entered) saveState();
+    });
+    window.addEventListener('pagehide', function() { if (entered) saveState(); });
+  } catch(e) {}
+
+  /* 15. Logout unifie */
+  W.gsLogout = W.logout = W.deconnexion = async function() {
+    try {
+      if (sb() && sb().auth) await wt(sb().auth.signOut(), 8000);
+    } catch(e) {}
+    entered = false; gateCalled = false;
+    lock = { id: null, at: 0 };
+    wizardAllowed = false;
+    W._supaUser = null;
+    try { window._supaUser = null; } catch(e) {}
+    resetState();
+    showAuth();
+    try { if (typeof W.toast === 'function') W.toast('Deconnecte'); } catch(e) {}
+    return false;
+  };
+
+  /* 16. Expose global */
+  W.initAuth         = gate;
+  W.afterAuth        = afterAuth;
+  W.resolveAuthEntry = afterAuth;
+  W.gsAuthInit       = gate;
+
+  /* 17. Demarrage */
+  gate();
+
+  console.log('[GS-AUTH] Master v1 - actif');
+})();
+</script>
